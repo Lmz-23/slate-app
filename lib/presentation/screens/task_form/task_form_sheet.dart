@@ -1,0 +1,415 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_spacing.dart';
+import '../../../core/extensions/datetime_extensions.dart';
+import '../../../domain/entities/task.dart';
+import '../../../domain/enums/task_priority.dart';
+import '../../../domain/enums/recurrence_type.dart';
+import '../../../application/providers/task_provider.dart';
+import '../../../application/providers/category_provider.dart';
+import '../../../application/providers/speech_provider.dart';
+import 'widgets/priority_selector.dart';
+import 'widgets/category_selector.dart';
+import 'widgets/recurrence_selector.dart';
+
+class TaskFormSheet extends ConsumerStatefulWidget {
+  final DateTime initialDate;
+  final String? taskId;
+  final bool isVoiceMode;
+
+  const TaskFormSheet({
+    super.key,
+    required this.initialDate,
+    this.taskId,
+    this.isVoiceMode = false,
+  });
+
+  @override
+  ConsumerState<TaskFormSheet> createState() => _TaskFormSheetState();
+}
+
+class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
+  final _titleController = TextEditingController();
+  final _notesController = TextEditingController();
+
+  late DateTime _selectedDate;
+  TimeOfDay? _selectedTime;
+  TaskPriority _priority = TaskPriority.normal;
+  RecurrenceType _recurrence = RecurrenceType.none;
+  List<int> _recurrenceDays = [];
+  String? _categoryId;
+  bool _isVoiceActive = false;
+
+  Task? _existingTask;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDate = widget.initialDate;
+
+    if (widget.taskId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final tasks = ref.read(tasksProvider);
+        final task = tasks.where((t) => t.id == widget.taskId).firstOrNull;
+        if (task != null) {
+          setState(() {
+            _existingTask = task;
+            _titleController.text = task.title;
+            _notesController.text = task.notes ?? '';
+            _selectedDate = task.scheduledDate;
+            _selectedTime = task.scheduledTime != null
+                ? TimeOfDay.fromDateTime(task.scheduledTime!)
+                : null;
+            _priority = task.priority;
+            _recurrence = task.recurrence;
+            _recurrenceDays = task.recurrenceDays ?? [];
+            _categoryId = task.categoryId;
+          });
+        }
+      });
+    }
+
+    if (widget.isVoiceMode) {
+      _startVoiceRecognition();
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _startVoiceRecognition() async {
+    final speechService = ref.read(speechProvider);
+    final available = await speechService.initialize();
+
+    if (!available) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Speech recognition not available')),
+        );
+      }
+      return;
+    }
+
+    setState(() => _isVoiceActive = true);
+
+    await speechService.startListening(onResult: (words) {
+      setState(() {
+        _titleController.text = words;
+      });
+    });
+  }
+
+  Future<void> _stopVoiceRecognition() async {
+    final speechService = ref.read(speechProvider);
+    await speechService.stopListening();
+    setState(() => _isVoiceActive = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = ref.watch(categoriesProvider);
+    final isEditing = widget.taskId != null;
+
+    return Container(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textTertiary,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  isEditing ? 'Editar tarea' : 'Nueva tarea',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                if (_isVoiceActive)
+                  IconButton(
+                    onPressed: _stopVoiceRecognition,
+                    icon: const Icon(Icons.mic, color: AppColors.error),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _titleController,
+                    autofocus: widget.isVoiceMode,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: AppColors.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: _isVoiceActive ? 'Escuchando...' : '¿Qué necesitas hacer?',
+                      prefixIcon: _isVoiceActive
+                          ? const Icon(Icons.mic, color: AppColors.primary)
+                          : null,
+                    ),
+                  ),
+                ),
+                if (!widget.isVoiceMode && !_isVoiceActive) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  IconButton(
+                    onPressed: _startVoiceRecognition,
+                    icon: const Icon(Icons.mic, color: AppColors.textSecondary),
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.surfaceLight,
+                      padding: const EdgeInsets.all(12),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            _buildDateTimeRow(),
+            const SizedBox(height: AppSpacing.md),
+            PrioritySelector(
+              selected: _priority,
+              onChanged: (p) => setState(() => _priority = p),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            CategorySelector(
+              categories: categories,
+              selectedId: _categoryId,
+              onChanged: (id) => setState(() => _categoryId = id),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            RecurrenceSelector(
+              selected: _recurrence,
+              selectedDays: _recurrenceDays,
+              onChanged: (r, days) => setState(() {
+                _recurrence = r;
+                _recurrenceDays = days ?? [];
+              }),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: _notesController,
+              maxLines: 3,
+              style: const TextStyle(color: AppColors.textPrimary),
+              decoration: const InputDecoration(
+                hintText: 'Notas (opcional)',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _saveTask,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
+                ),
+                child: Text(
+                  isEditing ? 'Guardar' : 'Crear tarea',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateTimeRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: GestureDetector(
+            onTap: _pickDate,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.calendar_today, size: 20, color: AppColors.textSecondary),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    _selectedDate.formattedDate,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: GestureDetector(
+            onTap: _pickTime,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.access_time, size: 20, color: AppColors.textSecondary),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    _selectedTime?.format(context) ?? 'Sin hora',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (_selectedTime != null) ...[
+          const SizedBox(width: AppSpacing.sm),
+          IconButton(
+            onPressed: () => setState(() => _selectedTime = null),
+            icon: const Icon(Icons.close, size: 20, color: AppColors.textTertiary),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _pickDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.primary,
+              surface: AppColors.surface,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (date != null) {
+      setState(() => _selectedDate = date);
+    }
+  }
+
+  Future<void> _pickTime() async {
+    final time = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime ?? TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.primary,
+              surface: AppColors.surface,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (time != null) {
+      setState(() => _selectedTime = time);
+    }
+  }
+
+  void _saveTask() {
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('El título es obligatorio')),
+      );
+      return;
+    }
+
+    DateTime? scheduledTime;
+    if (_selectedTime != null) {
+      scheduledTime = DateTime(
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+        _selectedTime!.hour,
+        _selectedTime!.minute,
+      );
+    }
+
+    if (_existingTask != null) {
+      final updated = _existingTask!.copyWith(
+        title: title,
+        notes: _notesController.text.isEmpty ? null : _notesController.text,
+        scheduledDate: _selectedDate,
+        scheduledTime: scheduledTime,
+        priority: _priority,
+        recurrence: _recurrence,
+        recurrenceDays: _recurrenceDays.isEmpty ? null : _recurrenceDays,
+        categoryId: _categoryId,
+      );
+      ref.read(tasksProvider.notifier).updateTask(updated);
+    } else {
+      ref.read(tasksProvider.notifier).addTask(
+            title: title,
+            notes: _notesController.text.isEmpty ? null : _notesController.text,
+            scheduledDate: _selectedDate,
+            scheduledTime: scheduledTime,
+            priorityIndex: _priority.index,
+            recurrenceIndex: _recurrence.index,
+            recurrenceDays: _recurrenceDays.isEmpty ? null : _recurrenceDays,
+            categoryId: _categoryId,
+          );
+    }
+
+    Navigator.pop(context);
+  }
+}

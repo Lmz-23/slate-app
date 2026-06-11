@@ -1,0 +1,50 @@
+name: slate_app
+description: "Slate - Task management app with streak gamification"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State Management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Navigation
+  go_router: ^14.8.1
+
+  # Local Storage
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # Utilities
+  uuid: ^4.5.1
+  intl: ^0.20.2
+  equatable: ^2.0.7
+
+  # Speech to Text
+  speech_to_text: ^7.0.0
+
+  # Notifications
+  flutter_local_notifications: ^18.0.1
+
+  # Home Widget
+  home_widget: ^0.7.0
+
+  # Timezone
+  timezone: ^0.10.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.15
+
+flutter:
+  uses-material-design: true
