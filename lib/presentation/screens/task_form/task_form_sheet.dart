@@ -9,6 +9,7 @@ import '../../../domain/enums/recurrence_type.dart';
 import '../../../application/providers/task_provider.dart';
 import '../../../application/providers/category_provider.dart';
 import '../../../application/providers/speech_provider.dart';
+import '../../../presentation/widgets/voice_input_button.dart';
 import 'widgets/priority_selector.dart';
 import 'widgets/category_selector.dart';
 import 'widgets/recurrence_selector.dart';
@@ -40,6 +41,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
   List<int> _recurrenceDays = [];
   String? _categoryId;
   bool _isVoiceActive = false;
+  String _partialText = '';
 
   Task? _existingTask;
 
@@ -89,7 +91,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
     if (!available) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Speech recognition not available')),
+          const SnackBar(content: Text('Reconocimiento de voz no disponible')),
         );
       }
       return;
@@ -97,22 +99,113 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
 
     setState(() => _isVoiceActive = true);
 
-    await speechService.startListening(onResult: (words) {
-      setState(() {
-        _titleController.text = words;
-      });
-    });
+    await speechService.startListening(
+      onResult: (words) {
+        setState(() {
+          _titleController.text = words;
+          _partialText = '';
+        });
+      },
+      onPartialResult: (words) {
+        setState(() {
+          _partialText = words;
+        });
+      },
+    );
   }
 
   Future<void> _stopVoiceRecognition() async {
     final speechService = ref.read(speechProvider);
     await speechService.stopListening();
     setState(() => _isVoiceActive = false);
+    _partialText = '';
+  }
+
+  void _showDeleteDialog() {
+    if (_existingTask == null) return;
+
+    final hasRecurrence = _existingTask!.parentTaskId != null ||
+        _existingTask!.recurrence != RecurrenceType.none;
+
+    if (hasRecurrence) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: const Text(
+            'Eliminar tarea',
+            style: TextStyle(color: AppColors.textPrimary),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.today, color: AppColors.primary),
+                title: const Text(
+                  'Solo este día',
+                  style: TextStyle(color: AppColors.textPrimary),
+                ),
+                subtitle: const Text(
+                  'Eliminar solo esta ocurrencia',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _deleteTask(this.context, deleteAll: false);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.event_repeat, color: AppColors.error),
+                title: const Text(
+                  'Todas las ocurrencias',
+                  style: TextStyle(color: AppColors.error),
+                ),
+                subtitle: const Text(
+                  'Eliminar tarea y todas sus repeticiones',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _deleteTask(this.context, deleteAll: true);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      _deleteTask(context, deleteAll: false);
+    }
+  }
+
+  void _deleteTask(BuildContext context, {required bool deleteAll}) {
+    if (_existingTask == null) return;
+
+    if (deleteAll && _existingTask!.parentTaskId == null) {
+      final tasks = ref.read(tasksProvider);
+      final tasksToDelete = tasks.where(
+        (t) => t.parentTaskId == _existingTask!.id || t.id == _existingTask!.id,
+      );
+      for (final task in tasksToDelete) {
+        ref.read(tasksProvider.notifier).deleteTask(task.id);
+      }
+    } else {
+      ref.read(tasksProvider.notifier).deleteTask(_existingTask!.id);
+    }
+
+    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(categoriesProvider);
+    final isListening = ref.watch(isListeningProvider);
     final isEditing = widget.taskId != null;
 
     return Container(
@@ -151,43 +244,112 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
                     color: AppColors.textPrimary,
                   ),
                 ),
-                if (_isVoiceActive)
-                  IconButton(
-                    onPressed: _stopVoiceRecognition,
-                    icon: const Icon(Icons.mic, color: AppColors.error),
-                  ),
+                Row(
+                  children: [
+                    if (isEditing)
+                      IconButton(
+                        onPressed: _showDeleteDialog,
+                        icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                      ),
+                    if (_isVoiceActive || isListening)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.hearing, size: 14, color: AppColors.error),
+                            SizedBox(width: 4),
+                            Text(
+                              'Escuchando',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.error,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
+            // Voice input with animated button
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _titleController,
-                    autofocus: widget.isVoiceMode,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      color: AppColors.textPrimary,
-                    ),
-                    decoration: InputDecoration(
-                      hintText: _isVoiceActive ? 'Escuchando...' : '¿Qué necesitas hacer?',
-                      prefixIcon: _isVoiceActive
-                          ? const Icon(Icons.mic, color: AppColors.primary)
-                          : null,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: _titleController,
+                        autofocus: widget.isVoiceMode || _isVoiceActive,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: AppColors.textPrimary,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: _isVoiceActive || isListening
+                              ? 'Habla ahora...'
+                              : '¿Qué necesitas hacer?',
+                          prefixIcon: _isVoiceActive || isListening
+                              ? const Icon(Icons.mic, color: AppColors.primary)
+                              : null,
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            _partialText = '';
+                          });
+                        },
+                      ),
+                      // Show partial recognized text in real-time
+                      if (_partialText.isNotEmpty && _partialText != _titleController.text)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.auto_awesome,
+                                  size: 14,
+                                  color: AppColors.primary,
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    _partialText,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.primary,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                if (!widget.isVoiceMode && !_isVoiceActive) ...[
-                  const SizedBox(width: AppSpacing.sm),
-                  IconButton(
-                    onPressed: _startVoiceRecognition,
-                    icon: const Icon(Icons.mic, color: AppColors.textSecondary),
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppColors.surfaceLight,
-                      padding: const EdgeInsets.all(12),
-                    ),
-                  ),
-                ],
+                const SizedBox(width: AppSpacing.md),
+                VoiceInputButton(
+                  isListening: _isVoiceActive || isListening,
+                  onStart: _startVoiceRecognition,
+                  onStop: _stopVoiceRecognition,
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.lg),

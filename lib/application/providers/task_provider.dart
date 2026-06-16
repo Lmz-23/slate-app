@@ -140,6 +140,23 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     refresh();
   }
 
+  Future<void> deleteTaskAndRecurring(String id) async {
+    final task = _repository.getById(id);
+    if (task == null) return;
+
+    // Delete the task itself
+    await _repository.delete(id);
+
+    // If this task has children (generated from recurrence), delete them too
+    final allTasks = _repository.getAll();
+    final childrenToDelete = allTasks.where((t) => t.parentTaskId == id);
+    for (final child in childrenToDelete) {
+      await _repository.delete(child.id);
+    }
+
+    refresh();
+  }
+
   Future<void> toggleComplete(String id) async {
     final task = _repository.getById(id);
     if (task != null) {

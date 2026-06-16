@@ -63,6 +63,20 @@ lib/
 - Android SDK 36
 - JDK 17+
 
+### Variables de Entorno
+
+Las features de IA (notificaciones y badges) requieren una API key de Gemini. Para compilar:
+
+```bash
+# Crear archivo .env.local con tu API key
+echo "GEMINI_API_KEY=tu_api_key_aqui" > .env.local
+
+# Compilar con la API key
+flutter build apk --dart-define=GEMINI_API_KEY=$GEMINI_API_KEY
+```
+
+Obtén tu API key en: https://aistudio.google.com/app/apikey
+
 ### Instalación
 
 ```bash
@@ -162,11 +176,11 @@ Las insignias **NO se pierden** si rompes la racha.
 ## 📦 Build
 
 ```bash
-# Debug APK
-flutter build apk --debug
+# Debug APK (requiere API key de Gemini)
+flutter build apk --debug --dart-define=GEMINI_API_KEY=$GEMINI_API_KEY
 
 # Release APK (firmado)
-flutter build apk --release
+flutter build apk --release --dart-define=GEMINI_API_KEY=$GEMINI_API_KEY
 
 # APK en: build/app/outputs/flutter-apk/
 ```

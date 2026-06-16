@@ -58,4 +58,101 @@ class SettingsNotifier extends StateNotifier<UserSettings> {
       state = updated;
     }
   }
+
+  Future<void> updateTimezone(String timezone) async {
+    final updated = state.copyWith(timezone: timezone);
+    await _repository.updateSettings(updated);
+    state = updated;
+  }
+
+  Future<void> updateAutoDetectTimezone(bool enabled) async {
+    final updated = state.copyWith(autoDetectTimezone: enabled);
+    await _repository.updateSettings(updated);
+    state = updated;
+  }
+
+  Future<void> updateLocationPermissionGranted(bool granted) async {
+    final updated = state.copyWith(locationPermissionGranted: granted);
+    await _repository.updateSettings(updated);
+    state = updated;
+  }
+
+  // AI Notification Settings
+  Future<void> updateUseAINotifications(bool useAI) async {
+    final updated = state.copyWith(useAINotifications: useAI);
+    await _repository.updateSettings(updated);
+    state = updated;
+  }
+
+  Future<void> updateNotificationSound(bool sound) async {
+    final updated = state.copyWith(notificationSound: sound);
+    await _repository.updateSettings(updated);
+    state = updated;
+  }
+
+  Future<void> updateNotificationVibration(bool vibration) async {
+    final updated = state.copyWith(notificationVibration: vibration);
+    await _repository.updateSettings(updated);
+    state = updated;
+  }
+
+  Future<void> updateNotificationBadge(bool badge) async {
+    final updated = state.copyWith(notificationBadge: badge);
+    await _repository.updateSettings(updated);
+    state = updated;
+  }
+
+  Future<void> updateNotificationContext({
+    List<String>? imagePaths,
+    String? textContext,
+  }) async {
+    final updated = state.copyWith(
+      notificationImagePaths: imagePaths,
+      notificationTextContext: textContext,
+    );
+    await _repository.updateSettings(updated);
+    state = updated;
+  }
+
+  Future<void> applyAINotificationSettings({
+    required bool sound,
+    required bool vibration,
+    required bool badge,
+  }) async {
+    final updated = state.copyWith(
+      notificationSound: sound,
+      notificationVibration: vibration,
+      notificationBadge: badge,
+    );
+    await _repository.updateSettings(updated);
+    state = updated;
+  }
+
+  // Badge Customization
+  Future<void> updateCustomBadgeConfig(CustomBadgeConfig config) async {
+    final existing = state.customBadgeConfigs
+        .where((c) => c.badgeType == config.badgeType)
+        .toList();
+
+    List<CustomBadgeConfig> newConfigs;
+    if (existing.isNotEmpty) {
+      newConfigs = state.customBadgeConfigs.map((c) {
+        return c.badgeType == config.badgeType ? config : c;
+      }).toList();
+    } else {
+      newConfigs = [...state.customBadgeConfigs, config];
+    }
+
+    final updated = state.copyWith(customBadgeConfigs: newConfigs);
+    await _repository.updateSettings(updated);
+    state = updated;
+  }
+
+  Future<void> addCustomBadge(CustomBadgeConfig config) async {
+    final updated = state.copyWith(
+      customBadgeConfigs: [...state.customBadgeConfigs, config],
+    );
+    await _repository.updateSettings(updated);
+    state = updated;
+  }
 }
