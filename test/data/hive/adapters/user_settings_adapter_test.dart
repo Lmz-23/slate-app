@@ -272,6 +272,9 @@ void main() {
         dailyReminderEnabled: false,
         dailyReminderHour1: 8,
         dailyReminderHour2: 21,
+        slateSystemTheme: true,
+        useAIThematicTexts: true,
+        enableDayClosure: true,
       );
 
       await box.put('settings', original);
@@ -285,6 +288,9 @@ void main() {
       expect(restored.dailyReminderEnabled, isFalse);
       expect(restored.dailyReminderHour1, 8);
       expect(restored.dailyReminderHour2, 21);
+      expect(restored.slateSystemTheme, isTrue);
+      expect(restored.useAIThematicTexts, isTrue);
+      expect(restored.enableDayClosure, isTrue);
     });
 
     test('roundtrip con valores por defecto no lanza errores', () async {
@@ -300,6 +306,9 @@ void main() {
       expect(restored.dailyReminderEnabled, isTrue);
       expect(restored.dailyReminderHour1, 10);
       expect(restored.dailyReminderHour2, 19);
+      expect(restored.slateSystemTheme, isFalse);
+      expect(restored.useAIThematicTexts, isFalse);
+      expect(restored.enableDayClosure, isFalse);
     });
 
     test(
@@ -329,6 +338,11 @@ void main() {
       expect(legacy.dailyReminderEnabled, isTrue);
       expect(legacy.dailyReminderHour1, 10);
       expect(legacy.dailyReminderHour2, 19);
+
+      // Slate System (decisión: default OFF, nunca alterar registros previos).
+      expect(legacy.slateSystemTheme, isFalse);
+      expect(legacy.useAIThematicTexts, isFalse);
+      expect(legacy.enableDayClosure, isFalse);
     });
   });
 }

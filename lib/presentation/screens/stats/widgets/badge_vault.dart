@@ -2,12 +2,23 @@ import 'package:flutter/material.dart' hide Badge;
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../domain/entities/badge.dart';
+import '../../../../domain/entities/user_settings.dart';
 import '../../../../domain/enums/badge_type.dart';
+import 'badge_presentation.dart';
 
 class BadgeVault extends StatelessWidget {
   final List<Badge> badges;
 
-  const BadgeVault({super.key, required this.badges});
+  /// Ajustes del usuario para la resolución de nombre/icono (config IA →
+  /// nomenclatura Slate System → canónico). Por defecto tema OFF: los nombres
+  /// canónicos actuales.
+  final UserSettings settings;
+
+  const BadgeVault({
+    super.key,
+    required this.badges,
+    this.settings = const UserSettings(),
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +62,14 @@ class BadgeVault extends StatelessWidget {
   }
 
   Widget _buildBadgeItem(BadgeType type, bool isUnlocked, Badge? badge) {
-    final iconData = _getIconData(type.iconName);
+    // Resolución centralizada: config IA → nomenclatura SL → canónico.
+    final displayName = BadgePresentation.resolveName(type: type, settings: settings);
+    final flavor = BadgePresentation.resolveFlavor(type: type, settings: settings);
+    final iconData = BadgePresentation.resolveIconData(type: type, settings: settings);
+
+    final subtitle = flavor != null
+        ? '$flavor · ${type.requiredDays} días'
+        : '${type.requiredDays} días';
 
     return Container(
       decoration: BoxDecoration(
@@ -72,7 +90,7 @@ class BadgeVault extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            isUnlocked ? type.name : '???',
+            isUnlocked ? displayName : '???',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 11,
@@ -82,7 +100,8 @@ class BadgeVault extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            '${type.requiredDays} días',
+            subtitle,
+            textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 10,
               color: AppColors.textTertiary,
@@ -91,30 +110,5 @@ class BadgeVault extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  IconData _getIconData(String iconName) {
-    switch (iconName) {
-      case 'star':
-        return Icons.star;
-      case 'fire':
-        return Icons.local_fire_department;
-      case 'lightning':
-        return Icons.bolt;
-      case 'flower':
-        return Icons.local_florist;
-      case 'shield':
-        return Icons.shield;
-      case 'trophy':
-        return Icons.emoji_events;
-      case 'crown':
-        return Icons.workspace_premium;
-      case 'diamond':
-        return Icons.diamond;
-      case 'rocket':
-        return Icons.rocket_launch;
-      default:
-        return Icons.star;
-    }
   }
 }

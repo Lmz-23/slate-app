@@ -13,10 +13,12 @@ import 'data/hive/boxes/categories_box.dart';
 import 'data/hive/boxes/badges_box.dart';
 import 'data/hive/boxes/streaks_box.dart';
 import 'data/hive/boxes/settings_box.dart';
+import 'data/hive/boxes/thematic_text_cache_box.dart';
 import 'application/providers/task_provider.dart';
 import 'application/providers/category_provider.dart';
 import 'application/providers/streak_provider.dart';
 import 'application/providers/settings_provider.dart';
+import 'application/providers/notification_providers.dart';
 import 'application/services/notification_service.dart';
 
 void main() async {
@@ -48,6 +50,11 @@ void main() async {
 
   final settingsBox = SettingsBox();
   await settingsBox.init();
+
+  // Caché local de variantes temáticas (Slate System) generadas con IA. Se
+  // abre antes de runApp para que el resolver pueda leerla al programar.
+  final thematicTextCache = ThematicTextCache();
+  await thematicTextCache.init();
 
   // ─────────────────────────────────────────────────────────────────────────
   // Sistema de notificaciones (P1/P2/P3/P5)
@@ -81,6 +88,7 @@ void main() async {
         badgesBoxProvider.overrideWithValue(badgesBox),
         streaksBoxProvider.overrideWithValue(streaksBox),
         settingsBoxProvider.overrideWithValue(settingsBox),
+        thematicTextCacheProvider.overrideWithValue(thematicTextCache),
       ],
       child: const SlateApp(),
     ),

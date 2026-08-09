@@ -184,6 +184,16 @@ class SettingsScreen extends ConsumerWidget {
                           ref.read(settingsProvider.notifier).updateDailyReminderHour2(hour),
                     ),
                   ),
+                  const Divider(height: 1, color: AppColors.surfaceLight),
+                  _buildSwitchTile(
+                    icon: Icons.nightlight_round,
+                    title: 'Cierre de jornada',
+                    subtitle: 'Resumen de tu día al día siguiente (${settings.dayResetHour}:00)',
+                    value: settings.enableDayClosure,
+                    onChanged: (value) {
+                      ref.read(settingsProvider.notifier).updateEnableDayClosure(value);
+                    },
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -195,6 +205,26 @@ class SettingsScreen extends ConsumerWidget {
                     title: 'Tema',
                     subtitle: settings.themeMode.displayName,
                     onTap: () => _showThemePicker(context, ref, settings.themeMode),
+                  ),
+                  const Divider(height: 1, color: AppColors.surfaceLight),
+                  _buildSwitchTile(
+                    icon: Icons.auto_awesome_outlined,
+                    title: 'Slate System',
+                    subtitle: 'Textos temáticos y rangos de nivel en notificaciones e insignias',
+                    value: settings.slateSystemTheme,
+                    onChanged: (value) {
+                      ref.read(settingsProvider.notifier).updateSlateSystemTheme(value);
+                    },
+                  ),
+                  const Divider(height: 1, color: AppColors.surfaceLight),
+                  _buildSwitchTile(
+                    icon: Icons.smart_toy_outlined,
+                    title: 'Textos con IA',
+                    subtitle: 'Los textos se generan con IA, se guardan en el dispositivo y pueden omitirse si estás sin conexión',
+                    value: settings.useAIThematicTexts,
+                    onChanged: (value) {
+                      ref.read(settingsProvider.notifier).updateUseAIThematicTexts(value);
+                    },
                   ),
                 ],
               ),

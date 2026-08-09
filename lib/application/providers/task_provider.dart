@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -102,6 +104,12 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     for (final occurrence in generated) {
       await _syncReminderForTask(occurrence);
     }
+
+    // Slate System: al GUARDAR la tarea (no al disparar) se genera en segundo
+    // plano la variante temática con IA si el usuario activó "Textos con IA".
+    // Solo para la tarea raíz: las ocurrencias comparten título y no merecen
+    // llamadas repetidas a la API.
+    unawaited(_maybeGenerateThematicVariant(task));
   }
 
   Future<void> _generateRecurringTasks(Task task) async {
@@ -154,6 +162,9 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     // fecha/hora cambió, el zonedSchedule nuevo reemplaza al anterior; si
     // perdió el horario o se completó, syncTaskReminder lo cancela.
     await _syncReminderForTask(task);
+    // Slate System: al guardar una edición se regenera la variante IA si el
+    // título cambió (la clave de caché incluye el título normalizado).
+    unawaited(_maybeGenerateThematicVariant(task));
   }
 
   Future<void> deleteTask(String id) async {
@@ -242,6 +253,20 @@ class TasksNotifier extends StateNotifier<List<Task>> {
       await manager.cancelTaskReminder(taskId);
     } catch (e) {
       debugPrint('TasksNotifier: error cancelando recordatorio: $e');
+    }
+  }
+
+  /// Slate System: genera (si corresponde) la variante temática con IA del
+  /// recordatorio de [task]. No-op si el tema o el toggle "Textos con IA"
+  /// están desactivados o no hay API key (el generador lo comprueba interno).
+  Future<void> _maybeGenerateThematicVariant(Task task) async {
+    final settings = _ref.read(settingsProvider);
+    if (!settings.useAIThematicTexts || !settings.slateSystemTheme) return;
+    try {
+      final generator = _ref.read(thematicTextsGeneratorProvider);
+      await generator.ensureTaskVariant(task);
+    } catch (e) {
+      debugPrint('TasksNotifier: error generando texto temático: $e');
     }
   }
 }

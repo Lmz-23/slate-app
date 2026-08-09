@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/entities/task.dart';
 import '../../domain/entities/user_settings.dart';
+import '../../domain/enums/badge_type.dart';
 import '../providers/now_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/streak_provider.dart';
 import '../providers/task_provider.dart';
 import 'notification_service.dart';
 import 'reminder_manager.dart';
@@ -56,12 +59,17 @@ class DailyReminderController {
   /// Incluye los toggles de sonido/vibración/badge (Mejora 2): al cambiarlos
   /// se vuelve a agendar TODO para que los nuevos detalles del canal queden
   /// aplicados también a las programaciones pendientes.
+  ///
+  /// Incluye el tema Slate System y sus textos con IA: al cambiarlos se
+  /// re-agenda para que los títulos/cuerpos temáticos (o canónicos) queden
+  /// aplicados en las programaciones pendientes. Incluye el cierre de jornada.
   String _notificationSignature(UserSettings s) =>
       '${s.notificationsEnabled}|${s.notificationLeadTimeMinutes}|'
       '${s.dailyReminderEnabled}|${s.dailyReminderHour1}|'
       '${s.dailyReminderHour2}|${s.timezone}|'
       '${s.notificationSound}|${s.notificationVibration}|'
-      '${s.notificationBadge}';
+      '${s.notificationBadge}|${s.enableDayClosure}|'
+      '${s.slateSystemTheme}|${s.useAIThematicTexts}';
 
   DateTime _now() {
     final settings = _ref.read(settingsProvider);
@@ -121,12 +129,45 @@ class DailyReminderController {
         allTasks: tasks,
         settings: settings,
       );
+      await _syncDayClosureIfEnabled(now, tasks, settings);
     } catch (e) {
       debugPrint('DailyReminderController: error programando recordatorios: $e');
     }
 
     _lastScheduledDay = now;
     _lastNotificationSignature = _notificationSignature(settings);
+  }
+
+  /// Re-decide el cierre de jornada solo si el toggle está activo (evita leer
+  /// el estado de racha en el caso común desactivado). Si está desactivado,
+  /// [ReminderManager.syncDayClosure] cancela el id sin depender de la racha.
+  Future<void> _syncDayClosureIfEnabled(
+    DateTime now,
+    List<Task> tasks,
+    UserSettings settings,
+  ) async {
+    if (!settings.enableDayClosure) {
+      await _manager.syncDayClosure(
+        now: now,
+        allTasks: tasks,
+        settings: settings,
+      );
+      return;
+    }
+    final streak = _ref.read(streakProvider);
+    await _manager.syncDayClosure(
+      now: now,
+      allTasks: tasks,
+      settings: settings,
+      currentStreak: streak.currentStreak,
+      milestone: _currentMilestone(streak.currentStreak),
+    );
+  }
+
+  /// Hito de rango más alto alcanzado a la racha actual (null si racha 0).
+  static BadgeType? _currentMilestone(int streakDays) {
+    final all = BadgeType.badgesUpTo(streakDays);
+    return all.isEmpty ? null : all.last;
   }
 
   /// Solo re-decide los resúmenes diarios (10:00/19:00). Barato y se llama en
@@ -145,6 +186,7 @@ class DailyReminderController {
         allTasks: tasks,
         settings: settings,
       );
+      await _syncDayClosureIfEnabled(now, tasks, settings);
     } catch (e) {
       debugPrint('DailyReminderController: error en resumen diario: $e');
     }

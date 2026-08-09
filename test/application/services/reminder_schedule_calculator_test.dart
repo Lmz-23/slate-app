@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:slate_app/application/services/reminder_schedule_calculator.dart';
 import 'package:slate_app/domain/entities/task.dart';
+import 'package:slate_app/domain/enums/badge_type.dart';
 
 Task _task(
   String id,
@@ -295,6 +296,83 @@ void main() {
         ReminderScheduleCalculator.eveningReminderBody(2),
         'Hoy no has completado ninguna tarea. Te quedan 2 pendientes.',
       );
+    });
+  });
+
+  group('cierre de jornada (decisión C)', () {
+    test('nextDayReset: antes del reset -> HOY; en/después -> MAÑANA', () {
+      expect(
+        ReminderScheduleCalculator.nextDayReset(DateTime(2026, 1, 15, 3, 0), 4),
+        DateTime(2026, 1, 15, 4, 0),
+      );
+      expect(
+        ReminderScheduleCalculator.nextDayReset(DateTime(2026, 1, 15, 4, 0), 4),
+        DateTime(2026, 1, 16, 4, 0),
+        reason: 'en el instante exacto del reset ya no se programa al pasado',
+      );
+      expect(
+        ReminderScheduleCalculator.nextDayReset(DateTime(2026, 1, 15, 10, 0), 4),
+        DateTime(2026, 1, 16, 4, 0),
+      );
+    });
+
+    test('jornadaEndingAtNextReset: ayer si aún no pasó el reset; hoy si pasó',
+        () {
+      expect(
+        ReminderScheduleCalculator.jornadaEndingAtNextReset(
+            DateTime(2026, 1, 15, 3, 0), 4),
+        DateTime(2026, 1, 14),
+      );
+      expect(
+        ReminderScheduleCalculator.jornadaEndingAtNextReset(
+            DateTime(2026, 1, 15, 10, 0), 4),
+        DateTime(2026, 1, 15),
+      );
+    });
+
+    test('hasTasksOn / scheduledCountOn / completedCountOn del día', () {
+      final day = DateTime(2026, 1, 15);
+      final tasks = [
+        _task('a', day, isCompleted: true),
+        _task('b', day),
+        _task('c', day, isCompleted: true),
+        _task('d', DateTime(2026, 1, 16)),
+      ];
+      expect(ReminderScheduleCalculator.hasTasksOn(tasks, day), isTrue);
+      expect(ReminderScheduleCalculator.scheduledCountOn(tasks, day), 3);
+      expect(ReminderScheduleCalculator.completedCountOn(tasks, day), 2);
+      expect(
+        ReminderScheduleCalculator.hasTasksOn(
+            [_task('d', DateTime(2026, 1, 16))], day),
+        isFalse,
+      );
+    });
+
+    test('cuerpo canónico del cierre: completadas/total + pendientes', () {
+      final stats = DayClosureStats(
+        jornada: DateTime(2026, 1, 14),
+        total: 5,
+        completed: 3,
+        currentStreak: 7,
+      );
+      final body = ReminderScheduleCalculator.dayClosureBody(stats);
+      expect(body, contains('3/5'));
+      expect(body, contains('2 pendientes'));
+      expect(body, contains('Racha actual: 7 días'));
+    });
+
+    test('cuerpo canónico incluye el hito desbloqueado si existe', () {
+      final day = DateTime(2026, 1, 14);
+      final body = ReminderScheduleCalculator.dayClosureBody(
+        DayClosureStats(
+          jornada: day,
+          total: 1,
+          completed: 1,
+          currentStreak: 3,
+          milestone: BadgeType.streak3,
+        ),
+      );
+      expect(body, contains('Hito desbloqueado: Primer Paso'));
     });
   });
 }

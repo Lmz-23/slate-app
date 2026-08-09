@@ -4,8 +4,10 @@ import 'package:slate_app/application/services/notification_ids.dart';
 import 'package:slate_app/application/services/reminder_manager.dart';
 import 'package:slate_app/application/services/reminder_schedule_calculator.dart';
 import 'package:slate_app/application/services/reminder_scheduler.dart';
+import 'package:slate_app/application/services/thematic_texts_resolver.dart';
 import 'package:slate_app/domain/entities/task.dart';
 import 'package:slate_app/domain/entities/user_settings.dart';
+import 'package:slate_app/domain/enums/badge_type.dart';
 
 /// Fake del Contrato de bajo nivel: registra programaciones y cancelaciones sin
 /// depender del plugin nativo.
@@ -73,6 +75,12 @@ void main() {
     scheduler = FakeScheduler();
     manager = ReminderManager(scheduler: scheduler);
   });
+
+  // Jornada de ejemplo con tareas completadas y pendientes (decisión C).
+  final tareasHoy = [
+    _task('a', DateTime(2026, 1, 15)),
+    _task('b', DateTime(2026, 1, 15), isCompleted: true),
+  ];
 
   group('syncTaskReminder (P2)', () {
     test('programa solo si hay horario y notificaciones activas', () async {
@@ -288,6 +296,122 @@ void main() {
       await manager.cancelDailyReminders();
       expect(scheduler.cancelled,
           containsAll([morningDailyReminderId, eveningDailyReminderId]));
+    });
+  });
+
+  group('syncDayClosure (decisión C: cierre de jornada)', () {
+    test('después del reset: programa MAÑANA a las 04:00 reportando hoy',
+        () async {
+      final now = DateTime(2026, 1, 15, 10, 0);
+      const settings = UserSettings(enableDayClosure: true);
+      await manager.syncDayClosure(
+          now: now, allTasks: tareasHoy, settings: settings);
+
+      final entry = scheduler.scheduled[dayClosureReminderId];
+      expect(entry, isNotNull);
+      expect(entry!.fireTime, DateTime(2026, 1, 16, 4, 0));
+      expect(entry.body, contains('1/2'));
+    });
+
+    test('antes del reset: programa HOY a las 04:00 reportando ayer', () async {
+      final now = DateTime(2026, 1, 15, 3, 0);
+      const settings = UserSettings(enableDayClosure: true);
+      final tareasAyer =
+          tareasHoy.map((t) => _task(t.id, DateTime(2026, 1, 14))).toList();
+      await manager.syncDayClosure(
+          now: now, allTasks: tareasAyer, settings: settings);
+
+      final entry = scheduler.scheduled[dayClosureReminderId];
+      expect(entry, isNotNull);
+      expect(entry!.fireTime, DateTime(2026, 1, 15, 4, 0));
+    });
+
+    test('toggle off: cancela aunque haya tareas', () async {
+      final now = DateTime(2026, 1, 15, 10, 0);
+      await manager.syncDayClosure(
+          now: now, allTasks: tareasHoy, settings: const UserSettings());
+
+      expect(scheduler.scheduled.containsKey(dayClosureReminderId), isFalse);
+      expect(scheduler.cancelled, contains(dayClosureReminderId));
+    });
+
+    test('sin tareas en la jornada y racha 0: cancela', () async {
+      final now = DateTime(2026, 1, 15, 10, 0);
+      const settings = UserSettings(enableDayClosure: true);
+      await manager.syncDayClosure(
+          now: now,
+          allTasks: [_task('d', DateTime(2026, 1, 16))],
+          settings: settings,
+          currentStreak: 0);
+
+      expect(scheduler.scheduled.containsKey(dayClosureReminderId), isFalse);
+      expect(scheduler.cancelled, contains(dayClosureReminderId));
+    });
+
+    test('sin tareas pero racha > 0: programa igual (decisión C)', () async {
+      final now = DateTime(2026, 1, 15, 10, 0);
+      const settings = UserSettings(enableDayClosure: true);
+      await manager.syncDayClosure(
+          now: now,
+          allTasks: [_task('d', DateTime(2026, 1, 16))],
+          settings: settings,
+          currentStreak: 30,
+          milestone: BadgeType.streak30);
+
+      final entry = scheduler.scheduled[dayClosureReminderId];
+      expect(entry, isNotNull);
+      expect(entry!.body, contains('Racha actual: 30 días'));
+      expect(entry.body, contains('Hito desbloqueado: Mes de Hierro'));
+    });
+  });
+
+  group('textos temáticos Slate System', () {
+    test('resolver ON: el recordatorio usa los textos del catálogo', () async {
+      final themedManager = ReminderManager(
+        scheduler: scheduler,
+        resolver: const ThematicTextsResolver(),
+      );
+      final task = _task('t', DateTime(2026, 1, 15), scheduledTime: _atTwo);
+      await themedManager.syncTaskReminder(
+          task, const UserSettings(slateSystemTheme: true));
+
+      final entry = scheduler.scheduled[reminderIdForTask('t')]!;
+      expect(entry.title, contains('Daily Quest'));
+      expect(entry.body, contains('▶'));
+      expect(entry.body, contains('14:00'));
+    });
+
+    test('resolver ON: el cierre de jornada usa texto temático', () async {
+      final manager = ReminderManager(
+        scheduler: scheduler,
+        resolver: const ThematicTextsResolver(),
+      );
+      const settings = UserSettings(
+        enableDayClosure: true,
+        slateSystemTheme: true,
+      );
+      await manager.syncDayClosure(
+        now: DateTime(2026, 1, 15, 10, 0),
+        allTasks: tareasHoy,
+        settings: settings,
+        currentStreak: 3,
+        milestone: BadgeType.streak3,
+      );
+
+      final entry = scheduler.scheduled[dayClosureReminderId]!;
+      expect(entry.title, contains('System Report'));
+      expect(entry.body, contains('Jornada cerrada'));
+    });
+
+    test('resolver sin tema (OFF): conserva el texto canónico exacto', () async {
+      final task = _task('t', DateTime(2026, 1, 15), scheduledTime: _atTwo);
+      await manager.syncTaskReminder(task, _settings());
+
+      expect(scheduler.scheduled[reminderIdForTask('t')]!.title, 'Recordatorio');
+      expect(
+        scheduler.scheduled[reminderIdForTask('t')]!.body,
+        ReminderScheduleCalculator.taskReminderBody(task),
+      );
     });
   });
 }

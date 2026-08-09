@@ -1,8 +1,10 @@
 import '../../domain/entities/task.dart';
 import '../../domain/entities/user_settings.dart';
+import '../../domain/enums/badge_type.dart';
 import 'notification_ids.dart';
 import 'reminder_schedule_calculator.dart';
 import 'reminder_scheduler.dart';
+import 'thematic_texts_resolver.dart';
 
 /// Orquesta la relación entre las tareas/ajustes y las notificaciones.
 ///
@@ -14,11 +16,22 @@ import 'reminder_scheduler.dart';
 ///   id de la tarea), por lo que la nueva programación reemplaza a la anterior
 ///   sin necesidad de cancelación previa.
 /// - Resumen diario (10:00 y 19:00) según las decisiones P3/P5.
+/// - Cierre de jornada (`0x60000003`) según la decisión C: reporta el día al
+///   siguiente reset.
+///
+/// Si se inyecta un [resolver] de textos temáticos (Slate System), los títulos
+/// y cuerpos se toman de él cuando el tema está ON; si el tema está OFF (o no
+/// hay resolver) se usan exactamente los textos canónicos actuales, de modo
+/// que ningún test ni comportamiento existente cambia.
 class ReminderManager {
-  const ReminderManager({required ReminderScheduler scheduler})
-      : _scheduler = scheduler;
+  const ReminderManager({
+    required ReminderScheduler scheduler,
+    ThematicTextsResolver? resolver,
+  })  : _scheduler = scheduler,
+        _resolver = resolver;
 
   final ReminderScheduler _scheduler;
+  final ThematicTextsResolver? _resolver;
 
   /// Sincroniza el recordatorio de UNA tarea con su estado y los ajustes.
   ///
@@ -36,10 +49,11 @@ class ReminderManager {
       task,
       settings.notificationLeadTimeMinutes,
     );
+    final themed = _resolver?.resolveTaskReminder(task, settings);
     await _scheduler.schedule(
       id: reminderIdForTask(task.id),
-      title: 'Recordatorio',
-      body: ReminderScheduleCalculator.taskReminderBody(task),
+      title: themed?.title ?? 'Recordatorio',
+      body: themed?.body ?? ReminderScheduleCalculator.taskReminderBody(task),
       fireTime: fireTime,
     );
   }
@@ -95,12 +109,17 @@ class ReminderManager {
         morningTime.isAfter(now);
 
     if (fireMorning) {
+      final themed = _resolver?.resolveMorningSummary(
+        ReminderScheduleCalculator.pendingCountOn(allTasks, today),
+        settings,
+      );
       await _scheduler.schedule(
         id: morningDailyReminderId,
-        title: 'Tareas pendientes hoy',
-        body: ReminderScheduleCalculator.morningReminderBody(
-          ReminderScheduleCalculator.pendingCountOn(allTasks, today),
-        ),
+        title: themed?.title ?? 'Tareas pendientes hoy',
+        body: themed?.body ??
+            ReminderScheduleCalculator.morningReminderBody(
+              ReminderScheduleCalculator.pendingCountOn(allTasks, today),
+            ),
         fireTime: morningTime,
       );
     } else {
@@ -123,12 +142,17 @@ class ReminderManager {
         eveningTime.isAfter(now);
 
     if (fireEvening) {
+      final themed = _resolver?.resolveEveningSummary(
+        ReminderScheduleCalculator.pendingCountOn(allTasks, today),
+        settings,
+      );
       await _scheduler.schedule(
         id: eveningDailyReminderId,
-        title: 'Resumen de hoy',
-        body: ReminderScheduleCalculator.eveningReminderBody(
-          ReminderScheduleCalculator.pendingCountOn(allTasks, today),
-        ),
+        title: themed?.title ?? 'Resumen de hoy',
+        body: themed?.body ??
+            ReminderScheduleCalculator.eveningReminderBody(
+              ReminderScheduleCalculator.pendingCountOn(allTasks, today),
+            ),
         fireTime: eveningTime,
       );
     } else {
@@ -141,4 +165,66 @@ class ReminderManager {
     await _scheduler.cancel(morningDailyReminderId);
     await _scheduler.cancel(eveningDailyReminderId);
   }
+
+  /// Decide y programa/cancela el cierre de jornada (`0x60000003`).
+  ///
+  /// Reglas (decisión C):
+  /// - La notificación de la jornada X se programa para disparar a
+  ///   `dayResetHour` del día X+1 y reporta el resultado del día X
+  ///   (completadas/total, pendientes, racha actual y hito alcanzado).
+  /// - Se programa SOLO si: notificaciones activas, cierre activo, y hubo
+  ///   tareas programadas en la jornada reportada (o racha > 0).
+  /// - Se CANCELA si: toggles desactivados, sin tareas en la jornada (y racha
+  ///   0), o la hora de disparo ya pasó (defensa: nunca programar al pasado).
+  ///
+  /// [currentStreak] y [milestone] los aporta el controlador (leyendo el
+  /// estado de racha); el hito es el nivel de rango alcanzado a la racha
+  /// actual, que se incluye en el reporte como "hito desbloqueado si hubo".
+  Future<void> syncDayClosure({
+    required DateTime now,
+    required List<Task> allTasks,
+    required UserSettings settings,
+    int currentStreak = 0,
+    BadgeType? milestone,
+  }) async {
+    final enabled = settings.notificationsEnabled && settings.enableDayClosure;
+    final fireTime = ReminderScheduleCalculator.nextDayReset(
+      now,
+      settings.dayResetHour,
+    );
+
+    // Toggle off o el disparo ya pasó (defensa): cancelar.
+    if (!enabled || !fireTime.isAfter(now)) {
+      await _scheduler.cancel(dayClosureReminderId);
+      return;
+    }
+
+    final jornada = ReminderScheduleCalculator.jornadaEndingAtNextReset(
+      now,
+      settings.dayResetHour,
+    );
+    final hadTasks = ReminderScheduleCalculator.hasTasksOn(allTasks, jornada);
+    if (!hadTasks && currentStreak <= 0) {
+      await _scheduler.cancel(dayClosureReminderId);
+      return;
+    }
+
+    final stats = DayClosureStats(
+      jornada: jornada,
+      total: ReminderScheduleCalculator.scheduledCountOn(allTasks, jornada),
+      completed: ReminderScheduleCalculator.completedCountOn(allTasks, jornada),
+      currentStreak: currentStreak,
+      milestone: milestone,
+    );
+    final themed = _resolver?.resolveDayClosure(stats, settings);
+    await _scheduler.schedule(
+      id: dayClosureReminderId,
+      title: themed?.title ?? 'Cierre de jornada',
+      body: themed?.body ?? ReminderScheduleCalculator.dayClosureBody(stats),
+      fireTime: fireTime,
+    );
+  }
+
+  /// Cancela directamente el cierre de jornada.
+  Future<void> cancelDayClosure() => _scheduler.cancel(dayClosureReminderId);
 }

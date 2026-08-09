@@ -12,6 +12,7 @@ import 'package:slate_app/data/hive/boxes/streaks_box.dart';
 import 'package:slate_app/data/hive/boxes/badges_box.dart';
 import 'package:slate_app/domain/entities/badge.dart';
 import 'package:slate_app/domain/entities/task.dart';
+import 'package:slate_app/domain/entities/user_settings.dart';
 import 'package:slate_app/domain/enums/badge_type.dart';
 import 'package:slate_app/presentation/screens/stats/widgets/badge_vault.dart';
 
@@ -102,6 +103,60 @@ void main() {
       expect(find.text('Semana Perfecta'), findsOneWidget);
       expect(find.text('Quincena'), findsOneWidget);
       expect(find.text('???'), findsNWidgets(BadgeType.values.length - 3));
+    });
+  });
+
+  group('BadgeVault - tema Slate System', () {
+    testWidgets('con tema ON muestra rangos/niveles y apodos', (tester) async {
+      await _pumpInScrollView(
+        tester,
+        BadgeVault(
+          badges: [_badge(BadgeType.streak14)],
+          settings: const UserSettings(slateSystemTheme: true),
+        ),
+      );
+
+      expect(find.text('Rango D · Nivel I'), findsOneWidget);
+      expect(find.text('Aprendiz · 14 días'), findsOneWidget);
+      expect(find.text('Quincena'), findsNothing,
+          reason: 'el nombre canónico queda en fallback');
+    });
+
+    testWidgets('la config personalizada IA gana sobre el rango SL',
+        (tester) async {
+      await _pumpInScrollView(
+        tester,
+        BadgeVault(
+          badges: [_badge(BadgeType.streak7)],
+          settings: const UserSettings(
+            slateSystemTheme: true,
+            customBadgeConfigs: [
+              CustomBadgeConfig(
+                badgeType: 'streak7',
+                customName: 'Siete Hebras',
+                iconName: 'sword',
+                daysRequired: 7,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(find.text('Siete Hebras'), findsOneWidget);
+      expect(find.text('Rango E · Nivel II'), findsNothing);
+    });
+
+    testWidgets('con tema OFF (default) el nombre canónico sigue mostrándose',
+        (tester) async {
+      await _pumpInScrollView(
+        tester,
+        BadgeVault(
+          badges: [_badge(BadgeType.streak30)],
+          settings: const UserSettings(),
+        ),
+      );
+      expect(find.text('Mes de Hierro'), findsOneWidget);
+      expect(find.text('30 días'), findsOneWidget);
     });
   });
 

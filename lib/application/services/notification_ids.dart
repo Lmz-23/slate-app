@@ -8,8 +8,8 @@
 /// Se usan rangos separados para eliminar colisiones:
 ///   - Recordatorios de tarea: `[0x10000000, 0x4FFFFFFF]` (30 bits derivados
 ///     del id de la tarea).
-///   - Recordatorios diarios: `0x60000001` (resumen de la mañana) y
-///     `0x60000002` (resumen de la tarde).
+///   - Recordatorios diarios: `0x60000001` (resumen de la mañana),
+///     `0x60000002` (resumen de la tarde) y `0x60000003` (cierre de jornada).
 library;
 
 /// FNV-1a de 32 bits. Determinista, rápido y estable entre ejecuciones de la
@@ -37,3 +37,10 @@ const int morningDailyReminderId = 0x60000001;
 
 /// Id del recordatorio diario de resumen de la tarde (19:00 por defecto).
 const int eveningDailyReminderId = 0x60000002;
+
+/// Id del recordatorio diario de cierre de jornada (quest complete diaria).
+///
+/// Se programa al cruzar de día usando `dayResetHour` (default 04:00): dispara
+/// a la hora de reset del día siguiente y reporta el resultado del día que
+/// acaba de cerrar.
+const int dayClosureReminderId = 0x60000003;

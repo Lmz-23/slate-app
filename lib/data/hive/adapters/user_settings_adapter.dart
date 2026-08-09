@@ -49,13 +49,18 @@ class UserSettingsAdapter extends TypeAdapter<UserSettings> {
       dailyReminderEnabled: fields[17] as bool? ?? true,
       dailyReminderHour1: fields[18] as int? ?? 10,
       dailyReminderHour2: fields[19] as int? ?? 19,
+      // Slate System (personalización temática): default OFF para no alterar el
+      // comportamiento de ningún registro existente.
+      slateSystemTheme: fields[20] as bool? ?? false,
+      useAIThematicTexts: fields[21] as bool? ?? false,
+      enableDayClosure: fields[22] as bool? ?? false,
     );
   }
 
   @override
   void write(BinaryWriter writer, UserSettings obj) {
     writer
-      ..writeByte(20)
+      ..writeByte(23)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -102,6 +107,12 @@ class UserSettingsAdapter extends TypeAdapter<UserSettings> {
       ..writeByte(18)
       ..write(obj.dailyReminderHour1)
       ..writeByte(19)
-      ..write(obj.dailyReminderHour2);
+      ..write(obj.dailyReminderHour2)
+      ..writeByte(20)
+      ..write(obj.slateSystemTheme)
+      ..writeByte(21)
+      ..write(obj.useAIThematicTexts)
+      ..writeByte(22)
+      ..write(obj.enableDayClosure);
   }
 }

@@ -96,6 +96,25 @@ class SettingsNotifier extends StateNotifier<UserSettings> {
     state = updated;
   }
 
+  // Slate System (personalización temática)
+  Future<void> updateSlateSystemTheme(bool enabled) async {
+    final updated = state.copyWith(slateSystemTheme: enabled);
+    await _repository.updateSettings(updated);
+    state = updated;
+  }
+
+  Future<void> updateUseAIThematicTexts(bool enabled) async {
+    final updated = state.copyWith(useAIThematicTexts: enabled);
+    await _repository.updateSettings(updated);
+    state = updated;
+  }
+
+  Future<void> updateEnableDayClosure(bool enabled) async {
+    final updated = state.copyWith(enableDayClosure: enabled);
+    await _repository.updateSettings(updated);
+    state = updated;
+  }
+
   Future<void> updateLocationPermissionGranted(bool granted) async {
     final updated = state.copyWith(locationPermissionGranted: granted);
     await _repository.updateSettings(updated);

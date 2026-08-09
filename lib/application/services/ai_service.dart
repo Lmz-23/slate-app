@@ -11,6 +11,14 @@ class AIService {
   );
   static const String _baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
+  /// ¿Existe API key de Gemini compilada (--dart-define)?
+  static bool get hasApiKey => _apiKey.isNotEmpty;
+
+  /// Lo mismo que [hasApiKey] pero como getter de instancia, para poder
+  /// sobrescribirlo en los tests (un fake puede "tener" API key sin compilar
+  /// el --dart-define).
+  bool get canUseAI => _apiKey.isNotEmpty;
+
   /// Analyze context (images + text) and return notification settings
   Future<NotificationAIResult> analyzeNotificationSettings({
     List<String>? imagePaths,
@@ -192,6 +200,75 @@ Contexto del usuario: ${textDescription ?? "Sin descripción"}
       'custom365': 'Dios del Hábito',
     };
   }
+
+  /// Genera la variante TEMÁTICA (Slate System) de una notificación.
+  ///
+  /// Se invoca cuando el usuario guarda una tarea o se genera contenido con el
+  /// toggle "Textos con IA" activo (NUNCA en el disparo de la notificación).
+  ///
+  /// La respuesta se VALIDA (estructura `title`/`body`, longitud y no vacía).
+  /// Cualquier error, timeout, JSON inválido o ausencia de API key devuelve
+  /// `null` para que el llamador use el catálogo local (fallback, nunca
+  /// bloquear).
+  Future<ThematicTextAIResult?> generateThematicText({
+    required String eventType,
+    required String titleContext,
+  }) async {
+    if (_apiKey.isEmpty) return null;
+    try {
+      final prompt = '''
+Eres el "System" de una app de productividad con estética de cazadores y rangos.
+Genera el texto de una notificación motivacional en ESPAÑOL para el evento "$eventType" relacionado con: "$titleContext".
+
+Responde SOLO con JSON válido:
+{"title": "título corto (máximo 60 caracteres)", "body": "cuerpo (máximo 200 caracteres)"}
+
+Estilo: ventana de sistema (System window), tono de progresión por rangos/niveles.
+Puedes usar glifos como ▶ ◇ ⚠ ◆. Motivacional, breve, sin emojis.
+No copies frases literales de ninguna obra existente.
+''';
+
+      final parts = <Map<String, dynamic>>[
+        {'text': prompt},
+      ];
+
+      final requestBody = jsonEncode({
+        'contents': [
+          {'parts': parts}
+        ],
+        'generationConfig': {
+          'temperature': 0.7,
+          'maxOutputTokens': 200,
+        },
+      });
+
+      final uri = Uri.parse('$_baseUrl?key=$_apiKey');
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: requestBody,
+      );
+
+      if (response.statusCode != 200) return null;
+      final data = jsonDecode(response.body);
+      final text = data['candidates']?[0]?['content']?['parts']?[0]?['text'] ??
+          '';
+      final jsonMatch = RegExp(r'\{[^}]+\}').firstMatch(text);
+      if (jsonMatch == null) return null;
+      final result = jsonDecode(jsonMatch.group(0)!);
+
+      final title = result['title'];
+      final content = result['body'] ?? result['content'];
+      if (title is! String || content is! String) return null;
+      final cleanTitle = title.trim();
+      final cleanContent = content.trim();
+      if (cleanTitle.isEmpty || cleanContent.isEmpty) return null;
+      if (cleanTitle.length > 60 || cleanContent.length > 200) return null;
+      return ThematicTextAIResult(title: cleanTitle, body: cleanContent);
+    } catch (_) {
+      return null;
+    }
+  }
 }
 
 class NotificationAIResult {
@@ -221,5 +298,15 @@ class BadgeAIResult {
   BadgeAIResult({
     required this.name,
     required this.icon,
+  });
+}
+
+class ThematicTextAIResult {
+  final String title;
+  final String body;
+
+  ThematicTextAIResult({
+    required this.title,
+    required this.body,
   });
 }

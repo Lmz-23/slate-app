@@ -33,6 +33,21 @@ class UserSettings extends Equatable {
   final int dailyReminderHour1;
   final int dailyReminderHour2;
 
+  // Slate System (personalización temática)
+  /// Activa la estética temática "Slate System" en notificaciones e insignias
+  /// (textos temáticos y nomenclatura de rangos/niveles). Cuando está OFF el
+  /// comportamiento y los textos son idénticos a los actuales.
+  final bool slateSystemTheme;
+
+  /// Opt-in: genera los textos temáticos de notificaciones con IA (Gemini) al
+  /// guardar tareas/generar contenido. Los textos se guardan en caché local en
+  /// el dispositivo; si no hay red/API key se usa el catálogo local.
+  final bool useAIThematicTexts;
+
+  /// Opt-in: notificación única de cierre de jornada (id `0x60000003`) que se
+  /// programa al cruzar de día usando `dayResetHour` (default 04:00).
+  final bool enableDayClosure;
+
   const UserSettings({
     this.id = 'singleton',
     this.userName = 'Usuario',
@@ -54,6 +69,9 @@ class UserSettings extends Equatable {
     this.dailyReminderEnabled = true,
     this.dailyReminderHour1 = 10,
     this.dailyReminderHour2 = 19,
+    this.slateSystemTheme = false,
+    this.useAIThematicTexts = false,
+    this.enableDayClosure = false,
   });
 
   UserSettings copyWith({
@@ -77,6 +95,9 @@ class UserSettings extends Equatable {
     bool? dailyReminderEnabled,
     int? dailyReminderHour1,
     int? dailyReminderHour2,
+    bool? slateSystemTheme,
+    bool? useAIThematicTexts,
+    bool? enableDayClosure,
   }) {
     return UserSettings(
       id: id ?? this.id,
@@ -100,6 +121,9 @@ class UserSettings extends Equatable {
       dailyReminderEnabled: dailyReminderEnabled ?? this.dailyReminderEnabled,
       dailyReminderHour1: dailyReminderHour1 ?? this.dailyReminderHour1,
       dailyReminderHour2: dailyReminderHour2 ?? this.dailyReminderHour2,
+      slateSystemTheme: slateSystemTheme ?? this.slateSystemTheme,
+      useAIThematicTexts: useAIThematicTexts ?? this.useAIThematicTexts,
+      enableDayClosure: enableDayClosure ?? this.enableDayClosure,
     );
   }
 
@@ -125,6 +149,9 @@ class UserSettings extends Equatable {
         dailyReminderEnabled,
         dailyReminderHour1,
         dailyReminderHour2,
+        slateSystemTheme,
+        useAIThematicTexts,
+        enableDayClosure,
       ];
 }
 
