@@ -87,7 +87,14 @@ class SettingsScreen extends ConsumerWidget {
                     icon: Icons.access_time,
                     title: 'Hora de reset del día',
                     subtitle: '${settings.dayResetHour}:00 AM',
-                    onTap: () => _showHourPicker(context, ref, settings.dayResetHour),
+                    onTap: () => _showHourPicker(
+                      context,
+                      ref,
+                      settings.dayResetHour,
+                      title: 'Hora de reset',
+                      onSelect: (hour) =>
+                          ref.read(settingsProvider.notifier).updateDayResetHour(hour),
+                    ),
                   ),
                   const Divider(height: 1, color: AppColors.surfaceLight),
                   _buildSwitchTile(
@@ -121,6 +128,61 @@ class SettingsScreen extends ConsumerWidget {
                     title: 'Personalizar insignias',
                     subtitle: '${settings.customBadgeConfigs.length} insignias configuradas',
                     onTap: () => context.push('/badge-customization'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _buildSection(
+                title: 'Recordatorios',
+                children: [
+                  _buildInfoBox(
+                    text: 'Por defecto te avisamos justo a la hora de la tarea '
+                        '(margen 0). Puedes adelantar el aviso eligiendo un margen.',
+                  ),
+                  const Divider(height: 1, color: AppColors.surfaceLight),
+                  _buildListTile(
+                    icon: Icons.timer_outlined,
+                    title: 'Margen de aviso',
+                    subtitle: _formatLeadTime(settings.notificationLeadTimeMinutes),
+                    onTap: () => _showLeadTimePicker(context, ref, settings.notificationLeadTimeMinutes),
+                  ),
+                  const Divider(height: 1, color: AppColors.surfaceLight),
+                  _buildSwitchTile(
+                    icon: Icons.summarize_outlined,
+                    title: 'Resumen diario',
+                    subtitle: 'Recibe 2 resúmenes al día con tus pendientes',
+                    value: settings.dailyReminderEnabled,
+                    onChanged: (value) {
+                      ref.read(settingsProvider.notifier).updateDailyReminderEnabled(value);
+                    },
+                  ),
+                  const Divider(height: 1, color: AppColors.surfaceLight),
+                  _buildListTile(
+                    icon: Icons.wb_sunny_outlined,
+                    title: 'Resumen de la mañana',
+                    subtitle: '${settings.dailyReminderHour1}:00 · si tienes tareas pendientes',
+                    onTap: () => _showHourPicker(
+                      context,
+                      ref,
+                      settings.dailyReminderHour1,
+                      title: 'Hora del resumen',
+                      onSelect: (hour) =>
+                          ref.read(settingsProvider.notifier).updateDailyReminderHour1(hour),
+                    ),
+                  ),
+                  const Divider(height: 1, color: AppColors.surfaceLight),
+                  _buildListTile(
+                    icon: Icons.nightlight_outlined,
+                    title: 'Resumen de la tarde',
+                    subtitle: '${settings.dailyReminderHour2}:00 · solo si no completaste nada hoy',
+                    onTap: () => _showHourPicker(
+                      context,
+                      ref,
+                      settings.dailyReminderHour2,
+                      title: 'Hora del resumen de la tarde',
+                      onSelect: (hour) =>
+                          ref.read(settingsProvider.notifier).updateDailyReminderHour2(hour),
+                    ),
                   ),
                 ],
               ),
@@ -286,7 +348,13 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _showHourPicker(BuildContext context, WidgetRef ref, int currentHour) {
+  void _showHourPicker(
+    BuildContext context,
+    WidgetRef ref,
+    int currentHour, {
+    required String title,
+    required void Function(int hour) onSelect,
+  }) {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface,
@@ -298,11 +366,11 @@ class SettingsScreen extends ConsumerWidget {
           height: 300,
           child: Column(
             children: [
-              const Padding(
-                padding: EdgeInsets.all(AppSpacing.md),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Text(
-                  'Hora de reset',
-                  style: TextStyle(
+                  title,
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
@@ -326,7 +394,101 @@ class SettingsScreen extends ConsumerWidget {
                           ? const Icon(Icons.check, color: AppColors.primary)
                           : null,
                       onTap: () {
-                        ref.read(settingsProvider.notifier).updateDayResetHour(index);
+                        onSelect(index);
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Aviso informativo (P2): por defecto el margen es 0 (aviso a la hora).
+  String _formatLeadTime(int minutes) {
+    if (minutes == 0) return 'A tiempo (0 min)';
+    return '$minutes min antes';
+  }
+
+  Widget _buildInfoBox({required String text}) {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline, size: 16, color: AppColors.primary),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLeadTimePicker(BuildContext context, WidgetRef ref, int current) {
+    const options = [0, 5, 10, 15, 30, 60];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SizedBox(
+          height: 320,
+          child: Column(
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(AppSpacing.md),
+                child: Text(
+                  'Margen de aviso',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: options.length,
+                  itemBuilder: (context, index) {
+                    final minutes = options[index];
+                    final isSelected = minutes == current;
+                    return ListTile(
+                      title: Text(
+                        _formatLeadTime(minutes),
+                        style: TextStyle(
+                          color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                      subtitle: Text(
+                        minutes == 0
+                            ? 'Avísame justo a la hora de la tarea'
+                            : 'Avísame $minutes min antes de la tarea',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      trailing: isSelected
+                          ? const Icon(Icons.check, color: AppColors.primary)
+                          : null,
+                      onTap: () {
+                        ref.read(settingsProvider.notifier).updateNotificationLeadTime(minutes);
                         Navigator.pop(context);
                       },
                     );

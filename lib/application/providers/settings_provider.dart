@@ -71,6 +71,31 @@ class SettingsNotifier extends StateNotifier<UserSettings> {
     state = updated;
   }
 
+  // Recordatorios (P2/P3/P5)
+  Future<void> updateNotificationLeadTime(int minutes) async {
+    final updated = state.copyWith(notificationLeadTimeMinutes: minutes);
+    await _repository.updateSettings(updated);
+    state = updated;
+  }
+
+  Future<void> updateDailyReminderEnabled(bool enabled) async {
+    final updated = state.copyWith(dailyReminderEnabled: enabled);
+    await _repository.updateSettings(updated);
+    state = updated;
+  }
+
+  Future<void> updateDailyReminderHour1(int hour) async {
+    final updated = state.copyWith(dailyReminderHour1: hour);
+    await _repository.updateSettings(updated);
+    state = updated;
+  }
+
+  Future<void> updateDailyReminderHour2(int hour) async {
+    final updated = state.copyWith(dailyReminderHour2: hour);
+    await _repository.updateSettings(updated);
+    state = updated;
+  }
+
   Future<void> updateLocationPermissionGranted(bool granted) async {
     final updated = state.copyWith(locationPermissionGranted: granted);
     await _repository.updateSettings(updated);

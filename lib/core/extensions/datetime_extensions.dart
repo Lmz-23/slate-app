@@ -24,9 +24,13 @@ extension DateTimeExtensions on DateTime {
 
   DateTime get endOfDay => DateTime(year, month, day, 23, 59, 59);
 
-  String get relativeDay {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+  /// Devuelve 'Hoy', 'Mañana' o 'Ayer' cuando corresponde, o la fecha formateada.
+  ///
+  /// [now] permite pasar el instante actual en la zona horaria configurada
+  /// (p. ej. `ref.read(nowProvider)`). Si es `null` se usa `DateTime.now()`.
+  String relativeDay({DateTime? now}) {
+    final current = now ?? DateTime.now();
+    final today = DateTime(current.year, current.month, current.day);
     final thisDate = DateTime(year, month, day);
     final diff = thisDate.difference(today).inDays;
 

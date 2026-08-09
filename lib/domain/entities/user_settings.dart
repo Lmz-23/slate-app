@@ -23,6 +23,16 @@ class UserSettings extends Equatable {
   // AI Badge Settings
   final List<CustomBadgeConfig> customBadgeConfigs;
 
+  // Recordatorios de tarea / resumen diario (P2/P3/P5)
+  /// Margen de aviso ANTES de la hora de la tarea (minutos). Default 0: se
+  /// avisa justo a la hora de la tarea.
+  final int notificationLeadTimeMinutes;
+
+  /// Activa/desactiva los resúmenes diarios (10:00 y 19:00).
+  final bool dailyReminderEnabled;
+  final int dailyReminderHour1;
+  final int dailyReminderHour2;
+
   const UserSettings({
     this.id = 'singleton',
     this.userName = 'Usuario',
@@ -40,6 +50,10 @@ class UserSettings extends Equatable {
     this.notificationImagePaths = const [],
     this.notificationTextContext,
     this.customBadgeConfigs = const [],
+    this.notificationLeadTimeMinutes = 0,
+    this.dailyReminderEnabled = true,
+    this.dailyReminderHour1 = 10,
+    this.dailyReminderHour2 = 19,
   });
 
   UserSettings copyWith({
@@ -59,6 +73,10 @@ class UserSettings extends Equatable {
     List<String>? notificationImagePaths,
     String? notificationTextContext,
     List<CustomBadgeConfig>? customBadgeConfigs,
+    int? notificationLeadTimeMinutes,
+    bool? dailyReminderEnabled,
+    int? dailyReminderHour1,
+    int? dailyReminderHour2,
   }) {
     return UserSettings(
       id: id ?? this.id,
@@ -77,6 +95,11 @@ class UserSettings extends Equatable {
       notificationImagePaths: notificationImagePaths ?? this.notificationImagePaths,
       notificationTextContext: notificationTextContext ?? this.notificationTextContext,
       customBadgeConfigs: customBadgeConfigs ?? this.customBadgeConfigs,
+      notificationLeadTimeMinutes:
+          notificationLeadTimeMinutes ?? this.notificationLeadTimeMinutes,
+      dailyReminderEnabled: dailyReminderEnabled ?? this.dailyReminderEnabled,
+      dailyReminderHour1: dailyReminderHour1 ?? this.dailyReminderHour1,
+      dailyReminderHour2: dailyReminderHour2 ?? this.dailyReminderHour2,
     );
   }
 
@@ -98,6 +121,10 @@ class UserSettings extends Equatable {
         notificationImagePaths,
         notificationTextContext,
         customBadgeConfigs,
+        notificationLeadTimeMinutes,
+        dailyReminderEnabled,
+        dailyReminderHour1,
+        dailyReminderHour2,
       ];
 }
 

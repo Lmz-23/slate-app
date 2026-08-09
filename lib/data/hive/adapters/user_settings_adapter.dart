@@ -16,7 +16,7 @@ class UserSettingsAdapter extends TypeAdapter<UserSettings> {
       fields[key] = value;
     }
 
-    final customBadgeConfigsList = fields[16] as List?;
+    final customBadgeConfigsList = fields[15] as List?;
     final customBadgeConfigs = customBadgeConfigsList
         ?.map((e) => CustomBadgeConfig(
               badgeType: e['badgeType'] ?? '',
@@ -43,13 +43,19 @@ class UserSettingsAdapter extends TypeAdapter<UserSettings> {
       notificationImagePaths: (fields[13] as List?)?.cast<String>() ?? [],
       notificationTextContext: fields[14] as String?,
       customBadgeConfigs: customBadgeConfigs ?? [],
+      // Campos añadidos en esta versión (migración hacia delante segura: los
+      // registros antiguos no los escriben y aquí se aplica el default).
+      notificationLeadTimeMinutes: fields[16] as int? ?? 0,
+      dailyReminderEnabled: fields[17] as bool? ?? true,
+      dailyReminderHour1: fields[18] as int? ?? 10,
+      dailyReminderHour2: fields[19] as int? ?? 19,
     );
   }
 
   @override
   void write(BinaryWriter writer, UserSettings obj) {
     writer
-      ..writeByte(17)
+      ..writeByte(20)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -88,6 +94,14 @@ class UserSettingsAdapter extends TypeAdapter<UserSettings> {
                 'iconName': e.iconName,
                 'daysRequired': e.daysRequired,
               })
-          .toList());
+          .toList())
+      ..writeByte(16)
+      ..write(obj.notificationLeadTimeMinutes)
+      ..writeByte(17)
+      ..write(obj.dailyReminderEnabled)
+      ..writeByte(18)
+      ..write(obj.dailyReminderHour1)
+      ..writeByte(19)
+      ..write(obj.dailyReminderHour2);
   }
 }

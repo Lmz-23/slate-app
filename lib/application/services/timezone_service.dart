@@ -1,3 +1,6 @@
+import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
+
 class TimezoneService {
   static const Map<String, String> supportedTimezones = {
     // América
@@ -57,6 +60,20 @@ class TimezoneService {
 
   static String getDisplayName(String timezone) {
     return supportedTimezones[timezone] ?? timezone;
+  }
+
+  /// Devuelve el instante actual en la zona horaria [timezone].
+  ///
+  /// Si la zona no es válida o falla la inicialización, cae a
+  /// `DateTime.now()` (zona local del dispositivo).
+  static DateTime nowInTimezone(String timezone) {
+    try {
+      tz_data.initializeTimeZones();
+      final location = tz.getLocation(timezone);
+      return tz.TZDateTime.now(location);
+    } catch (_) {
+      return DateTime.now();
+    }
   }
 
   static List<String> get sortedTimezones {

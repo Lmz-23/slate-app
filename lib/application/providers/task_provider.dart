@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../domain/entities/task.dart';
@@ -5,6 +6,9 @@ import '../../domain/enums/task_priority.dart';
 import '../../domain/enums/recurrence_type.dart';
 import '../../data/hive/boxes/tasks_box.dart';
 import '../../data/repositories/task_repository_impl.dart';
+import 'now_provider.dart';
+import 'notification_providers.dart';
+import 'settings_provider.dart';
 
 final tasksBoxProvider = Provider<TasksBox>((ref) {
   throw UnimplementedError('Must be overridden');
@@ -15,11 +19,11 @@ final taskRepositoryProvider = Provider<TaskRepositoryImpl>((ref) {
 });
 
 final tasksProvider = StateNotifierProvider<TasksNotifier, List<Task>>((ref) {
-  return TasksNotifier(ref.watch(taskRepositoryProvider));
+  return TasksNotifier(ref.watch(taskRepositoryProvider), ref);
 });
 
 final selectedDateProvider = StateProvider<DateTime>((ref) {
-  final now = DateTime.now();
+  final now = ref.read(nowProvider).value ?? DateTime.now();
   return DateTime(now.year, now.month, now.day);
 });
 
@@ -52,9 +56,10 @@ final unscheduledTasksProvider = Provider<List<Task>>((ref) {
 
 class TasksNotifier extends StateNotifier<List<Task>> {
   final TaskRepositoryImpl _repository;
+  final Ref _ref;
   final _uuid = const Uuid();
 
-  TasksNotifier(this._repository) : super(_repository.getAll());
+  TasksNotifier(this._repository, this._ref) : super(_repository.getAll());
 
   void refresh() {
     state = _repository.getAll();
@@ -85,6 +90,18 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     await _repository.add(task);
     await _generateRecurringTasks(task);
     refresh();
+
+    // Conecta el sistema de notificaciones: programa el recordatorio de la
+    // tarea creada (si tiene horario) y el de cada ocurrencia generada de la
+    // serie recurrente (cada una tiene su propio id derivado).
+    await _syncReminderForTask(task);
+    final generated = _repository
+        .getAll()
+        .where((t) => t.parentTaskId == task.id)
+        .toList();
+    for (final occurrence in generated) {
+      await _syncReminderForTask(occurrence);
+    }
   }
 
   Future<void> _generateRecurringTasks(Task task) async {
@@ -133,28 +150,59 @@ class TasksNotifier extends StateNotifier<List<Task>> {
   Future<void> updateTask(Task task) async {
     await _repository.update(task);
     refresh();
+    // Reprograma el recordatorio con el MISMO id (se deriva de task.id): si la
+    // fecha/hora cambió, el zonedSchedule nuevo reemplaza al anterior; si
+    // perdió el horario o se completó, syncTaskReminder lo cancela.
+    await _syncReminderForTask(task);
   }
 
   Future<void> deleteTask(String id) async {
+    // Actualización SÍNCRONA y optimista: el ítem desaparece del estado (y por
+    // tanto del árbol de widgets) antes de que termine el borrado en Hive.
+    // Esto evita el assert "A dismissed Dismissible widget is still part of
+    // the tree" cuando se borra una tarjeta desde el Dismissible.
+    state = state.where((t) => t.id != id).toList();
     await _repository.delete(id);
-    refresh();
+    await _cancelReminder(id);
   }
 
+  /// Elimina una serie completa de tareas recurrentes.
+  ///
+  /// Dada CUALQUIER ocurrencia de la serie (incluida una hija con
+  /// `parentTaskId`), sube hasta la RAÍZ (la tarea original cuyo id es igual
+  /// a `parentTaskId`; si la tarea dada no tiene `parentTaskId`, ella es la
+  /// raíz) y borra la raíz junto con todas las tareas que tengan
+  /// `parentTaskId == idRaíz`.
+  ///
+  /// El estado se actualiza de forma SÍNCRONA (optimista) antes de esperar el
+  /// borrado en Hive por las mismas razones que [deleteTask].
   Future<void> deleteTaskAndRecurring(String id) async {
-    final task = _repository.getById(id);
-    if (task == null) return;
+    final found = _repository.getById(id);
+    if (found == null) return;
 
-    // Delete the task itself
-    await _repository.delete(id);
-
-    // If this task has children (generated from recurrence), delete them too
-    final allTasks = _repository.getAll();
-    final childrenToDelete = allTasks.where((t) => t.parentTaskId == id);
-    for (final child in childrenToDelete) {
-      await _repository.delete(child.id);
+    // Subir a la raíz de la serie. `root` no es anulable para que el
+    // promotor de tipos no pierda la no-nulidad dentro del bucle.
+    var root = found;
+    while (root.parentTaskId != null) {
+      final parent = _repository.getById(root.parentTaskId!);
+      if (parent == null) break;
+      root = parent;
     }
 
-    refresh();
+    final rootId = root.id;
+    final idsToDelete = state
+        .where((t) => t.id == rootId || t.parentTaskId == rootId)
+        .map((t) => t.id)
+        .toSet();
+
+    // Actualización síncrona del estado antes del borrado asíncrono.
+    state = state.where((t) => !idsToDelete.contains(t.id)).toList();
+
+    for (final taskId in idsToDelete) {
+      await _repository.delete(taskId);
+      // Cancela el recordatorio de CADA ocurrencia de la serie.
+      await _cancelReminder(taskId);
+    }
   }
 
   Future<void> toggleComplete(String id) async {
@@ -166,6 +214,34 @@ class TasksNotifier extends StateNotifier<List<Task>> {
       );
       await _repository.update(updated);
       refresh();
+
+      // Al completar se CANCELA el recordatorio de esa ocurrencia; al
+      // desmarcar se reprograma (si sigue con horario y notificaciones
+      // activas).
+      if (updated.isCompleted) {
+        await _cancelReminder(updated.id);
+      } else {
+        await _syncReminderForTask(updated);
+      }
+    }
+  }
+
+  Future<void> _syncReminderForTask(Task task) async {
+    final manager = _ref.read(reminderManagerProvider);
+    final settings = _ref.read(settingsProvider);
+    try {
+      await manager.syncTaskReminder(task, settings);
+    } catch (e) {
+      debugPrint('TasksNotifier: error sincronizando recordatorio: $e');
+    }
+  }
+
+  Future<void> _cancelReminder(String taskId) async {
+    final manager = _ref.read(reminderManagerProvider);
+    try {
+      await manager.cancelTaskReminder(taskId);
+    } catch (e) {
+      debugPrint('TasksNotifier: error cancelando recordatorio: $e');
     }
   }
 }

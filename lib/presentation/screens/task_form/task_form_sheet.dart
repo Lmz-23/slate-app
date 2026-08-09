@@ -124,8 +124,10 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
   void _showDeleteDialog() {
     if (_existingTask == null) return;
 
+    final tasks = ref.read(tasksProvider);
     final hasRecurrence = _existingTask!.parentTaskId != null ||
-        _existingTask!.recurrence != RecurrenceType.none;
+        _existingTask!.recurrence != RecurrenceType.none ||
+        tasks.any((t) => t.parentTaskId == _existingTask!.id);
 
     if (hasRecurrence) {
       showDialog(
@@ -187,14 +189,11 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
   void _deleteTask(BuildContext context, {required bool deleteAll}) {
     if (_existingTask == null) return;
 
-    if (deleteAll && _existingTask!.parentTaskId == null) {
-      final tasks = ref.read(tasksProvider);
-      final tasksToDelete = tasks.where(
-        (t) => t.parentTaskId == _existingTask!.id || t.id == _existingTask!.id,
-      );
-      for (final task in tasksToDelete) {
-        ref.read(tasksProvider.notifier).deleteTask(task.id);
-      }
+    if (deleteAll) {
+      // deleteTaskAndRecurring sube a la raíz de la serie y borra la raíz +
+      // todas las tareas con parentTaskId == idRaíz, funcione desde la
+      // ocurrencia original o desde cualquier hija.
+      ref.read(tasksProvider.notifier).deleteTaskAndRecurring(_existingTask!.id);
     } else {
       ref.read(tasksProvider.notifier).deleteTask(_existingTask!.id);
     }
@@ -354,6 +353,10 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
             ),
             const SizedBox(height: AppSpacing.lg),
             _buildDateTimeRow(),
+            if (_selectedTime != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              _buildReminderHint(),
+            ],
             const SizedBox(height: AppSpacing.md),
             PrioritySelector(
               selected: _priority,
@@ -408,6 +411,41 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
             const SizedBox(height: AppSpacing.md),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildReminderHint() {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLight,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.notifications_active_outlined,
+            size: 16,
+            color: AppColors.primary,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              'Por defecto te avisaremos justo a la hora de la tarea. '
+              'Puedes adelantar el aviso en Ajustes › Recordatorios.',
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

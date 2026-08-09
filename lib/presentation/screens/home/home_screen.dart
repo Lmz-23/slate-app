@@ -5,7 +5,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/extensions/datetime_extensions.dart';
 import '../../../application/providers/task_provider.dart';
 import '../../../application/providers/streak_provider.dart';
-import '../../widgets/task_tile.dart';
+import '../../../application/providers/now_provider.dart';
 import '../../widgets/streak_badge.dart';
 import '../task_form/task_form_sheet.dart';
 import 'widgets/task_section.dart';
@@ -64,6 +64,8 @@ class HomeScreen extends ConsumerWidget {
     DateTime date,
     dynamic streak,
   ) {
+    final now = ref.watch(nowProvider).value ?? DateTime.now();
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -76,7 +78,7 @@ class HomeScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    date.relativeDay,
+                    date.relativeDay(now: now),
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -103,66 +105,97 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildDateSelector(BuildContext context, WidgetRef ref, DateTime selectedDate) {
-    final today = DateTime.now();
+    final now = ref.watch(nowProvider).value ?? DateTime.now();
+
+    // La franja de 7 días se centra en la FECHA SELECCIONADA (selectedDate ± 3),
+    // no en el día actual, para que al navegar a una fecha lejana la franja
+    // muestre los días cercanos a dicha fecha.
+    final anchor = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+    );
     final dates = List.generate(7, (i) {
-      return today.add(Duration(days: i - 3));
+      return anchor.add(Duration(days: i - 3));
     });
 
-    return SizedBox(
-      height: 70,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: dates.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final date = dates[index];
-          final isSelected = date.year == selectedDate.year &&
-              date.month == selectedDate.month &&
-              date.day == selectedDate.day;
-          final isToday = date.isSameDay(today);
+    return Row(
+      children: [
+        IconButton(
+          onPressed: () {
+            ref.read(selectedDateProvider.notifier).state =
+                selectedDate.subtract(const Duration(days: 7));
+          },
+          icon: const Icon(Icons.chevron_left, color: AppColors.textSecondary),
+          tooltip: 'Semana anterior',
+        ),
+        Expanded(
+          child: SizedBox(
+            height: 70,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: dates.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final date = dates[index];
+                final isSelected = date.year == selectedDate.year &&
+                    date.month == selectedDate.month &&
+                    date.day == selectedDate.day;
+                final isToday = date.isSameDay(now);
 
-          return GestureDetector(
-            onTap: () {
-              ref.read(selectedDateProvider.notifier).state = date;
-            },
-            child: Container(
-              width: 50,
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : AppColors.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: isToday && !isSelected
-                    ? Border.all(color: AppColors.primary, width: 1)
-                    : null,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    ['L', 'M', 'X', 'J', 'V', 'S', 'D'][date.weekday % 7],
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isSelected
-                          ? Colors.white.withValues(alpha: 0.7)
-                          : AppColors.textSecondary,
+                return GestureDetector(
+                  onTap: () {
+                    ref.read(selectedDateProvider.notifier).state = date;
+                  },
+                  child: Container(
+                    width: 50,
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primary : AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: isToday && !isSelected
+                          ? Border.all(color: AppColors.primary, width: 1)
+                          : null,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          ['L', 'M', 'X', 'J', 'V', 'S', 'D'][date.weekday % 7],
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isSelected
+                                ? Colors.white.withValues(alpha: 0.7)
+                                : AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          date.day.toString(),
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected
+                                ? Colors.white
+                                : AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    date.day.toString(),
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: isSelected
-                          ? Colors.white
-                          : AppColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
-          );
-        },
-      ),
+          ),
+        ),
+        IconButton(
+          onPressed: () {
+            ref.read(selectedDateProvider.notifier).state =
+                selectedDate.add(const Duration(days: 7));
+          },
+          icon: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+          tooltip: 'Semana siguiente',
+        ),
+      ],
     );
   }
 

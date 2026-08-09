@@ -84,4 +84,13 @@ enum BadgeType {
     }
     return null;
   }
+
+  /// Devuelve todas las insignias cuyo umbral es menor o igual a [days].
+  ///
+  /// Permite desbloquear de una sola vez TODOS los hitos alcanzados cuando la
+  /// racha sube más de un día de golpe (p. ej. un backfill de historial):
+  /// `badgesUpTo(14)` devuelve streak3, streak7 y streak14.
+  static List<BadgeType> badgesUpTo(int days) {
+    return BadgeType.values.where((b) => b.requiredDays <= days).toList();
+  }
 }

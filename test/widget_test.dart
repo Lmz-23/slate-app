@@ -1,30 +1,48 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:slate_app/main.dart';
+import 'package:slate_app/application/services/timezone_service.dart';
+import 'package:slate_app/core/extensions/datetime_extensions.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('DateTimeExtensions.relativeDay', () {
+    test('devuelve "Hoy" para la misma fecha', () {
+      final now = DateTime(2026, 1, 15, 10, 30);
+      final date = DateTime(2026, 1, 15);
+      expect(date.relativeDay(now: now), 'Hoy');
+    });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    test('devuelve "Mañana" para el día siguiente', () {
+      final now = DateTime(2026, 1, 15, 10, 30);
+      final date = DateTime(2026, 1, 16);
+      expect(date.relativeDay(now: now), 'Mañana');
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    test('devuelve "Ayer" para el día anterior', () {
+      final now = DateTime(2026, 1, 15, 10, 30);
+      final date = DateTime(2026, 1, 14);
+      expect(date.relativeDay(now: now), 'Ayer');
+    });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('devuelve la fecha formateada para fechas lejanas', () {
+      final now = DateTime(2026, 1, 15, 10, 30);
+      final date = DateTime(2026, 2, 1);
+      expect(date.relativeDay(now: now), '01 Feb 2026');
+    });
+  });
+
+  group('TimezoneService.nowInTimezone', () {
+    test('devuelve un DateTime para una zona válida', () {
+      final now = TimezoneService.nowInTimezone('America/Bogota');
+      expect(now, isA<DateTime>());
+    });
+
+    test('cae a DateTime.now() para una zona desconocida', () {
+      final now = TimezoneService.nowInTimezone('Invalid/Zone');
+      expect(now, isA<DateTime>());
+      final fallback = DateTime.now();
+      expect(now.year, fallback.year);
+      expect(now.month, fallback.month);
+      expect(now.day, fallback.day);
+    });
   });
 }

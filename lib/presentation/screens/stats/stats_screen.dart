@@ -4,7 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../application/providers/streak_provider.dart';
 import '../../../application/providers/task_provider.dart';
-import '../../widgets/streak_badge.dart';
+import '../../../application/providers/now_provider.dart';
 import 'widgets/streak_display.dart';
 import 'widgets/badge_vault.dart';
 import 'widgets/monthly_calendar.dart';
@@ -17,10 +17,9 @@ class StatsScreen extends ConsumerWidget {
     final streak = ref.watch(streakProvider);
     final badges = ref.watch(badgesProvider);
     final tasks = ref.watch(tasksProvider);
+    final now = ref.watch(nowProvider).value ?? DateTime.now();
 
-    final completedTasks = tasks.where((t) => t.isCompleted).length;
-    final totalTasks = tasks.length;
-    final weeklyProgress = _calculateWeeklyProgress(tasks);
+    final weeklyProgress = _calculateWeeklyProgress(tasks, now);
 
     return Scaffold(
       body: SafeArea(
@@ -53,9 +52,8 @@ class StatsScreen extends ConsumerWidget {
     );
   }
 
-  double _calculateWeeklyProgress(List<dynamic> tasks) {
+  double _calculateWeeklyProgress(List<dynamic> tasks, DateTime now) {
     if (tasks.isEmpty) return 0.0;
-    final now = DateTime.now();
     final weekStart = now.subtract(Duration(days: now.weekday % 7));
     final weekTasks = tasks.where((t) {
       return t.scheduledDate.isAfter(weekStart.subtract(const Duration(days: 1))) &&

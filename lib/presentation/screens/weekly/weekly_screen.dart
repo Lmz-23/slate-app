@@ -5,7 +5,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../core/extensions/datetime_extensions.dart';
 import '../../../application/providers/task_provider.dart';
 import '../../../application/providers/streak_provider.dart';
-import '../home/widgets/task_section.dart';
+import '../../../application/providers/now_provider.dart';
 
 class WeeklyScreen extends ConsumerWidget {
   const WeeklyScreen({super.key});
@@ -143,7 +143,8 @@ class WeeklyScreen extends ConsumerWidget {
     double progress,
     bool isSelected,
   ) {
-    final isToday = date.isSameDay(DateTime.now());
+    final now = ref.watch(nowProvider).value ?? DateTime.now();
+    final isToday = date.isSameDay(now);
 
     return GestureDetector(
       onTap: () {

@@ -40,6 +40,23 @@
 
         <service android:name="es.antonborri.home_widget.HomeWidgetBackgroundService" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="true"/>
 
+        <!-- flutter_local_notifications:
+             - ScheduledNotificationReceiver: recibe las alarmas programadas y
+               muestra la notificación.
+             - ScheduledNotificationBootReceiver: vuelve a programar las
+               notificaciones pendientes tras un reinicio del dispositivo
+               (BOOT_COMPLETED) o una actualización de la app
+               (MY_PACKAGE_REPLACED). -->
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
