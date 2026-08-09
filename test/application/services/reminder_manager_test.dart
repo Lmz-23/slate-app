@@ -15,6 +15,19 @@ class FakeScheduler implements ReminderScheduler {
   final scheduled = <int, ({DateTime fireTime, String title, String body})>{};
   final cancelled = <int>[];
 
+  /// Simula el plugin real (`zonedSchedule`): cuando es true, `schedule` lanza
+  /// `ArgumentError` si [fireTime] no es estrictamente posterior a
+  /// [nowProvider()] — el comportamiento exacto que motivó el fix A (nunca
+  /// programar al pasado). Default false para no alterar los 143 tests previos.
+  bool throwOnPastFireTime = false;
+
+  /// "Ahora" con el que el fake valida `fireTime` cuando
+  /// [throwOnPastFireTime] está activo. Por defecto usa `DateTime.now()`.
+  DateTime Function() nowProvider;
+
+  FakeScheduler({DateTime Function()? nowProvider})
+      : nowProvider = nowProvider ?? DateTime.now;
+
   @override
   Future<void> init({required String timezone}) async {}
 
@@ -31,6 +44,9 @@ class FakeScheduler implements ReminderScheduler {
     required String body,
     required DateTime fireTime,
   }) async {
+    if (throwOnPastFireTime && !fireTime.isAfter(nowProvider())) {
+      throw ArgumentError('fireTime must be in the future');
+    }
     scheduled[id] = (fireTime: fireTime, title: title, body: body);
   }
 
@@ -67,6 +83,9 @@ UserSettings _settings({int lead = 0, bool notificationsEnabled = true}) =>
 /// Instante de una tarea: 14:00 del día.
 DateTime get _atTwo => DateTime(2026, 1, 15, 14, 0);
 
+/// Instante anterior a los `fireTime` de los tests (08:00 del 15/01).
+DateTime get _earlyMorning => DateTime(2026, 1, 15, 8, 0);
+
 void main() {
   late FakeScheduler scheduler;
   late ReminderManager manager;
@@ -85,7 +104,7 @@ void main() {
   group('syncTaskReminder (P2)', () {
     test('programa solo si hay horario y notificaciones activas', () async {
       final task = _task('a', DateTime(2026, 1, 15), scheduledTime: _atTwo);
-      await manager.syncTaskReminder(task, _settings());
+      await manager.syncTaskReminder(task, _settings(), now: _earlyMorning);
 
       expect(scheduler.scheduled.keys, contains(reminderIdForTask('a')));
       expect(
@@ -100,7 +119,8 @@ void main() {
 
     test('aplica el margen: con 15 min el disparo es las 13:45', () async {
       final task = _task('t', DateTime(2026, 1, 15), scheduledTime: _atTwo);
-      await manager.syncTaskReminder(task, _settings(lead: 15));
+      await manager.syncTaskReminder(
+          task, _settings(lead: 15), now: _earlyMorning);
 
       expect(
         scheduler.scheduled[reminderIdForTask('t')]!.fireTime,
@@ -122,7 +142,7 @@ void main() {
         DateTime(2026, 1, 16),
         scheduledTime: DateTime(2026, 1, 1, 8, 0),
       );
-      await manager.syncTaskReminder(occurrence, _settings());
+      await manager.syncTaskReminder(occurrence, _settings(), now: _earlyMorning);
       expect(
         scheduler.scheduled[reminderIdForTask('child')]!.fireTime,
         DateTime(2026, 1, 16, 8, 0),
@@ -137,14 +157,14 @@ void main() {
         isCompleted: true,
         completedAt: DateTime(2026, 1, 15, 10, 0),
       );
-      await manager.syncTaskReminder(task, _settings());
+      await manager.syncTaskReminder(task, _settings(), now: _earlyMorning);
       expect(scheduler.scheduled, isEmpty);
       expect(scheduler.cancelled, contains(reminderIdForTask('t')));
     });
 
     test('tarea sin horario -> CANCELA', () async {
       final task = _task('t', DateTime(2026, 1, 15));
-      await manager.syncTaskReminder(task, _settings());
+      await manager.syncTaskReminder(task, _settings(), now: _earlyMorning);
       expect(scheduler.scheduled, isEmpty);
       expect(scheduler.cancelled, contains(reminderIdForTask('t')));
     });
@@ -153,7 +173,27 @@ void main() {
         () async {
       final task = _task('t', DateTime(2026, 1, 15), scheduledTime: _atTwo);
       await manager.syncTaskReminder(
-          task, _settings(notificationsEnabled: false));
+          task, _settings(notificationsEnabled: false), now: _earlyMorning);
+      expect(scheduler.scheduled, isEmpty);
+      expect(scheduler.cancelled, contains(reminderIdForTask('t')));
+    });
+
+    test('fireTime pasado -> CANCELA, no lanza (defensa Fix A)', () async {
+      final task = _task('t', DateTime(2026, 1, 15), scheduledTime: _atTwo);
+      // now 15:00: el disparo (14:00) ya pasó → cancelar en vez de programar.
+      await manager.syncTaskReminder(
+          task, _settings(), now: DateTime(2026, 1, 15, 15, 0));
+
+      expect(scheduler.scheduled, isEmpty);
+      expect(scheduler.cancelled, contains(reminderIdForTask('t')));
+    });
+
+    test('fireTime pasado por margen -> CANCELA', () async {
+      final task = _task('t', DateTime(2026, 1, 15), scheduledTime: _atTwo);
+      // lead 60 → fireTime 13:00; now 13:45 → ya pasó al restar el margen.
+      await manager.syncTaskReminder(task, _settings(lead: 60),
+          now: DateTime(2026, 1, 15, 13, 45));
+
       expect(scheduler.scheduled, isEmpty);
       expect(scheduler.cancelled, contains(reminderIdForTask('t')));
     });
@@ -167,11 +207,48 @@ void main() {
             scheduledTime: DateTime(2026, 1, 16, 9, 0)),
         _task('c', DateTime(2026, 1, 17)), // sin horario
       ];
-      await manager.syncAllTaskReminders(tasks, _settings());
+      await manager.syncAllTaskReminders(tasks, _settings(), now: _earlyMorning);
       expect(scheduler.scheduled.keys, {
         reminderIdForTask('a'),
         reminderIdForTask('b'),
       });
+    });
+
+    test('mezcla de una pasada y una futura: cancela la pasada y programa '
+        'la futura', () async {
+      final tasks = [
+        _task('past', DateTime(2026, 1, 15), scheduledTime: _atTwo),
+        _task('future', DateTime(2026, 1, 16),
+            scheduledTime: DateTime(2026, 1, 16, 9, 0)),
+      ];
+      await manager.syncAllTaskReminders(
+          tasks, _settings(), now: DateTime(2026, 1, 15, 15, 0));
+
+      expect(scheduler.scheduled.keys, {reminderIdForTask('future')});
+      expect(scheduler.cancelled, contains(reminderIdForTask('past')));
+    });
+
+    test('una tarea que lanza no aborta la sincronización de las demás '
+        '(Fix B)', () async {
+      // Simula la carrera real entre el `now` de la app y el reloj del
+      // dispositivo en el plugin: el gestor (ahora 08:00) agenda la tarea de
+      // las 14:00, pero el plugin (fake con reloj 15:00) lanza ArgumentError
+      // al validar `fireTime` → la defensa por tarea debe continuar con el resto.
+      scheduler.throwOnPastFireTime = true;
+      scheduler.nowProvider = () => DateTime(2026, 1, 15, 15, 0);
+
+      final tasks = [
+        _task('a', DateTime(2026, 1, 15), scheduledTime: _atTwo),
+        _task('b', DateTime(2026, 1, 16),
+            scheduledTime: DateTime(2026, 1, 16, 9, 0)),
+      ];
+      await manager.syncAllTaskReminders(
+          tasks, _settings(), now: DateTime(2026, 1, 15, 8, 0));
+
+      expect(scheduler.scheduled.containsKey(reminderIdForTask('a')), isFalse,
+          reason: 'la tarea que lanza no queda programada');
+      expect(scheduler.scheduled.keys, contains(reminderIdForTask('b')),
+          reason: 'el fallo de una tarea no aborta las demás');
     });
 
     test('cancelTaskReminder cancela un id concreto', () async {
@@ -335,6 +412,26 @@ void main() {
       expect(scheduler.cancelled, contains(dayClosureReminderId));
     });
 
+    test('borde: now == dayResetHour -> NO cierra HOY; programa MAÑANA '
+        'reportando la jornada de hoy', () async {
+      // A las 04:00 exactas (dayResetHour por defecto) el reset de HOY ya no
+      // es estrictamente posterior a `now` (`nextDayReset` usa `isBefore`),
+      // por lo que el comportamiento esperado es el de "no cerrar hoy,
+      // preparar mañana": el cierre se agenda para MAÑANA a las 04:00 y
+      // reporta la jornada de HOY (15/01).
+      final now = DateTime(2026, 1, 15, 4, 0);
+      const settings = UserSettings(enableDayClosure: true);
+      await manager.syncDayClosure(
+          now: now, allTasks: tareasHoy, settings: settings);
+
+      final entry = scheduler.scheduled[dayClosureReminderId];
+      expect(entry, isNotNull);
+      expect(entry!.fireTime, DateTime(2026, 1, 16, 4, 0),
+          reason: 'en la hora exacta del reset el próximo disparo es mañana');
+      expect(entry.body, contains('1/2'),
+          reason: 'reporta la jornada de hoy (1 completada de 2)');
+    });
+
     test('sin tareas en la jornada y racha 0: cancela', () async {
       final now = DateTime(2026, 1, 15, 10, 0);
       const settings = UserSettings(enableDayClosure: true);
@@ -373,7 +470,7 @@ void main() {
       );
       final task = _task('t', DateTime(2026, 1, 15), scheduledTime: _atTwo);
       await themedManager.syncTaskReminder(
-          task, const UserSettings(slateSystemTheme: true));
+          task, const UserSettings(slateSystemTheme: true), now: _earlyMorning);
 
       final entry = scheduler.scheduled[reminderIdForTask('t')]!;
       expect(entry.title, contains('Daily Quest'));
@@ -405,7 +502,7 @@ void main() {
 
     test('resolver sin tema (OFF): conserva el texto canónico exacto', () async {
       final task = _task('t', DateTime(2026, 1, 15), scheduledTime: _atTwo);
-      await manager.syncTaskReminder(task, _settings());
+      await manager.syncTaskReminder(task, _settings(), now: _earlyMorning);
 
       expect(scheduler.scheduled[reminderIdForTask('t')]!.title, 'Recordatorio');
       expect(

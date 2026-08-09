@@ -120,18 +120,33 @@ class DailyReminderController {
     final tasks = _ref.read(tasksProvider);
     final now = _now();
 
+    // Secciones independientes con try/catch PROPIO: un fallo en una (p. ej.
+    // una tarea cuyo `zonedSchedule` lanza) NO debe saltarse las otras
+    // (resúmenes 10:00/19:00 y cierre de jornada). Fix A+B: coordenada con el
+    // fix de `syncAllTaskReminders` que cancela disparos pasados en vez de
+    // programarlos.
     try {
-      // NOTA: si las notificaciones están desactivadas, syncTaskReminder y
-      // syncDailyReminders cancelan en lugar de programar.
-      await _manager.syncAllTaskReminders(tasks, settings);
+      await _manager.syncAllTaskReminders(tasks, settings, now: now);
+    } catch (e) {
+      debugPrint(
+          'DailyReminderController: error en recordatorios de tareas: $e');
+    }
+    try {
+      // NOTA: si las notificaciones están desactivadas, syncDailyReminders
+      // cancela en lugar de programar.
       await _manager.syncDailyReminders(
         now: now,
         allTasks: tasks,
         settings: settings,
       );
+    } catch (e) {
+      debugPrint('DailyReminderController: error en resumen diario: $e');
+    }
+    try {
       await _syncDayClosureIfEnabled(now, tasks, settings);
     } catch (e) {
-      debugPrint('DailyReminderController: error programando recordatorios: $e');
+      debugPrint(
+          'DailyReminderController: error en cierre de jornada: $e');
     }
 
     _lastScheduledDay = now;
@@ -186,9 +201,14 @@ class DailyReminderController {
         allTasks: tasks,
         settings: settings,
       );
-      await _syncDayClosureIfEnabled(now, tasks, settings);
     } catch (e) {
       debugPrint('DailyReminderController: error en resumen diario: $e');
+    }
+    try {
+      await _syncDayClosureIfEnabled(now, tasks, settings);
+    } catch (e) {
+      debugPrint(
+          'DailyReminderController: error en cierre de jornada: $e');
     }
     _lastScheduledDay = now;
   }

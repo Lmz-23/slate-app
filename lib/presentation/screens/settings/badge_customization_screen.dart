@@ -7,6 +7,7 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../application/services/ai_service.dart';
 import '../../../application/providers/settings_provider.dart';
 import '../../../domain/entities/user_settings.dart';
+import '../stats/widgets/badge_presentation.dart';
 
 class BadgeCustomizationScreen extends ConsumerStatefulWidget {
   const BadgeCustomizationScreen({super.key});
@@ -174,7 +175,7 @@ class _BadgeCustomizationScreenState extends ConsumerState<BadgeCustomizationScr
             borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
           ),
           child: Icon(
-            _getIconData(iconName),
+            BadgePresentation.iconDataFor(iconName),
             color: AppColors.primary,
           ),
         ),
@@ -203,39 +204,6 @@ class _BadgeCustomizationScreenState extends ConsumerState<BadgeCustomizationScr
         ),
       ),
     );
-  }
-
-  IconData _getIconData(String iconName) {
-    const iconMap = {
-      'star': Icons.star,
-      'fire': Icons.local_fire_department,
-      'lightning': Icons.bolt,
-      'flower': Icons.local_florist,
-      'shield': Icons.shield,
-      'trophy': Icons.emoji_events,
-      'crown': Icons.workspace_premium,
-      'diamond': Icons.diamond,
-      'rocket': Icons.rocket_launch,
-      'sword': Icons.sports_martial_arts,
-      'medal': Icons.military_tech,
-      'award': Icons.verified,
-      'flame': Icons.whatshot,
-      'bolt': Icons.bolt,
-      'zap': Icons.flash_on,
-      'moon': Icons.nightlight_round,
-      'sun': Icons.wb_sunny,
-      'heart': Icons.favorite,
-      'bell': Icons.notifications,
-      'bellSlash': Icons.notifications_off,
-      'bellOff': Icons.notifications_off,
-      'volume': Icons.volume_up,
-      'volume2': Icons.volume_down,
-      'volumeX': Icons.volume_off,
-      'alarm': Icons.alarm,
-      'clock': Icons.access_time,
-      'hourglass': Icons.hourglass_empty,
-    };
-    return iconMap[iconName] ?? Icons.star;
   }
 
   void _showCustomizationDialog({
@@ -282,7 +250,7 @@ class _BadgeCustomizationScreenState extends ConsumerState<BadgeCustomizationScr
                             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                           ),
                           child: Icon(
-                            _getIconData(generatedIcon ?? 'star'),
+                            BadgePresentation.iconDataFor(generatedIcon ?? 'star'),
                             color: AppColors.primary,
                             size: 28,
                           ),

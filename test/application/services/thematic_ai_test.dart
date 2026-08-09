@@ -177,5 +177,59 @@ void main() {
       expect(text!.title, 'Quest IA');
       expect(text.body, 'Texto IA');
     });
+
+    test('tema ON + toggle OFF: la CACHÉ local se sigue usando (decisión '
+        'Hallazgo 6)', () async {
+      final fake = FakeAIService(
+        result: ThematicTextAIResult(
+          title: 'Título IA',
+          body: 'Cuerpo IA',
+        ),
+      );
+      final generator = ThematicTextsGenerator(aiService: fake, cache: cache);
+      final task = _task('c', 'Mi tarea');
+      await generator.ensureTaskVariant(task);
+
+      // DECISIÓN documentada: tras desactivar "Textos con IA", las variantes
+      // cacheadas (locales, ya generadas con el opt-in activo) se siguen
+      // usando. El toggle solo detiene el ENVÍO de títulos a la IA; nunca se
+      // reenvía nada al resolver.
+      final resolver = ThematicTextsResolver(cache: cache);
+      final text = resolver.resolveTaskReminder(
+        task,
+        const UserSettings(
+          slateSystemTheme: true,
+          useAIThematicTexts: false,
+        ),
+      );
+      expect(text, isNotNull);
+      expect(text!.title, 'Título IA');
+      expect(text.body, 'Cuerpo IA');
+    });
+
+    test('el resolver es de SOLO LECTURA: resolver no dispara ni escribe '
+        'generación', () async {
+      // Hallazgo 1: el resolver ya no tiene referencia al generador; la
+      // generación ocurre únicamente en el guardado (TasksNotifier). Este
+      // test documenta el contrato: resolver devuelve catálogo local con caché
+      // vacía y NO deja ninguna entrada nueva en la caché.
+      final resolver = ThematicTextsResolver(cache: cache);
+      final task = _task('d', 'Mi tarea');
+
+      final text = resolver.resolveTaskReminder(
+        task,
+        const UserSettings(
+          slateSystemTheme: true,
+          useAIThematicTexts: true,
+        ),
+      );
+      expect(text, isNotNull);
+      expect(text!.title, contains('Daily Quest'));
+      expect(
+        cache.get(ThematicTextsCatalog.taskCacheKey(task)),
+        isNull,
+        reason: 'resolver no escribe caché: la generación no vive en este path',
+      );
+    });
   });
 }

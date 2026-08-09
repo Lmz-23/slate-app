@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
@@ -220,10 +221,20 @@ class SettingsScreen extends ConsumerWidget {
                   _buildSwitchTile(
                     icon: Icons.smart_toy_outlined,
                     title: 'Textos con IA',
-                    subtitle: 'Los textos se generan con IA, se guardan en el dispositivo y pueden omitirse si estás sin conexión',
+                    subtitle: 'Los títulos de tus tareas se envían a Google '
+                        'Gemini para generar textos; se guardan en tu '
+                        'dispositivo y, sin conexión o si lo desactivas, se '
+                        'usan textos locales',
                     value: settings.useAIThematicTexts,
-                    onChanged: (value) {
-                      ref.read(settingsProvider.notifier).updateUseAIThematicTexts(value);
+                    onChanged: (value) async {
+                      if (value) {
+                        // El toggle se activa SIEMPRE (no bloqueante): el
+                        // diálogo es solo informativo y se muestra una vez.
+                        ref.read(settingsProvider.notifier).updateUseAIThematicTexts(true);
+                        await _showAIThematicPrivacyNoticeIfFirstTime(context);
+                      } else {
+                        ref.read(settingsProvider.notifier).updateUseAIThematicTexts(false);
+                      }
                     },
                   ),
                 ],
@@ -460,6 +471,69 @@ class SettingsScreen extends ConsumerWidget {
                 color: AppColors.textSecondary,
                 height: 1.4,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Aviso de privacidad del toggle "Textos con IA" (Hallazgo 2, review
+  /// `3142d33`): informa que los títulos de las tareas se envían a Google
+  /// Gemini, que los textos generados se guardan en el dispositivo y que hay
+  /// fallback local sin conexión o con el toggle desactivado.
+  ///
+  /// Se muestra UNA sola vez (bandera en la caja auxiliar `app_meta`, el mismo
+  /// patrón que `notification_prompted` en `main.dart`). NO es bloqueante: el
+  /// toggle ya quedó activado antes de mostrar el diálogo y el usuario solo
+  /// debe reconocer la información.
+  Future<void> _showAIThematicPrivacyNoticeIfFirstTime(BuildContext context) async {
+    final Box<dynamic> metaBox;
+    try {
+      metaBox = Hive.box('app_meta');
+    } catch (_) {
+      // La caja auxiliar puede no estar abierta en entornos de test; en ese
+      // caso se omite el diálogo sin romper la pantalla.
+      return;
+    }
+    if (metaBox.get('ai_thematic_notice_shown') == true) {
+      return;
+    }
+    await metaBox.put('ai_thematic_notice_shown', true);
+    if (!context.mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          'Textos con IA',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        content: const Text(
+          'Al activar esta opción, los títulos de tus tareas se envían a un '
+          'servicio externo de IA (Google Gemini) para generar los textos de '
+          'las notificaciones.\n\n'
+          'Los textos generados se guardan en tu dispositivo.\n\n'
+          'Si estás sin conexión o desactivas esta opción, se usan textos '
+          'locales y no se envía nada.',
+          style: TextStyle(
+            fontSize: 14,
+            color: AppColors.textSecondary,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Entendido',
+              style: TextStyle(color: AppColors.primary),
             ),
           ),
         ],

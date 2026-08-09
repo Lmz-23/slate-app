@@ -8,6 +8,7 @@ import '../../domain/enums/task_priority.dart';
 import '../../domain/enums/recurrence_type.dart';
 import '../../data/hive/boxes/tasks_box.dart';
 import '../../data/repositories/task_repository_impl.dart';
+import '../services/timezone_service.dart';
 import 'now_provider.dart';
 import 'notification_providers.dart';
 import 'settings_provider.dart';
@@ -105,11 +106,11 @@ class TasksNotifier extends StateNotifier<List<Task>> {
       await _syncReminderForTask(occurrence);
     }
 
-    // Slate System: al GUARDAR la tarea (no al disparar) se genera en segundo
-    // plano la variante temática con IA si el usuario activó "Textos con IA".
-    // Solo para la tarea raíz: las ocurrencias comparten título y no merecen
-    // llamadas repetidas a la API.
-    unawaited(_maybeGenerateThematicVariant(task));
+    // Slate System: al GUARDAR la tarea (no al disparar ni al programar) se
+    // genera en segundo plano la variante temática con IA si el usuario activó
+    // "Textos con IA". Solo para la tarea raíz: las ocurrencias comparten
+    // título y no merecen llamadas repetidas a la API.
+    unawaited(_maybeGenerateThematicVariants(task));
   }
 
   Future<void> _generateRecurringTasks(Task task) async {
@@ -164,7 +165,7 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     await _syncReminderForTask(task);
     // Slate System: al guardar una edición se regenera la variante IA si el
     // título cambió (la clave de caché incluye el título normalizado).
-    unawaited(_maybeGenerateThematicVariant(task));
+    unawaited(_maybeGenerateThematicVariants(task));
   }
 
   Future<void> deleteTask(String id) async {
@@ -241,7 +242,13 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     final manager = _ref.read(reminderManagerProvider);
     final settings = _ref.read(settingsProvider);
     try {
-      await manager.syncTaskReminder(task, settings);
+      // `now` en la zona horaria configurada: evita que un disparo ya pasado
+      // llegue al plugin (que lanza ArgumentError). Cancelar es el lado seguro.
+      await manager.syncTaskReminder(
+        task,
+        settings,
+        now: TimezoneService.nowInTimezone(settings.timezone),
+      );
     } catch (e) {
       debugPrint('TasksNotifier: error sincronizando recordatorio: $e');
     }
@@ -256,15 +263,29 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     }
   }
 
-  /// Slate System: genera (si corresponde) la variante temática con IA del
-  /// recordatorio de [task]. No-op si el tema o el toggle "Textos con IA"
-  /// están desactivados o no hay API key (el generador lo comprueba interno).
-  Future<void> _maybeGenerateThematicVariant(Task task) async {
+  /// Slate System: genera (si corresponde) las variantes temáticas con IA.
+  ///
+  /// DECISIÓN (review `3142d33`, Hallazgos 1/4/6): este es el ÚNICO punto de
+  /// generación con IA del sistema y se ejecuta SOLO al guardar tareas. El
+  /// resolver de notificaciones es de solo lectura, por lo que programar
+  /// NUNCA invoca a la IA.
+  ///
+  /// Gating del opt-in: se exige `slateSystemTheme == true` Y
+  /// `useAIThematicTexts == true` (ambos). Con el toggle OFF la IA no se
+  /// invoca nunca (la comprobación de API key/caché del generador es defensa
+  /// adicional, no la condición del opt-in).
+  ///
+  /// Genera la variante de la tarea guardada y las 3 variantes GLOBALES
+  /// (resumen mañana/tarde + cierre de jornada), todas idempotentes por clave:
+  /// si ya existen en caché o tienen una generación en curso, el generador no
+  /// vuelve a llamar a la IA.
+  Future<void> _maybeGenerateThematicVariants(Task task) async {
     final settings = _ref.read(settingsProvider);
     if (!settings.useAIThematicTexts || !settings.slateSystemTheme) return;
     try {
       final generator = _ref.read(thematicTextsGeneratorProvider);
       await generator.ensureTaskVariant(task);
+      await generator.ensureSummaryVariants();
     } catch (e) {
       debugPrint('TasksNotifier: error generando texto temático: $e');
     }

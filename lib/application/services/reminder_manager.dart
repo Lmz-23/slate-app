@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../domain/entities/task.dart';
 import '../../domain/entities/user_settings.dart';
 import '../../domain/enums/badge_type.dart';
@@ -36,8 +38,15 @@ class ReminderManager {
   /// Sincroniza el recordatorio de UNA tarea con su estado y los ajustes.
   ///
   /// Si las notificaciones están desactivadas, la tarea está completada o no
-  /// tiene horario → CANCELA el recordatorio (idempotente).
-  Future<void> syncTaskReminder(Task task, UserSettings settings) async {
+  /// tiene horario → CANCELA el recordatorio (idempotente). También CANCELA si
+  /// el disparo calculado ya pasó respecto a [now]: nunca se programa al
+  /// pasado (el plugin lanza `ArgumentError` con fechas pasadas). Mismo patrón
+  /// de defensa que [syncDayClosure].
+  Future<void> syncTaskReminder(
+    Task task,
+    UserSettings settings, {
+    required DateTime now,
+  }) async {
     if (!settings.notificationsEnabled ||
         task.isCompleted ||
         task.scheduledTime == null) {
@@ -49,6 +58,10 @@ class ReminderManager {
       task,
       settings.notificationLeadTimeMinutes,
     );
+    if (!fireTime.isAfter(now)) {
+      await _scheduler.cancel(reminderIdForTask(task.id));
+      return;
+    }
     final themed = _resolver?.resolveTaskReminder(task, settings);
     await _scheduler.schedule(
       id: reminderIdForTask(task.id),
@@ -64,12 +77,23 @@ class ReminderManager {
 
   /// Re-sincroniza los recordatorios de TODAS las tareas (usado al iniciar la
   /// app y al cambiar ajustes globales de notificaciones: margen o toggle).
+  ///
+  /// Cada tarea se procesa en su propio try/catch (mismo patrón que
+  /// `TasksNotifier._syncReminderForTask`): un error de plugin en UNA tarea no
+  /// debe abortar la sincronización de las demás. [now] evita programar
+  /// disparos ya pasados (ver [syncTaskReminder]).
   Future<void> syncAllTaskReminders(
     List<Task> tasks,
-    UserSettings settings,
-  ) async {
+    UserSettings settings, {
+    required DateTime now,
+  }) async {
     for (final task in tasks) {
-      await syncTaskReminder(task, settings);
+      try {
+        await syncTaskReminder(task, settings, now: now);
+      } catch (e) {
+        debugPrint(
+            'ReminderManager: error sincronizando recordatorio de ${task.id}: $e');
+      }
     }
   }
 

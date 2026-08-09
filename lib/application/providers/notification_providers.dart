@@ -31,10 +31,13 @@ final thematicTextsGeneratorProvider = Provider<ThematicTextsGenerator>((ref) {
 
 /// Resolver de textos temáticos (Slate System). Sin caché/usuario solo usa el
 /// catálogo local y devuelve `null` cuando el tema está OFF.
+///
+/// DECISIÓN (review `3142d33`): el resolver es de SOLO LECTURA. No recibe el
+/// generador: la generación con IA ocurre únicamente al guardar tareas
+/// (`TasksNotifier`), nunca en el path de programación de notificaciones.
 final thematicTextsResolverProvider = Provider<ThematicTextsResolver>((ref) {
   return ThematicTextsResolver(
     cache: ref.watch(thematicTextCacheProvider),
-    generator: ref.watch(thematicTextsGeneratorProvider),
   );
 });
 
