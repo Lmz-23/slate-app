@@ -55,6 +55,14 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^3.0.0
   build_runner: ^2.4.13
+  flutter_launcher_icons: ^0.14.0
+
+flutter_icons:
+  android: true
+  ios: false
+  image_path: "icon/slate_icon_v1.png"
+  adaptive_icon_background: "#1A1A2E"
+  adaptive_icon_foreground: "icon/slate_icon_v1.png"
 
 flutter:
   uses-material-design: true

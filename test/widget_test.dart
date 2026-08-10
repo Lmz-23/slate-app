@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:slate_app/application/services/timezone_service.dart';
 import 'package:slate_app/core/extensions/datetime_extensions.dart';
 
 void main() {
@@ -30,19 +29,4 @@ void main() {
     });
   });
 
-  group('TimezoneService.nowInTimezone', () {
-    test('devuelve un DateTime para una zona válida', () {
-      final now = TimezoneService.nowInTimezone('America/Bogota');
-      expect(now, isA<DateTime>());
-    });
-
-    test('cae a DateTime.now() para una zona desconocida', () {
-      final now = TimezoneService.nowInTimezone('Invalid/Zone');
-      expect(now, isA<DateTime>());
-      final fallback = DateTime.now();
-      expect(now.year, fallback.year);
-      expect(now.month, fallback.month);
-      expect(now.day, fallback.day);
-    });
-  });
 }

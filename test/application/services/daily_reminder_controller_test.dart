@@ -206,6 +206,7 @@ void main() {
     late PlayerProgressBox playerProgressBox;
     late ControllerFakeScheduler scheduler;
     late ProviderContainer container;
+    late DateTime fixedNow;
 
     setUpAll(() async {
       tempDir = await Directory.systemTemp.createTemp('slate_controller_alerta');
@@ -214,6 +215,10 @@ void main() {
     });
 
     setUp(() async {
+      // Inyección de reloj fijo: 10 ago 2026 12:00 UTC-0 (mediodía).
+      // Evita dependencia del reloj real y race conditions a medianoche.
+      fixedNow = DateTime.utc(2026, 8, 10, 12, 0);
+
       settingsBox = SettingsBox();
       await settingsBox.init();
       tasksBox = TasksBox();
@@ -260,8 +265,7 @@ void main() {
       }
     }
 
-    DateTime today() =>
-        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    DateTime today() => DateTime(fixedNow.year, fixedNow.month, fixedNow.day);
 
     /// Siembra una racha activa de [streakDays] y una tarea pendiente HOY.
     Future<void> seedActiveStreak(int streakDays) async {
@@ -269,13 +273,13 @@ void main() {
         id: 'main_streak',
         currentStreak: streakDays,
         longestStreak: streakDays,
-        updatedAt: DateTime.now(),
+        updatedAt: fixedNow,
       ));
       await tasksBox.add(Task(
         id: 't1',
         title: 'Misión de hoy',
         scheduledDate: today(),
-        createdAt: DateTime.now(),
+        createdAt: fixedNow,
       ));
     }
 

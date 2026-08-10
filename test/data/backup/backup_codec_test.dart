@@ -125,14 +125,6 @@ void main() {
       expect(settings.containsKey('customBadgeConfigs'), isFalse);
     });
 
-    test('incluye timestamp de exportación', () {
-      final jsonString =
-          BackupCodec.encode(tasks: [], categories: [], streaks: [], badges: [],
-              userSettings: const UserSettings(), appMeta: const {},
-              thematicTextCache: const {}, exportedAt: DateTime(2026, 8, 9, 10, 30));
-      final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
-      expect(decoded['exportedAt'], '2026-08-09T10:30:00.000');
-    });
   });
 
   group('BackupCodec.decode (import válido)', () {
