@@ -78,13 +78,6 @@ enum BadgeType {
     }
   }
 
-  static BadgeType? fromDays(int days) {
-    for (final badge in BadgeType.values) {
-      if (badge.requiredDays == days) return badge;
-    }
-    return null;
-  }
-
   /// Devuelve todas las insignias cuyo umbral es menor o igual a [days].
   ///
   /// Permite desbloquear de una sola vez TODOS los hitos alcanzados cuando la

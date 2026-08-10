@@ -5,11 +5,6 @@ final speechToTextProvider = Provider<SpeechToText>((ref) {
   return SpeechToText();
 });
 
-final speechAvailableProvider = FutureProvider<bool>((ref) async {
-  final stt = ref.watch(speechToTextProvider);
-  return await stt.initialize();
-});
-
 final isListeningProvider = StateProvider<bool>((ref) => false);
 
 final lastWordsProvider = StateProvider<String>((ref) => '');

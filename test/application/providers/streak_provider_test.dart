@@ -52,7 +52,7 @@ void main() {
 
     streakRepository = StreakRepositoryImpl(streaksBox);
     badgeRepository = BadgeRepositoryImpl(badgesBox);
-    notifier = StreakNotifier(streakRepository, badgeRepository, BadgesNotifier(badgeRepository));
+    notifier = StreakNotifier(streakRepository, BadgesNotifier(badgeRepository));
   });
 
   tearDown(() async {

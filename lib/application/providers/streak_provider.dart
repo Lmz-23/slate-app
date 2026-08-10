@@ -29,7 +29,6 @@ final badgeRepositoryProvider = Provider<BadgeRepositoryImpl>((ref) {
 final streakProvider = StateNotifierProvider<StreakNotifier, Streak>((ref) {
   return StreakNotifier(
     ref.watch(streakRepositoryProvider),
-    ref.watch(badgeRepositoryProvider),
     ref.watch(badgesProvider.notifier),
   );
 });
@@ -38,14 +37,11 @@ final badgesProvider = StateNotifierProvider<BadgesNotifier, List<Badge>>((ref) 
   return BadgesNotifier(ref.watch(badgeRepositoryProvider));
 });
 
-final newUnlockedBadgeProvider = StateProvider<Badge?>((ref) => null);
-
 class StreakNotifier extends StateNotifier<Streak> {
   final StreakRepositoryImpl _streakRepository;
-  final BadgeRepositoryImpl _badgeRepository;
   final BadgesNotifier _badgesNotifier;
 
-  StreakNotifier(this._streakRepository, this._badgeRepository, this._badgesNotifier)
+  StreakNotifier(this._streakRepository, this._badgesNotifier)
       : super(_streakRepository.getStreak());
 
   void refresh() {
@@ -106,13 +102,6 @@ class StreakNotifier extends StateNotifier<Streak> {
       await _badgesNotifier.unlockBadges(calculation.currentStreak);
     }
   }
-
-  void markBadgeAsDisplayed(String badgeId) {
-    final badge = _badgeRepository.getById(badgeId);
-    if (badge != null) {
-      _badgeRepository.update(badge.copyWith(isDisplayed: false));
-    }
-  }
 }
 
 class BadgesNotifier extends StateNotifier<List<Badge>> {
@@ -155,6 +144,4 @@ class BadgesNotifier extends StateNotifier<List<Badge>> {
       state = [...state, ...newlyUnlocked];
     }
   }
-
-  List<Badge> getUnlocked() => _repository.getUnlocked();
 }

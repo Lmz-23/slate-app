@@ -34,10 +34,6 @@ class BadgesBox {
     await _box.delete(id);
   }
 
-  List<Badge> getUnlocked() {
-    return _box.values.toList()..sort((a, b) => b.unlockedAt.compareTo(a.unlockedAt));
-  }
-
   Badge? getByType(int typeIndex) {
     try {
       return _box.values.firstWhere((badge) => badge.type.index == typeIndex);

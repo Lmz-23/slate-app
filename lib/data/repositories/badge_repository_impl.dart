@@ -20,8 +20,5 @@ class BadgeRepositoryImpl implements BadgeRepository {
   Future<void> update(Badge badge) => _badgesBox.update(badge);
 
   @override
-  List<Badge> getUnlocked() => _badgesBox.getUnlocked();
-
-  @override
   Badge? getByType(int typeIndex) => _badgesBox.getByType(typeIndex);
 }
