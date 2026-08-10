@@ -463,14 +463,14 @@ void main() {
   });
 
   group('textos temáticos Slate System', () {
-    test('resolver ON: el recordatorio usa los textos del catálogo', () async {
+    test('con resolver: el recordatorio usa los textos del catálogo', () async {
       final themedManager = ReminderManager(
         scheduler: scheduler,
         resolver: const ThematicTextsResolver(),
       );
       final task = _task('t', DateTime(2026, 1, 15), scheduledTime: _atTwo);
       await themedManager.syncTaskReminder(
-          task, const UserSettings(slateSystemTheme: true), now: _earlyMorning);
+          task, _settings(), now: _earlyMorning);
 
       final entry = scheduler.scheduled[reminderIdForTask('t')]!;
       expect(entry.title, contains('Daily Quest'));
@@ -478,15 +478,12 @@ void main() {
       expect(entry.body, contains('14:00'));
     });
 
-    test('resolver ON: el cierre de jornada usa texto temático', () async {
+    test('con resolver: el cierre de jornada usa texto temático', () async {
       final manager = ReminderManager(
         scheduler: scheduler,
         resolver: const ThematicTextsResolver(),
       );
-      const settings = UserSettings(
-        enableDayClosure: true,
-        slateSystemTheme: true,
-      );
+      const settings = UserSettings(enableDayClosure: true);
       await manager.syncDayClosure(
         now: DateTime(2026, 1, 15, 10, 0),
         allTasks: tareasHoy,
@@ -498,17 +495,6 @@ void main() {
       final entry = scheduler.scheduled[dayClosureReminderId]!;
       expect(entry.title, contains('System Report'));
       expect(entry.body, contains('Jornada cerrada'));
-    });
-
-    test('resolver sin tema (OFF): conserva el texto canónico exacto', () async {
-      final task = _task('t', DateTime(2026, 1, 15), scheduledTime: _atTwo);
-      await manager.syncTaskReminder(task, _settings(), now: _earlyMorning);
-
-      expect(scheduler.scheduled[reminderIdForTask('t')]!.title, 'Recordatorio');
-      expect(
-        scheduler.scheduled[reminderIdForTask('t')]!.body,
-        ReminderScheduleCalculator.taskReminderBody(task),
-      );
     });
   });
 }

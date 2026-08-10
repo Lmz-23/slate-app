@@ -2,22 +2,15 @@ import 'package:flutter/material.dart' hide Badge;
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../domain/entities/badge.dart';
-import '../../../../domain/entities/user_settings.dart';
 import '../../../../domain/enums/badge_type.dart';
 import 'badge_presentation.dart';
 
 class BadgeVault extends StatelessWidget {
   final List<Badge> badges;
 
-  /// Ajustes del usuario para la resolución de nombre/icono (config IA →
-  /// nomenclatura Slate System → canónico). Por defecto tema OFF: los nombres
-  /// canónicos actuales.
-  final UserSettings settings;
-
   const BadgeVault({
     super.key,
     required this.badges,
-    this.settings = const UserSettings(),
   });
 
   @override
@@ -62,14 +55,12 @@ class BadgeVault extends StatelessWidget {
   }
 
   Widget _buildBadgeItem(BadgeType type, bool isUnlocked, Badge? badge) {
-    // Resolución centralizada: config IA → nomenclatura SL → canónico.
-    final displayName = BadgePresentation.resolveName(type: type, settings: settings);
-    final flavor = BadgePresentation.resolveFlavor(type: type, settings: settings);
-    final iconData = BadgePresentation.resolveIconData(type: type, settings: settings);
+    // Resolución centralizada (Slate System es la única identidad del producto).
+    final displayName = BadgePresentation.resolveName(type: type);
+    final flavor = BadgePresentation.resolveFlavor(type: type);
+    final iconData = BadgePresentation.resolveIconData(type: type);
 
-    final subtitle = flavor != null
-        ? '$flavor · ${type.requiredDays} días'
-        : '${type.requiredDays} días';
+    final subtitle = '$flavor · ${type.requiredDays} días';
 
     return Container(
       decoration: BoxDecoration(

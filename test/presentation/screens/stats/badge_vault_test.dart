@@ -12,7 +12,6 @@ import 'package:slate_app/data/hive/boxes/streaks_box.dart';
 import 'package:slate_app/data/hive/boxes/badges_box.dart';
 import 'package:slate_app/domain/entities/badge.dart';
 import 'package:slate_app/domain/entities/task.dart';
-import 'package:slate_app/domain/entities/user_settings.dart';
 import 'package:slate_app/domain/enums/badge_type.dart';
 import 'package:slate_app/presentation/screens/stats/widgets/badge_vault.dart';
 
@@ -73,20 +72,20 @@ void main() {
       // Sin insignias: todos los tipos aparecen bloqueados.
       expect(find.text('Vitrina de insignias'), findsOneWidget);
       expect(find.text('???'), findsNWidgets(BadgeType.values.length));
-      expect(find.text('Primer Paso'), findsNothing);
+      expect(find.text('Rango E · Nivel I'), findsNothing);
     });
 
-    testWidgets('una insignia desbloqueada muestra su nombre y quita su ???', (tester) async {
+    testWidgets('una insignia desbloqueada muestra su rango SL y quita su ???', (tester) async {
       await _pumpInScrollView(
         tester,
         BadgeVault(badges: [_badge(BadgeType.streak3)]),
       );
 
-      expect(find.text('Primer Paso'), findsOneWidget);
+      expect(find.text('Rango E · Nivel I'), findsOneWidget);
       expect(find.text('???'), findsNWidgets(BadgeType.values.length - 1));
 
-      // El umbral de la insignia desbloqueada se sigue mostrando.
-      expect(find.text('3 días'), findsOneWidget);
+      // El apodo y el umbral de la insignia desbloqueada se siguen mostrando.
+      expect(find.text('Cazador Novato · 3 días'), findsOneWidget);
     });
 
     testWidgets('varias insignias desbloqueadas se muestran todas', (tester) async {
@@ -99,64 +98,36 @@ void main() {
         ]),
       );
 
-      expect(find.text('Primer Paso'), findsOneWidget);
-      expect(find.text('Semana Perfecta'), findsOneWidget);
-      expect(find.text('Quincena'), findsOneWidget);
+      expect(find.text('Rango E · Nivel I'), findsOneWidget);
+      expect(find.text('Rango E · Nivel II'), findsOneWidget);
+      expect(find.text('Rango D · Nivel I'), findsOneWidget);
       expect(find.text('???'), findsNWidgets(BadgeType.values.length - 3));
     });
   });
 
-  group('BadgeVault - tema Slate System', () {
-    testWidgets('con tema ON muestra rangos/niveles y apodos', (tester) async {
+  group('BadgeVault - identidad Slate System (fuente única)', () {
+    testWidgets('siempre muestra rangos/niveles y apodos', (tester) async {
       await _pumpInScrollView(
         tester,
-        BadgeVault(
-          badges: [_badge(BadgeType.streak14)],
-          settings: const UserSettings(slateSystemTheme: true),
-        ),
+        BadgeVault(badges: [_badge(BadgeType.streak14)]),
       );
 
       expect(find.text('Rango D · Nivel I'), findsOneWidget);
       expect(find.text('Aprendiz · 14 días'), findsOneWidget);
       expect(find.text('Quincena'), findsNothing,
-          reason: 'el nombre canónico queda en fallback');
+          reason: 'el nombre canónico ya no existe en la identidad única');
     });
 
-    testWidgets('la config personalizada IA gana sobre el rango SL',
+    testWidgets('los hitos de racha con umbral siguen en la vitrina',
         (tester) async {
+      // Los 9 hitos E→S se CONSERVAN: aquí se verifica el escalón más alto.
       await _pumpInScrollView(
         tester,
-        BadgeVault(
-          badges: [_badge(BadgeType.streak7)],
-          settings: const UserSettings(
-            slateSystemTheme: true,
-            customBadgeConfigs: [
-              CustomBadgeConfig(
-                badgeType: 'streak7',
-                customName: 'Siete Hebras',
-                iconName: 'sword',
-                daysRequired: 7,
-              ),
-            ],
-          ),
-        ),
+        BadgeVault(badges: [_badge(BadgeType.streak365)]),
       );
 
-      expect(find.text('Siete Hebras'), findsOneWidget);
-      expect(find.text('Rango E · Nivel II'), findsNothing);
-    });
-
-    testWidgets('con tema OFF (default) el nombre canónico sigue mostrándose',
-        (tester) async {
-      await _pumpInScrollView(
-        tester,
-        BadgeVault(
-          badges: [_badge(BadgeType.streak30)],
-          settings: const UserSettings(),
-        ),
-      );
-      expect(find.text('Mes de Hierro'), findsOneWidget);
-      expect(find.text('30 días'), findsOneWidget);
+      expect(find.text('Nivel Nacional'), findsOneWidget);
+      expect(find.text('Leyenda · 365 días'), findsOneWidget);
     });
   });
 
@@ -209,7 +180,7 @@ void main() {
           ),
         ),
       );
-      expect(find.text('Primer Paso'), findsNothing);
+      expect(find.text('Rango E · Nivel I'), findsNothing);
 
       // Flujo real de desbloqueo: completar 3 tareas → recalculate (racha 3).
       // La escritura en Hive es I/O real, por lo que se ejecuta fuera del
@@ -229,7 +200,7 @@ void main() {
       // reconstruye y BadgeVault muestra la insignia inmediatamente.
       await tester.pump();
 
-      expect(find.text('Primer Paso'), findsOneWidget);
+      expect(find.text('Rango E · Nivel I'), findsOneWidget);
       expect(find.text('???'), findsNWidgets(BadgeType.values.length - 1));
     });
 
@@ -256,7 +227,7 @@ void main() {
             );
       });
       await tester.pump();
-      expect(find.text('Primer Paso'), findsOneWidget);
+      expect(find.text('Rango E · Nivel I'), findsOneWidget);
 
       // Racha baja a 0: la insignia sigue visible.
       await tester.runAsync(() async {
@@ -272,7 +243,7 @@ void main() {
       await tester.pump();
 
       expect(container.read(streakProvider).currentStreak, 0);
-      expect(find.text('Primer Paso'), findsOneWidget);
+      expect(find.text('Rango E · Nivel I'), findsOneWidget);
       expect(find.text('???'), findsNWidgets(BadgeType.values.length - 1));
     });
   });

@@ -449,35 +449,16 @@ class BackupCodec {
       'notificationBadge': s.notificationBadge,
       'notificationImagePaths': s.notificationImagePaths,
       'notificationTextContext': s.notificationTextContext,
-      'customBadgeConfigs': s.customBadgeConfigs
-          .map((c) => <String, dynamic>{
-                'badgeType': c.badgeType,
-                'customName': c.customName,
-                'iconName': c.iconName,
-                'daysRequired': c.daysRequired,
-              })
-          .toList(),
       'notificationLeadTimeMinutes': s.notificationLeadTimeMinutes,
       'dailyReminderEnabled': s.dailyReminderEnabled,
       'dailyReminderHour1': s.dailyReminderHour1,
       'dailyReminderHour2': s.dailyReminderHour2,
-      'slateSystemTheme': s.slateSystemTheme,
       'useAIThematicTexts': s.useAIThematicTexts,
       'enableDayClosure': s.enableDayClosure,
     };
   }
 
   static UserSettings _settingsFromJson(Map<String, dynamic> m) {
-    final configs = (m['customBadgeConfigs'] as List? ?? const [])
-        .whereType<Map<String, dynamic>>()
-        .map((c) => CustomBadgeConfig(
-              badgeType: c['badgeType'] as String? ?? '',
-              customName: c['customName'] as String? ?? '',
-              iconName: c['iconName'] as String? ?? '',
-              daysRequired: c['daysRequired'] as int? ?? 0,
-            ))
-        .toList();
-
     return UserSettings(
       id: m['id'] as String? ?? 'singleton',
       userName: m['userName'] as String? ?? 'Usuario',
@@ -497,12 +478,10 @@ class BackupCodec {
       notificationImagePaths:
           (m['notificationImagePaths'] as List?)?.cast<String>() ?? const [],
       notificationTextContext: m['notificationTextContext'] as String?,
-      customBadgeConfigs: configs,
       notificationLeadTimeMinutes: m['notificationLeadTimeMinutes'] as int? ?? 0,
       dailyReminderEnabled: m['dailyReminderEnabled'] as bool? ?? true,
       dailyReminderHour1: m['dailyReminderHour1'] as int? ?? 10,
       dailyReminderHour2: m['dailyReminderHour2'] as int? ?? 19,
-      slateSystemTheme: m['slateSystemTheme'] as bool? ?? false,
       useAIThematicTexts: m['useAIThematicTexts'] as bool? ?? false,
       enableDayClosure: m['enableDayClosure'] as bool? ?? false,
     );

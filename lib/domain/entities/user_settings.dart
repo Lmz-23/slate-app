@@ -20,9 +20,6 @@ class UserSettings extends Equatable {
   final List<String> notificationImagePaths;
   final String? notificationTextContext;
 
-  // AI Badge Settings
-  final List<CustomBadgeConfig> customBadgeConfigs;
-
   // Recordatorios de tarea / resumen diario (P2/P3/P5)
   /// Margen de aviso ANTES de la hora de la tarea (minutos). Default 0: se
   /// avisa justo a la hora de la tarea.
@@ -32,12 +29,6 @@ class UserSettings extends Equatable {
   final bool dailyReminderEnabled;
   final int dailyReminderHour1;
   final int dailyReminderHour2;
-
-  // Slate System (personalización temática)
-  /// Activa la estética temática "Slate System" en notificaciones e insignias
-  /// (textos temáticos y nomenclatura de rangos/niveles). Cuando está OFF el
-  /// comportamiento y los textos son idénticos a los actuales.
-  final bool slateSystemTheme;
 
   /// Opt-in: genera los textos temáticos de notificaciones con IA (Gemini) al
   /// guardar tareas/generar contenido. Los textos se guardan en caché local en
@@ -64,12 +55,10 @@ class UserSettings extends Equatable {
     this.notificationBadge = true,
     this.notificationImagePaths = const [],
     this.notificationTextContext,
-    this.customBadgeConfigs = const [],
     this.notificationLeadTimeMinutes = 0,
     this.dailyReminderEnabled = true,
     this.dailyReminderHour1 = 10,
     this.dailyReminderHour2 = 19,
-    this.slateSystemTheme = false,
     this.useAIThematicTexts = false,
     this.enableDayClosure = false,
   });
@@ -90,12 +79,10 @@ class UserSettings extends Equatable {
     bool? notificationBadge,
     List<String>? notificationImagePaths,
     String? notificationTextContext,
-    List<CustomBadgeConfig>? customBadgeConfigs,
     int? notificationLeadTimeMinutes,
     bool? dailyReminderEnabled,
     int? dailyReminderHour1,
     int? dailyReminderHour2,
-    bool? slateSystemTheme,
     bool? useAIThematicTexts,
     bool? enableDayClosure,
   }) {
@@ -115,13 +102,11 @@ class UserSettings extends Equatable {
       notificationBadge: notificationBadge ?? this.notificationBadge,
       notificationImagePaths: notificationImagePaths ?? this.notificationImagePaths,
       notificationTextContext: notificationTextContext ?? this.notificationTextContext,
-      customBadgeConfigs: customBadgeConfigs ?? this.customBadgeConfigs,
       notificationLeadTimeMinutes:
           notificationLeadTimeMinutes ?? this.notificationLeadTimeMinutes,
       dailyReminderEnabled: dailyReminderEnabled ?? this.dailyReminderEnabled,
       dailyReminderHour1: dailyReminderHour1 ?? this.dailyReminderHour1,
       dailyReminderHour2: dailyReminderHour2 ?? this.dailyReminderHour2,
-      slateSystemTheme: slateSystemTheme ?? this.slateSystemTheme,
       useAIThematicTexts: useAIThematicTexts ?? this.useAIThematicTexts,
       enableDayClosure: enableDayClosure ?? this.enableDayClosure,
     );
@@ -144,44 +129,11 @@ class UserSettings extends Equatable {
         notificationBadge,
         notificationImagePaths,
         notificationTextContext,
-        customBadgeConfigs,
         notificationLeadTimeMinutes,
         dailyReminderEnabled,
         dailyReminderHour1,
         dailyReminderHour2,
-        slateSystemTheme,
         useAIThematicTexts,
         enableDayClosure,
       ];
-}
-
-class CustomBadgeConfig extends Equatable {
-  final String badgeType; // e.g., "streak30", "custom90"
-  final String customName;
-  final String iconName;
-  final int daysRequired;
-
-  const CustomBadgeConfig({
-    required this.badgeType,
-    required this.customName,
-    required this.iconName,
-    required this.daysRequired,
-  });
-
-  CustomBadgeConfig copyWith({
-    String? badgeType,
-    String? customName,
-    String? iconName,
-    int? daysRequired,
-  }) {
-    return CustomBadgeConfig(
-      badgeType: badgeType ?? this.badgeType,
-      customName: customName ?? this.customName,
-      iconName: iconName ?? this.iconName,
-      daysRequired: daysRequired ?? this.daysRequired,
-    );
-  }
-
-  @override
-  List<Object?> get props => [badgeType, customName, iconName, daysRequired];
 }

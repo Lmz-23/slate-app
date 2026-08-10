@@ -270,10 +270,12 @@ class TasksNotifier extends StateNotifier<List<Task>> {
   /// resolver de notificaciones es de solo lectura, por lo que programar
   /// NUNCA invoca a la IA.
   ///
-  /// Gating del opt-in: se exige `slateSystemTheme == true` Y
-  /// `useAIThematicTexts == true` (ambos). Con el toggle OFF la IA no se
-  /// invoca nunca (la comprobación de API key/caché del generador es defensa
-  /// adicional, no la condición del opt-in).
+  /// Gating del opt-in de CONTENIDO: se exige `useAIThematicTexts == true`.
+  /// Con el toggle OFF la IA no se invoca nunca (la comprobación de API
+  /// key/caché del generador es defensa adicional, no la condición del
+  /// opt-in). La estética "Slate System" es la identidad única del producto y
+  /// no forma parte del gating (los textos temáticos salen del catálogo
+  /// local incluso sin IA).
   ///
   /// Genera la variante de la tarea guardada y las 3 variantes GLOBALES
   /// (resumen mañana/tarde + cierre de jornada), todas idempotentes por clave:
@@ -281,7 +283,7 @@ class TasksNotifier extends StateNotifier<List<Task>> {
   /// vuelve a llamar a la IA.
   Future<void> _maybeGenerateThematicVariants(Task task) async {
     final settings = _ref.read(settingsProvider);
-    if (!settings.useAIThematicTexts || !settings.slateSystemTheme) return;
+    if (!settings.useAIThematicTexts) return;
     try {
       final generator = _ref.read(thematicTextsGeneratorProvider);
       await generator.ensureTaskVariant(task);

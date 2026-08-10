@@ -1,16 +1,16 @@
 import '../../data/hive/boxes/thematic_text_cache_box.dart';
 import '../../domain/entities/task.dart';
-import '../../domain/entities/user_settings.dart';
 import 'reminder_schedule_calculator.dart';
 import 'thematic_texts_catalog.dart';
 
-/// Resuelve el texto de una notificación respetando el tema "Slate System".
+/// Resuelve el texto de una notificación en la identidad única "Slate System".
 ///
-/// Orden de resolución:
-/// - Tema OFF (`slateSystemTheme == false`): devuelve `null`, y el llamador
-///   usa los textos canónicos actuales (comportamiento idéntico a hoy).
-/// - Tema ON: primero busca la variante generada con IA en [ThematicTextCache]
-///   (si existe); si no, usa el catálogo local [ThematicTextsCatalog].
+/// Orden de resolución (fuente única):
+/// - Si existe variante generada con IA en [ThematicTextCache], se usa esa.
+/// - Si no, se usa el catálogo local [ThematicTextsCatalog].
+///
+/// Contrato: SIEMPRE devuelve [ThematicText] (caché → catálogo). No existe
+/// "tema OFF": la estética Sistema es la única identidad del producto.
 ///
 /// DECISIÓN (review `3142d33`, Hallazgo 1 y 6): este resolver es de SOLO
 /// LECTURA y NUNCA dispara la generación con IA.
@@ -22,8 +22,8 @@ import 'thematic_texts_catalog.dart';
 ///   app invocaba a Gemini igualmente en cada ciclo de programación (violaba
 ///   el opt-in/privacidad del usuario). Desde este cambio es estructuralmente
 ///   imposible: el resolver no tiene referencia alguna al generador.
-/// - Gating del opt-in: la generación exige `slateSystemTheme == true` Y
-///   `useAIThematicTexts == true` (ambos), comprobados en el punto de guardado
+/// - Gating del opt-in de CONTENIDO: la generación exige
+///   `useAIThematicTexts == true`, comprobado en el punto de guardado
 ///   (`TasksNotifier._maybeGenerateThematicVariants`). Con el toggle OFF la IA
 ///   NUNCA se invoca (verificado por test).
 /// - Caché tras desactivar el toggle: las variantes CACHEADAS se siguen usando
@@ -40,9 +40,7 @@ class ThematicTextsResolver {
 
   final ThematicTextCache? _cache;
 
-  bool _isThemed(UserSettings settings) => settings.slateSystemTheme;
-
-  ThematicText? _fromCache(String key, ThematicText fallback) {
+  ThematicText _fromCache(String key, ThematicText fallback) {
     final cached = _cache?.get(key);
     if (cached != null) {
       return ThematicText(title: cached.title, body: cached.body);
@@ -50,39 +48,32 @@ class ThematicTextsResolver {
     return fallback;
   }
 
-  /// Recordatorio de tarea. `null` si el tema está OFF (texto canónico).
-  ThematicText? resolveTaskReminder(Task task, UserSettings settings) {
-    if (!_isThemed(settings)) return null;
+  /// Recordatorio de tarea.
+  ThematicText resolveTaskReminder(Task task) {
     return _fromCache(
       ThematicTextsCatalog.taskCacheKey(task),
       ThematicTextsCatalog.taskReminder(task),
     );
   }
 
-  /// Resumen de la mañana (10:00). `null` si el tema está OFF.
-  ThematicText? resolveMorningSummary(int pendingCount, UserSettings settings) {
-    if (!_isThemed(settings)) return null;
+  /// Resumen de la mañana (10:00).
+  ThematicText resolveMorningSummary(int pendingCount) {
     return _fromCache(
       ThematicTextsCatalog.summaryCacheKey('morning'),
       ThematicTextsCatalog.morningSummary(pendingCount),
     );
   }
 
-  /// Resumen de la tarde (19:00). `null` si el tema está OFF.
-  ThematicText? resolveEveningSummary(int pendingCount, UserSettings settings) {
-    if (!_isThemed(settings)) return null;
+  /// Resumen de la tarde (19:00).
+  ThematicText resolveEveningSummary(int pendingCount) {
     return _fromCache(
       ThematicTextsCatalog.summaryCacheKey('evening'),
       ThematicTextsCatalog.eveningSummary(pendingCount),
     );
   }
 
-  /// Cierre de jornada. `null` si el tema está OFF (texto canónico).
-  ThematicText? resolveDayClosure(
-    DayClosureStats stats,
-    UserSettings settings,
-  ) {
-    if (!_isThemed(settings)) return null;
+  /// Cierre de jornada.
+  ThematicText resolveDayClosure(DayClosureStats stats) {
     return _fromCache(
       ThematicTextsCatalog.summaryCacheKey('closure'),
       ThematicTextsCatalog.dayClosure(stats),

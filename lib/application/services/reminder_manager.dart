@@ -22,8 +22,8 @@ import 'thematic_texts_resolver.dart';
 ///   siguiente reset.
 ///
 /// Si se inyecta un [resolver] de textos temáticos (Slate System), los títulos
-/// y cuerpos se toman de él cuando el tema está ON; si el tema está OFF (o no
-/// hay resolver) se usan exactamente los textos canónicos actuales, de modo
+/// y cuerpos se toman de él SIEMPRE (el resolver es la fuente única; nunca
+/// devuelve `null`). Si no hay resolver se usan los textos por defecto, de modo
 /// que ningún test ni comportamiento existente cambia.
 class ReminderManager {
   const ReminderManager({
@@ -62,7 +62,7 @@ class ReminderManager {
       await _scheduler.cancel(reminderIdForTask(task.id));
       return;
     }
-    final themed = _resolver?.resolveTaskReminder(task, settings);
+    final themed = _resolver?.resolveTaskReminder(task);
     await _scheduler.schedule(
       id: reminderIdForTask(task.id),
       title: themed?.title ?? 'Recordatorio',
@@ -135,7 +135,6 @@ class ReminderManager {
     if (fireMorning) {
       final themed = _resolver?.resolveMorningSummary(
         ReminderScheduleCalculator.pendingCountOn(allTasks, today),
-        settings,
       );
       await _scheduler.schedule(
         id: morningDailyReminderId,
@@ -168,7 +167,6 @@ class ReminderManager {
     if (fireEvening) {
       final themed = _resolver?.resolveEveningSummary(
         ReminderScheduleCalculator.pendingCountOn(allTasks, today),
-        settings,
       );
       await _scheduler.schedule(
         id: eveningDailyReminderId,
@@ -240,7 +238,7 @@ class ReminderManager {
       currentStreak: currentStreak,
       milestone: milestone,
     );
-    final themed = _resolver?.resolveDayClosure(stats, settings);
+    final themed = _resolver?.resolveDayClosure(stats);
     await _scheduler.schedule(
       id: dayClosureReminderId,
       title: themed?.title ?? 'Cierre de jornada',

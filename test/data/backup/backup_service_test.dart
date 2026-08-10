@@ -139,7 +139,6 @@ void main() {
       themeMode: AppThemeMode.light,
       timezone: 'Europe/Madrid',
       notificationLeadTimeMinutes: 20,
-      slateSystemTheme: true,
       useAIThematicTexts: true,
       enableDayClosure: true,
     ));
@@ -223,7 +222,6 @@ void main() {
       // Ajustes.
       final settings = settingsBox.getSettings();
       expect(settings.userName, 'Ada');
-      expect(settings.slateSystemTheme, isTrue);
       expect(settings.useAIThematicTexts, isTrue);
       expect(settings.enableDayClosure, isTrue);
       expect(settings.notificationLeadTimeMinutes, 20);

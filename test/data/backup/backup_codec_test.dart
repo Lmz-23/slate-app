@@ -66,19 +66,10 @@ void main() {
         notificationBadge: false,
         notificationImagePaths: ['/img/a.png'],
         notificationTextContext: 'mi contexto',
-        customBadgeConfigs: [
-          CustomBadgeConfig(
-            badgeType: 'streak30',
-            customName: 'Racha 30',
-            iconName: 'shield',
-            daysRequired: 30,
-          ),
-        ],
         notificationLeadTimeMinutes: 20,
         dailyReminderEnabled: false,
         dailyReminderHour1: 8,
         dailyReminderHour2: 21,
-        slateSystemTheme: true,
         useAIThematicTexts: true,
         enableDayClosure: true,
       );
@@ -127,8 +118,11 @@ void main() {
 
       final settings = data['userSettings'] as Map<String, dynamic>;
       expect(settings['userName'], 'Ada');
-      expect(settings['slateSystemTheme'], isTrue);
-      expect(settings['customBadgeConfigs'], isA<List>());
+      expect(settings['useAIThematicTexts'], isTrue);
+      expect(settings['enableDayClosure'], isTrue);
+      // Los campos eliminados del modelo ya no se exportan.
+      expect(settings.containsKey('slateSystemTheme'), isFalse);
+      expect(settings.containsKey('customBadgeConfigs'), isFalse);
     });
 
     test('incluye timestamp de exportación', () {
@@ -155,12 +149,13 @@ void main() {
       expect(decoded.thematicTextCache['task_t-1'], isA<Map<String, dynamic>>());
     });
 
-    test('preserva ajustes con configuración de insignias personalizadas', () {
+    test('preserva los ajustes (sin los campos eliminados de personalización)',
+        () {
       final decoded = BackupCodec.decode(sampleBackupString());
-      expect(decoded.userSettings.customBadgeConfigs, hasLength(1));
-      expect(decoded.userSettings.customBadgeConfigs.single.daysRequired, 30);
-      expect(decoded.userSettings.enableDayClosure, isTrue);
       expect(decoded.userSettings.useAIThematicTexts, isTrue);
+      expect(decoded.userSettings.enableDayClosure, isTrue);
+      expect(decoded.userSettings.dailyReminderEnabled, isFalse);
+      expect(decoded.userSettings.dailyReminderHour1, 8);
     });
   });
 

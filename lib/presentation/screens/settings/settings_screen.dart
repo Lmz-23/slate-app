@@ -12,7 +12,6 @@ import '../../../application/providers/backup_provider.dart';
 import '../../../application/providers/settings_provider.dart';
 import '../../../application/services/timezone_service.dart';
 import 'ai_notification_settings_screen.dart';
-import 'badge_customization_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -126,13 +125,6 @@ class SettingsScreen extends ConsumerWidget {
                         : 'Standard',
                     onTap: () => _showNotificationStylePicker(context, ref, settings),
                   ),
-                  const Divider(height: 1, color: AppColors.surfaceLight),
-                  _buildListTile(
-                    icon: Icons.emoji_events_outlined,
-                    title: 'Personalizar insignias',
-                    subtitle: '${settings.customBadgeConfigs.length} insignias configuradas',
-                    onTap: () => context.push('/badge-customization'),
-                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -209,16 +201,6 @@ class SettingsScreen extends ConsumerWidget {
                     title: 'Tema',
                     subtitle: settings.themeMode.displayName,
                     onTap: () => _showThemePicker(context, ref, settings.themeMode),
-                  ),
-                  const Divider(height: 1, color: AppColors.surfaceLight),
-                  _buildSwitchTile(
-                    icon: Icons.auto_awesome_outlined,
-                    title: 'Slate System',
-                    subtitle: 'Textos temáticos y rangos de nivel en notificaciones e insignias',
-                    value: settings.slateSystemTheme,
-                    onChanged: (value) {
-                      ref.read(settingsProvider.notifier).updateSlateSystemTheme(value);
-                    },
                   ),
                   const Divider(height: 1, color: AppColors.surfaceLight),
                   _buildSwitchTile(

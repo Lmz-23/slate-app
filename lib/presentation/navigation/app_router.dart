@@ -4,7 +4,6 @@ import '../screens/home/home_screen.dart';
 import '../screens/weekly/weekly_screen.dart';
 import '../screens/stats/stats_screen.dart';
 import '../screens/settings/settings_screen.dart';
-import '../screens/settings/badge_customization_screen.dart';
 import '../screens/settings/ai_notification_settings_screen.dart';
 import '../screens/categories/categories_screen.dart';
 import '../widgets/common/navigation_shell.dart';
@@ -50,11 +49,6 @@ final appRouter = GoRouter(
       path: '/categories',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const CategoriesScreen(),
-    ),
-    GoRoute(
-      path: '/badge-customization',
-      parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const BadgeCustomizationScreen(),
     ),
     GoRoute(
       path: '/ai-notification-settings',

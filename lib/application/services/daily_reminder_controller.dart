@@ -60,16 +60,16 @@ class DailyReminderController {
   /// se vuelve a agendar TODO para que los nuevos detalles del canal queden
   /// aplicados también a las programaciones pendientes.
   ///
-  /// Incluye el tema Slate System y sus textos con IA: al cambiarlos se
-  /// re-agenda para que los títulos/cuerpos temáticos (o canónicos) queden
-  /// aplicados en las programaciones pendientes. Incluye el cierre de jornada.
+  /// Incluye el opt-in de textos con IA y el cierre de jornada: al cambiarlos
+  /// se re-agenda para que los títulos/cuerpos temáticos queden aplicados en
+  /// las programaciones pendientes.
   String _notificationSignature(UserSettings s) =>
       '${s.notificationsEnabled}|${s.notificationLeadTimeMinutes}|'
       '${s.dailyReminderEnabled}|${s.dailyReminderHour1}|'
       '${s.dailyReminderHour2}|${s.timezone}|'
       '${s.notificationSound}|${s.notificationVibration}|'
       '${s.notificationBadge}|${s.enableDayClosure}|'
-      '${s.slateSystemTheme}|${s.useAIThematicTexts}';
+      '${s.useAIThematicTexts}';
 
   DateTime _now() {
     final settings = _ref.read(settingsProvider);

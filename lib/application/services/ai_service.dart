@@ -100,107 +100,6 @@ Contexto del usuario: ${textDescription ?? "Sin descripción adicional"}
     }
   }
 
-  /// Analyze context and return badge customization suggestions
-  Future<BadgeAIResult> analyzeBadgeCustomization({
-    required String badgeType,
-    required int daysRequired,
-    List<String>? imagePaths,
-    String? textDescription,
-  }) async {
-    try {
-      final badgeNames = _getBadgeNames();
-      final defaultName = badgeNames[badgeType] ?? 'Insignia $daysRequired';
-
-      final prompt = '''
-Analiza el siguiente contexto y sugiere un nombre épico y un icono para una insignia de racha de $daysRequired días en una app de tareas.
-
-Responde SOLO con JSON válido:
-{"name": "nombre épico en español", "icon": "nombre_icono"}
-
-Iconos disponibles: star, fire, lightning, flower, shield, trophy, crown, diamond, rocket, sword, crown, medal, trophy, award, flame, bolt, zap, moon, sun, heart, bell, bellSlash, bellOff, volume, volume2, volumeX, alarm, clock, hourglass
-
-Contexto del usuario: ${textDescription ?? "Sin descripción"}
-''';
-
-      final parts = <Map<String, dynamic>>[
-        {'text': prompt},
-      ];
-
-      // Add images if provided
-      if (imagePaths != null && imagePaths.isNotEmpty) {
-        for (final path in imagePaths) {
-          final file = File(path);
-          if (await file.exists()) {
-            final bytes = await file.readAsBytes();
-            final base64Image = base64Encode(bytes);
-            parts.add({
-              'inlineData': {
-                'mimeType': 'image/jpeg',
-                'data': base64Image,
-              },
-            });
-          }
-        }
-      }
-
-      final body = jsonEncode({
-        'contents': [
-          {'parts': parts}
-        ],
-        'generationConfig': {
-          'temperature': 0.7,
-          'maxOutputTokens': 100,
-        },
-      });
-
-      final uri = Uri.parse('$_baseUrl?key=$_apiKey');
-      final response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: body,
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final text = data['candidates']?[0]?['content']?['parts']?[0]?['text'] ?? '';
-
-        final jsonMatch = RegExp(r'\{[^}]+\}').firstMatch(text);
-        if (jsonMatch != null) {
-          final jsonStr = jsonMatch.group(0)!;
-          final result = jsonDecode(jsonStr);
-          return BadgeAIResult(
-            name: result['name'] ?? defaultName,
-            icon: result['icon'] ?? 'star',
-          );
-        }
-      }
-
-      return BadgeAIResult(name: defaultName, icon: 'star');
-    } catch (e) {
-      return BadgeAIResult(
-        name: _getBadgeNames()[badgeType] ?? 'Insignia $daysRequired',
-        icon: 'star',
-      );
-    }
-  }
-
-  Map<String, String> _getBadgeNames() {
-    return {
-      'streak3': 'Primer Paso',
-      'streak7': 'Semana Perfecta',
-      'streak14': 'Quincena',
-      'streak21': 'Hábito Formado',
-      'streak30': 'Mes de Hierro',
-      'streak60': 'Doble Mes',
-      'streak90': 'Trimestre',
-      'streak180': 'Medio Año',
-      'streak365': 'Leyenda',
-      'custom90': 'Veterano',
-      'custom180': 'Maestro',
-      'custom365': 'Dios del Hábito',
-    };
-  }
-
   /// Genera la variante TEMÁTICA (Slate System) de una notificación.
   ///
   /// Se invoca cuando el usuario guarda una tarea o se genera contenido con el
@@ -289,16 +188,6 @@ class NotificationAIResult {
       badge: true,
     );
   }
-}
-
-class BadgeAIResult {
-  final String name;
-  final String icon;
-
-  BadgeAIResult({
-    required this.name,
-    required this.icon,
-  });
 }
 
 class ThematicTextAIResult {

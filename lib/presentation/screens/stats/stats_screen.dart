@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../application/providers/streak_provider.dart';
-import '../../../application/providers/settings_provider.dart';
 import '../../../application/providers/task_provider.dart';
 import '../../../application/providers/now_provider.dart';
 import 'widgets/streak_display.dart';
@@ -19,7 +18,6 @@ class StatsScreen extends ConsumerWidget {
     final badges = ref.watch(badgesProvider);
     final tasks = ref.watch(tasksProvider);
     final now = ref.watch(nowProvider).value ?? DateTime.now();
-    final settings = ref.watch(settingsProvider);
 
     final weeklyProgress = _calculateWeeklyProgress(tasks, now);
 
@@ -45,7 +43,7 @@ class StatsScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.lg),
               MonthlyCalendar(tasks: tasks),
               const SizedBox(height: AppSpacing.lg),
-              BadgeVault(badges: badges, settings: settings),
+              BadgeVault(badges: badges),
               const SizedBox(height: AppSpacing.xl),
             ],
           ),
