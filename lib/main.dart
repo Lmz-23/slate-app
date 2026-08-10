@@ -19,6 +19,7 @@ import 'application/providers/category_provider.dart';
 import 'application/providers/streak_provider.dart';
 import 'application/providers/settings_provider.dart';
 import 'application/providers/notification_providers.dart';
+import 'application/providers/backup_provider.dart';
 import 'application/services/notification_service.dart';
 
 void main() async {
@@ -89,6 +90,7 @@ void main() async {
         streaksBoxProvider.overrideWithValue(streaksBox),
         settingsBoxProvider.overrideWithValue(settingsBox),
         thematicTextCacheProvider.overrideWithValue(thematicTextCache),
+        appMetaBoxProvider.overrideWithValue(metaBox),
       ],
       child: const SlateApp(),
     ),

@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../domain/enums/app_theme_mode.dart';
+import '../../../application/providers/backup_provider.dart';
 import '../../../application/providers/settings_provider.dart';
 import '../../../application/services/timezone_service.dart';
 import 'ai_notification_settings_screen.dart';
@@ -236,6 +239,25 @@ class SettingsScreen extends ConsumerWidget {
                         ref.read(settingsProvider.notifier).updateUseAIThematicTexts(false);
                       }
                     },
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _buildSection(
+                title: 'Datos',
+                children: [
+                  _buildListTile(
+                    icon: Icons.upload_file_outlined,
+                    title: 'Exportar mis datos',
+                    subtitle: 'Genera una copia de seguridad en un archivo JSON',
+                    onTap: () => _onExportData(context, ref),
+                  ),
+                  const Divider(height: 1, color: AppColors.surfaceLight),
+                  _buildListTile(
+                    icon: Icons.settings_backup_restore_outlined,
+                    title: 'Importar desde archivo',
+                    subtitle: 'Restaura una copia de seguridad (reemplaza tus datos)',
+                    onTap: () => _onImportData(context, ref),
                   ),
                 ],
               ),
@@ -476,6 +498,128 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Fase 0 — Exportación: genera el archivo JSON con el estado completo del
+  /// usuario y lo comparte con el share sheet del sistema (share_plus).
+  /// Si el share no está disponible (plataforma sin soporte o error del
+  /// plugin) se muestra la ruta absoluta del archivo en un snackbar.
+  Future<void> _onExportData(BuildContext context, WidgetRef ref) async {
+    final controller = ref.read(backupControllerProvider.notifier);
+    final result = await controller.exportData();
+
+    final message = ref.read(backupControllerProvider).message ??
+        (result == null ? 'No se pudo exportar.' : 'Copia exportada.');
+    final filePath = result?.filePath;
+    if (!context.mounted) return;
+
+    if (result == null || filePath == null) {
+      _showSnack(context, message);
+      return;
+    }
+
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(filePath)],
+          text: 'Copia de seguridad de Slate',
+        ),
+      );
+      if (!context.mounted) return;
+      _showSnack(context, message);
+    } catch (_) {
+      if (!context.mounted) return;
+      _showSnack(context, 'Copia exportada. Ruta del archivo: $filePath');
+    }
+  }
+
+  /// Fase 0 — Importación: selecciona el archivo JSON, pide confirmación
+  /// explícita (la importación SOBRESCRIBE todos los datos) y restaura.
+  /// Tras importar, el controller refresca los providers vivos.
+  Future<void> _onImportData(BuildContext context, WidgetRef ref) async {
+    final FilePickerResult? picked;
+    try {
+      picked = await FilePicker.pickFiles(type: FileType.any);
+    } catch (_) {
+      if (!context.mounted) return;
+      _showSnack(context, 'No se pudo abrir el selector de archivos.');
+      return;
+    }
+    if (!context.mounted) return;
+    if (picked == null || picked.files.isEmpty) return;
+
+    final path = picked.files.single.path;
+    if (path == null) {
+      _showSnack(context, 'No se pudo obtener la ruta del archivo seleccionado.');
+      return;
+    }
+
+    final confirmed = await _confirmImport(context);
+    if (!context.mounted || !confirmed) return;
+
+    final controller = ref.read(backupControllerProvider.notifier);
+    final result = await controller.importData(path);
+    final message = ref.read(backupControllerProvider).message ??
+        (result == null ? 'No se pudo importar el archivo.' : 'Datos restaurados.');
+    if (!context.mounted) return;
+    _showSnack(context, message);
+  }
+
+  /// Confirmación explícita antes de sobrescribir los datos (regla de import
+  /// elegida: sobrescribir, no fusionar).
+  Future<bool> _confirmImport(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          '¿Restaurar copia?',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        content: const Text(
+          'Esta acción REEMPLAZARÁ todos tus datos actuales '
+          '(tareas, categorías, rachas, insignias, ajustes y caché temática) '
+          'con el contenido de la copia de seguridad.\n\n'
+          'Esta acción no se puede deshacer.',
+          style: TextStyle(
+            fontSize: 14,
+            color: AppColors.textSecondary,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Restaurar',
+              style: TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
+  }
+
+  void _showSnack(BuildContext context, String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// Aviso de privacidad del toggle "Textos con IA" (Hallazgo 2, review

@@ -4,7 +4,11 @@ import '../../../domain/entities/user_settings.dart';
 
 class SettingsBox {
   static const String _boxName = 'settings';
-  static const String _singletonId = 'user_settings';
+
+  /// Key bajo el que se guarda el ajuste del usuario (visible para el backup).
+  static const String singletonBoxKey = 'user_settings';
+
+  static const String _singletonId = singletonBoxKey;
   late Box<UserSettings> _box;
 
   Future<void> init() async {
