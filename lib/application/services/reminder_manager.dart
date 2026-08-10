@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 
+import '../../domain/entities/badge.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/user_settings.dart';
 import '../../domain/enums/badge_type.dart';
+import 'fortnight_calculator.dart';
 import 'notification_ids.dart';
 import 'reminder_schedule_calculator.dart';
 import 'reminder_scheduler.dart';
@@ -308,4 +310,60 @@ class ReminderManager {
   /// Cancela directamente la alerta de racha en peligro.
   Future<void> cancelStreakAtRiskReminder() =>
       _scheduler.cancel(streakAtRiskReminderId);
+
+  /// Decide y programa/cancela el resumen quincenal del Sistema
+  /// (`0x60000005`, F3 decisión D).
+  ///
+  /// Cadencia QUINCENAL (días fijos 1 y 16 a las 20:00). El resumen dispara
+  /// tras `fireTime` y reporta la quincena recién terminada:
+  /// - el disparo del día 16 reporta la quincena-1 (1..15 de ese mes);
+  /// - el disparo del día 1 reporta la quincena-2 del mes ANTERIOR
+  ///   (16..último día del mes).
+  ///
+  /// Patrón igual al cierre de jornada: programar, disparar tras `fireTime` y
+  /// re-programar el siguiente periodo (al volver a decidir,
+  /// [FortnightCalculator.nextFireTime] devuelve el siguiente disparo futuro).
+  /// Defensa Fix A: si la hora ya pasó, cancela en lugar de programar al
+  /// pasado. Se CANCELA solo cuando las notificaciones están desactivadas.
+  Future<void> syncFortnightSummary({
+    required DateTime now,
+    required List<Task> allTasks,
+    required UserSettings settings,
+    required int currentStreak,
+    required int level,
+    required int totalXp,
+    required List<Badge> badges,
+  }) async {
+    final fireTime = FortnightCalculator.nextFireTime(
+      now,
+      hour: fortnightSummaryReminderHour,
+    );
+
+    if (!settings.notificationsEnabled || !fireTime.isAfter(now)) {
+      await _scheduler.cancel(fortnightSummaryReminderId);
+      return;
+    }
+
+    final period = FortnightCalculator.periodForFireTime(fireTime);
+    final stats = FortnightSummaryStats(
+      period: period,
+      completedCount: FortnightCalculator.completedCountIn(allTasks, period),
+      currentStreak: currentStreak,
+      level: level,
+      totalXp: totalXp,
+      badgesUnlockedCount:
+          FortnightCalculator.badgesUnlockedIn(badges, period),
+    );
+    final themed = _resolver?.resolveFortnightSummary(stats);
+    await _scheduler.schedule(
+      id: fortnightSummaryReminderId,
+      title: themed?.title ?? 'Resumen quincenal',
+      body: themed?.body ?? FortnightCalculator.fortnightBody(stats),
+      fireTime: fireTime,
+    );
+  }
+
+  /// Cancela directamente el resumen quincenal.
+  Future<void> cancelFortnightSummary() =>
+      _scheduler.cancel(fortnightSummaryReminderId);
 }

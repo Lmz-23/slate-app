@@ -11,6 +11,7 @@
 ///   - Recordatorios diarios: `0x60000001` (resumen de la mañana),
 ///     `0x60000002` (resumen de la tarde) y `0x60000003` (cierre de jornada).
 ///   - Alerta de racha en peligro: `0x60000004` (F2).
+///   - Resumen quincenal del Sistema: `0x60000005` (F3).
 library;
 
 /// FNV-1a de 32 bits. Determinista, rápido y estable entre ejecuciones de la
@@ -60,3 +61,18 @@ const int streakAtRiskReminderId = 0x60000004;
 /// inequívoca: la alerta se dispara a mediodía, cuando al usuario le queda
 /// toda la tarde para completar una misión y salvar la racha.
 const int streakAtRiskReminderHour = 12;
+
+/// Id del resumen quincenal del Sistema (F3, decisión D).
+///
+/// Se programa SIEMPRE que las notificaciones estén activas (no tiene toggle
+/// propio en el MVP). Dispara el día **1 o 16** de cada mes a las 20:00 y
+/// reporta la quincena recién terminada (quincena-1: 1..15; quincena-2:
+/// 16..fin de mes). Mismo patrón que el cierre de jornada: programar, disparar
+/// tras `fireTime` y re-programar el siguiente periodo.
+const int fortnightSummaryReminderId = 0x60000005;
+
+/// Hora fija del resumen quincenal: **20:00 (8 PM)**.
+///
+/// Horario razonable de tarde-noche: el usuario ya terminó su jornada y puede
+/// revisar el resumen de la quincena sin interrumpir la mañana ni la tarde.
+const int fortnightSummaryReminderHour = 20;

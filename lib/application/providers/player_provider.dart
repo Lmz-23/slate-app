@@ -69,6 +69,17 @@ class PlayerNotifier extends StateNotifier<PlayerProfile> {
         XpEventType.subtask,
       );
 
+  /// F3 (decisión C): +25 XP al reclamar la quest diaria.
+  ///
+  /// La quest no se desreclama (el evento es unidireccional), pero el método
+  /// reutiliza la misma maquinaria de [PlayerProfile.shownLevelUps]: si el +25
+  /// cruza un nivel cuya transición YA fue consumida (p. ej. alcanzado antes
+  /// con tareas), devuelve `null` y la UI NO muestra un SnackBar duplicado.
+  Future<int?> addQuestXp() => _applyDelta(
+        PlayerXpCalculator.questXp,
+        XpEventType.quest,
+      );
+
   /// Aplica el delta de XP (positivo o negativo) de un [evento], persiste en
   /// Hive y actualiza el estado al instante (reflejo inmediato).
   ///

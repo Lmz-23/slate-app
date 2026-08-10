@@ -7,8 +7,8 @@ import '../../../../application/providers/task_provider.dart';
 import '../../../../application/providers/streak_provider.dart';
 import '../../../../application/providers/settings_provider.dart';
 import '../../../../application/providers/player_provider.dart';
-import '../../../../application/services/thematic_texts_catalog.dart';
 import '../../../../application/services/timezone_service.dart';
+import '../../../widgets/common/level_up_snackbar.dart';
 import '../../../widgets/task_tile.dart';
 import '../../task_form/task_form_sheet.dart';
 
@@ -124,25 +124,9 @@ class TaskSection extends ConsumerWidget {
     } else {
       levelUpLevel = await playerNotifier.addTaskXp(task.priority);
       if (levelUpLevel != null && context.mounted) {
-        _showLevelUpSnackBar(context, levelUpLevel);
+        showLevelUpSnackBar(context, levelUpLevel);
       }
     }
-  }
-
-  void _showLevelUpSnackBar(BuildContext context, int level) {
-    final messenger = ScaffoldMessenger.of(context);
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            ThematicTextsCatalog.levelUpMessage(level),
-            style: const TextStyle(color: AppColors.textPrimary),
-          ),
-          backgroundColor: AppColors.surfaceLight,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
   }
 
   void _deleteTask(WidgetRef ref, String id) {

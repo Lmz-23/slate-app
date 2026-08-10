@@ -1,5 +1,6 @@
 import '../../data/hive/boxes/thematic_text_cache_box.dart';
 import '../../domain/entities/task.dart';
+import 'fortnight_calculator.dart';
 import 'reminder_schedule_calculator.dart';
 import 'thematic_texts_catalog.dart';
 
@@ -85,6 +86,14 @@ class ThematicTextsResolver {
     return _fromCache(
       ThematicTextsCatalog.summaryCacheKey('streak_at_risk'),
       ThematicTextsCatalog.streakAtRisk(streakDays),
+    );
+  }
+
+  /// Resumen quincenal (F3, decisión D).
+  ThematicText resolveFortnightSummary(FortnightSummaryStats stats) {
+    return _fromCache(
+      ThematicTextsCatalog.summaryCacheKey('fortnight'),
+      ThematicTextsCatalog.fortnightSummary(stats),
     );
   }
 }

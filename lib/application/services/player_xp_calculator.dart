@@ -34,6 +34,10 @@ class PlayerXpCalculator {
   /// través de `XpEventType.subtask`; todavía no existe UI de subtareas.
   static const int subtaskXp = 2;
 
+  /// XP ganado al reclamar la quest diaria "Completa 3 tareas hoy" (F3,
+  /// decisión C). Reclamable UNA vez por día y con acción explícita.
+  static const int questXp = 25;
+
 /// Umbral de XP TOTAL necesaria para alcanzar [level].
 ///
 /// Curva de producto: `xpRequerido(nivel) = 100 · nivel²` con los puntos

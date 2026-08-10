@@ -7,6 +7,7 @@ import '../../domain/entities/task.dart';
 import '../../domain/entities/user_settings.dart';
 import '../../domain/enums/badge_type.dart';
 import '../providers/now_provider.dart';
+import '../providers/player_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/streak_provider.dart';
 import '../providers/task_provider.dart';
@@ -29,6 +30,10 @@ import 'timezone_service.dart';
 ///   horas del resumen, zona horaria): re-aplica todo (tareas + resumen).
 /// - Cuando cambia el DÍA (el `nowProvider` refresca cada 30 s): reprograma
 ///   los resúmenes del nuevo día.
+///
+/// F2/F3: el controlador también coordina la alerta de racha en peligro
+/// (`0x60000004`, 12:00) y el resumen quincenal del Sistema (`0x60000005`,
+/// día 1 y 16 a las 20:00), ambos con secciones try/catch propias (Fix A+B).
 ///
 /// La programación con `zonedSchedule` es de disparo único para HOY, por lo que
 /// no hay un "periodic" nativo que cubra la 19:00 condicional; el controlador
@@ -164,6 +169,12 @@ class DailyReminderController {
     } catch (e) {
       debugPrint('DailyReminderController: error en alerta de racha: $e');
     }
+    try {
+      // F3 (decisión D): resumen quincenal del Sistema (1/16 a las 20:00).
+      await _syncFortnightSummary(now, tasks, settings);
+    } catch (e) {
+      debugPrint('DailyReminderController: error en resumen quincenal: $e');
+    }
 
     _lastScheduledDay = now;
     _lastNotificationSignature = _notificationSignature(settings);
@@ -251,7 +262,35 @@ class DailyReminderController {
     } catch (e) {
       debugPrint('DailyReminderController: error en alerta de racha: $e');
     }
+    try {
+      await _syncFortnightSummary(now, tasks, settings);
+    } catch (e) {
+      debugPrint('DailyReminderController: error en resumen quincenal: $e');
+    }
     _lastScheduledDay = now;
+  }
+
+  /// Decide el resumen quincenal (0x60000005) con los datos actuales: racha,
+  /// Jugador (nivel/XP) e insignias desbloqueadas. La programación/cancelación
+  /// se delega al manager, que aplica la cadencia fija (día 1 y 16, 20:00) y
+  /// la defensa de no programar al pasado (patrón Fix A).
+  Future<void> _syncFortnightSummary(
+    DateTime now,
+    List<Task> tasks,
+    UserSettings settings,
+  ) async {
+    final streak = _ref.read(streakProvider);
+    final player = _ref.read(playerProvider);
+    final badges = _ref.read(badgesProvider);
+    await _manager.syncFortnightSummary(
+      now: now,
+      allTasks: tasks,
+      settings: settings,
+      currentStreak: streak.currentStreak,
+      level: player.level,
+      totalXp: player.totalXp,
+      badges: badges,
+    );
   }
 
   void dispose() {}

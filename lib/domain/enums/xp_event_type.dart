@@ -11,4 +11,8 @@ enum XpEventType {
 
   /// XP de una subtarea completada/desmarcada (F4). +2 por subtarea.
   subtask,
+
+  /// XP de la quest diaria reclamada (F3, decisión C). +25 XP, una vez por
+  /// día; no se revierte (la quest no se desreclama).
+  quest,
 }

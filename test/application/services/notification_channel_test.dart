@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
 import 'package:slate_app/application/providers/notification_providers.dart';
+import 'package:slate_app/application/providers/player_provider.dart';
 import 'package:slate_app/application/providers/settings_provider.dart';
 import 'package:slate_app/application/providers/streak_provider.dart';
 import 'package:slate_app/application/providers/task_provider.dart';
@@ -12,10 +13,12 @@ import 'package:slate_app/application/services/notification_service.dart';
 import 'package:slate_app/application/services/reminder_manager.dart';
 import 'package:slate_app/application/services/reminder_scheduler.dart';
 import 'package:slate_app/data/hive/adapters/badge_adapter.dart';
+import 'package:slate_app/data/hive/adapters/player_profile_adapter.dart';
 import 'package:slate_app/data/hive/adapters/streak_adapter.dart';
 import 'package:slate_app/data/hive/adapters/task_adapter.dart';
 import 'package:slate_app/data/hive/adapters/user_settings_adapter.dart';
 import 'package:slate_app/data/hive/boxes/badges_box.dart';
+import 'package:slate_app/data/hive/boxes/player_progress_box.dart';
 import 'package:slate_app/data/hive/boxes/settings_box.dart';
 import 'package:slate_app/data/hive/boxes/streaks_box.dart';
 import 'package:slate_app/data/hive/boxes/tasks_box.dart';
@@ -103,6 +106,7 @@ void main() {
     late TasksBox tasksBox;
     late StreaksBox streaksBox;
     late BadgesBox badgesBox;
+    late PlayerProgressBox playerProgressBox;
     late ChannelFakeScheduler scheduler;
     late ProviderContainer container;
 
@@ -113,6 +117,7 @@ void main() {
       Hive.registerAdapter(UserSettingsAdapter());
       Hive.registerAdapter(StreakAdapter());
       Hive.registerAdapter(BadgeAdapter());
+      Hive.registerAdapter(PlayerProfileAdapter());
     });
 
     setUp(() async {
@@ -124,6 +129,8 @@ void main() {
       await streaksBox.init();
       badgesBox = BadgesBox();
       await badgesBox.init();
+      playerProgressBox = PlayerProgressBox();
+      await playerProgressBox.init();
 
       scheduler = ChannelFakeScheduler();
       container = ProviderContainer(
@@ -132,6 +139,7 @@ void main() {
           tasksBoxProvider.overrideWithValue(tasksBox),
           streaksBoxProvider.overrideWithValue(streaksBox),
           badgesBoxProvider.overrideWithValue(badgesBox),
+          playerProgressBoxProvider.overrideWithValue(playerProgressBox),
           // El canal se recrea a través de `NotificationService`; la
           // programación de recordatorios usa el fake para que la cadena
           // asíncrona del controlador drene sin depender del plugin.
@@ -154,6 +162,7 @@ void main() {
       await Hive.deleteBoxFromDisk('tasks');
       await Hive.deleteBoxFromDisk('streaks');
       await Hive.deleteBoxFromDisk('badges');
+      await Hive.deleteBoxFromDisk('player_progress');
     });
 
     tearDownAll(() async {

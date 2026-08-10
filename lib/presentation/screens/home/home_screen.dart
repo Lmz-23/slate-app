@@ -8,6 +8,7 @@ import '../../../application/providers/streak_provider.dart';
 import '../../../application/providers/now_provider.dart';
 import '../../widgets/streak_badge.dart';
 import '../task_form/task_form_sheet.dart';
+import 'widgets/quest_card.dart';
 import 'widgets/task_section.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -31,6 +32,8 @@ class HomeScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const QuestCard(),
+                    const SizedBox(height: AppSpacing.lg),
                     if (scheduledTasks.isNotEmpty) ...[
                       TaskSection(
                         title: 'Con horario',

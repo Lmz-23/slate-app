@@ -5,6 +5,7 @@ import 'package:slate_app/application/services/reminder_manager.dart';
 import 'package:slate_app/application/services/reminder_schedule_calculator.dart';
 import 'package:slate_app/application/services/reminder_scheduler.dart';
 import 'package:slate_app/application/services/thematic_texts_resolver.dart';
+import 'package:slate_app/domain/entities/badge.dart';
 import 'package:slate_app/domain/entities/task.dart';
 import 'package:slate_app/domain/entities/user_settings.dart';
 import 'package:slate_app/domain/enums/badge_type.dart';
@@ -606,6 +607,155 @@ void main() {
       expect(entry.title, contains('⚠'));
       expect(entry.title, contains('Racha en peligro'));
       expect(entry.body, contains('Tu racha de 7 días'));
+    });
+  });
+
+  group('syncFortnightSummary (F3, decisión D: resumen quincenal)', () {
+    const hour = fortnightSummaryReminderHour;
+
+    Badge badge(String id, DateTime unlockedAt) => Badge(
+          id: id,
+          type: BadgeType.streak3,
+          name: 'n',
+          iconName: 'i',
+          unlockedAt: unlockedAt,
+        );
+
+    test('día 5 → programa el día 16 a las 20:00 (reporta 1..15 del mes)',
+        () async {
+      final now = DateTime(2026, 8, 5, 8, 0);
+      final tasks = [
+        _task('a', DateTime(2026, 8, 2),
+            isCompleted: true, completedAt: DateTime(2026, 8, 2, 9, 0)),
+        _task('b', DateTime(2026, 8, 14),
+            isCompleted: true, completedAt: DateTime(2026, 8, 14, 10, 0)),
+        // Fuera del periodo reportado (quincena-1): se completa el 16.
+        _task('c', DateTime(2026, 8, 16),
+            isCompleted: true, completedAt: DateTime(2026, 8, 16, 11, 0)),
+      ];
+      await manager.syncFortnightSummary(
+        now: now,
+        allTasks: tasks,
+        settings: _settings(),
+        currentStreak: 4,
+        level: 2,
+        totalXp: 120,
+        badges: [badge('b1', DateTime(2026, 8, 10))],
+      );
+
+      final entry = scheduler.scheduled[fortnightSummaryReminderId];
+      expect(entry, isNotNull);
+      expect(entry!.fireTime, DateTime(2026, 8, 16, hour, 0));
+      // Reporta la quincena-1: solo "a" y "b" (2), no "c".
+      expect(entry.body, contains('01/08 - 15/08'));
+      expect(entry.body, contains('2 tareas completadas'));
+      expect(entry.body, contains('Racha actual: 4 días'));
+      expect(entry.body, contains('Nivel 2 · 120 XP'));
+      expect(entry.body, contains('Insignias desbloqueadas: 1'));
+    });
+
+    test('día 1 a las 08:00 → programa HOY a las 20:00 reportando la '
+        'quincena-2 del mes ANTERIOR', () async {
+      final now = DateTime(2026, 9, 1, 8, 0);
+      final tasks = [
+        _task('a', DateTime(2026, 9, 1)), // pendiente, no cuenta
+        _task('b', DateTime(2026, 8, 20),
+            isCompleted: true, completedAt: DateTime(2026, 8, 20, 9, 0)),
+        _task('c', DateTime(2026, 8, 30),
+            isCompleted: true, completedAt: DateTime(2026, 8, 30, 10, 0)),
+      ];
+      await manager.syncFortnightSummary(
+        now: now,
+        allTasks: tasks,
+        settings: _settings(),
+        currentStreak: 10,
+        level: 3,
+        totalXp: 400,
+        badges: [],
+      );
+
+      final entry = scheduler.scheduled[fortnightSummaryReminderId];
+      expect(entry, isNotNull);
+      expect(entry!.fireTime, DateTime(2026, 9, 1, hour, 0));
+      // Reporta la quincena-2 de AGOSTO (16..31): "b" y "c" (2).
+      expect(entry.body, contains('16/08 - 31/08'));
+      expect(entry.body, contains('2 tareas completadas'));
+    });
+
+    test('día 16 después de las 20:00 → programa el 1 del mes siguiente',
+        () async {
+      final now = DateTime(2026, 8, 16, 21, 0);
+      await manager.syncFortnightSummary(
+        now: now,
+        allTasks: [],
+        settings: _settings(),
+        currentStreak: 0,
+        level: 1,
+        totalXp: 0,
+        badges: [],
+      );
+
+      final entry = scheduler.scheduled[fortnightSummaryReminderId];
+      expect(entry, isNotNull);
+      expect(entry!.fireTime, DateTime(2026, 9, 1, hour, 0));
+    });
+
+    test('el id es 0x60000005 (libre; tareas usan 0x10000000-0x4FFFFFFF',
+        () async {
+      expect(fortnightSummaryReminderId, 0x60000005);
+      await manager.syncFortnightSummary(
+        now: DateTime(2026, 8, 5, 8, 0),
+        allTasks: [],
+        settings: _settings(),
+        currentStreak: 0,
+        level: 1,
+        totalXp: 0,
+        badges: [],
+      );
+      expect(
+        scheduler.scheduled.containsKey(fortnightSummaryReminderId),
+        isTrue,
+      );
+    });
+
+    test('cancelación: notificaciones desactivadas', () async {
+      await manager.syncFortnightSummary(
+        now: DateTime(2026, 8, 5, 8, 0),
+        allTasks: [_task('a', DateTime(2026, 8, 5))],
+        settings: _settings(notificationsEnabled: false),
+        currentStreak: 3,
+        level: 1,
+        totalXp: 0,
+        badges: [],
+      );
+
+      expect(
+        scheduler.scheduled.containsKey(fortnightSummaryReminderId),
+        isFalse,
+      );
+      expect(scheduler.cancelled, contains(fortnightSummaryReminderId));
+    });
+
+    test('con resolver: usa el texto temático "◇ System Report — Quincena"',
+        () async {
+      final themedManager = ReminderManager(
+        scheduler: scheduler,
+        resolver: const ThematicTextsResolver(),
+      );
+      await themedManager.syncFortnightSummary(
+        now: DateTime(2026, 8, 5, 8, 0),
+        allTasks: [_task('a', DateTime(2026, 8, 2))],
+        settings: _settings(),
+        currentStreak: 2,
+        level: 1,
+        totalXp: 10,
+        badges: [],
+      );
+
+      final entry = scheduler.scheduled[fortnightSummaryReminderId]!;
+      expect(entry.title, contains('◇'));
+      expect(entry.title, contains('System Report — Quincena'));
+      expect(entry.body, contains('Quincena 01/08 - 15/08'));
     });
   });
 }
