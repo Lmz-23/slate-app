@@ -160,6 +160,101 @@ void main() {
       expect(FortnightCalculator.completedCountIn(tasks, period), 1);
     });
 
+    test('una subtarea completada dentro del periodo NO cuenta (H2 regla de '
+        'producto)', () {
+      final tasks = [
+        Task(
+          id: 'main',
+          title: 'Principal',
+          scheduledDate: DateTime(2026, 8, 10),
+          isCompleted: true,
+          completedAt: DateTime(2026, 8, 10),
+          createdAt: DateTime(2026, 8, 10),
+        ),
+        Task(
+          id: 's1',
+          title: 'Subtarea',
+          scheduledDate: DateTime(2026, 8, 10),
+          isCompleted: true,
+          completedAt: DateTime(2026, 8, 11),
+          createdAt: DateTime(2026, 8, 10),
+          parentTaskId: 'main',
+          isSubtask: true,
+        ),
+      ];
+      expect(FortnightCalculator.completedCountIn(tasks, period), 1,
+          reason: 'solo la principal cuenta en el resumen quincenal');
+    });
+
+    test('una quincena con 2 principales y 8 subtareas cuenta solo 2', () {
+      // Refuerza la regla a escala: aunque el total de "marcas" sea 10, la
+      // quincena resume solo las 2 principales (las subtareas no infl an).
+      final tasks = <Task>[
+        Task(
+          id: 'a',
+          title: 'A',
+          scheduledDate: DateTime(2026, 8, 5),
+          isCompleted: true,
+          completedAt: DateTime(2026, 8, 5),
+          createdAt: DateTime(2026, 8, 5),
+        ),
+        Task(
+          id: 'b',
+          title: 'B',
+          scheduledDate: DateTime(2026, 8, 12),
+          isCompleted: true,
+          completedAt: DateTime(2026, 8, 12),
+          createdAt: DateTime(2026, 8, 12),
+        ),
+      ];
+      for (final subId in ['a1', 'a2', 'a3', 'a4']) {
+        tasks.add(Task(
+          id: subId,
+          title: 'subA',
+          scheduledDate: DateTime(2026, 8, 5),
+          isCompleted: true,
+          completedAt: DateTime(2026, 8, 5),
+          createdAt: DateTime(2026, 8, 5),
+          parentTaskId: 'a',
+          isSubtask: true,
+        ));
+      }
+      for (final subId in ['b1', 'b2', 'b3', 'b4']) {
+        tasks.add(Task(
+          id: subId,
+          title: 'subB',
+          scheduledDate: DateTime(2026, 8, 12),
+          isCompleted: true,
+          completedAt: DateTime(2026, 8, 12),
+          createdAt: DateTime(2026, 8, 12),
+          parentTaskId: 'b',
+          isSubtask: true,
+        ));
+      }
+      expect(FortnightCalculator.completedCountIn(tasks, period), 2,
+          reason: 'solo principales cuentan; subs = sub-bloques sin misión');
+    });
+
+    test('una quincena con SOLO subtareas completadas cuenta 0', () {
+      // Aunque haya N subtareas en el periodo, ninguna cuenta. La consistencia
+      // con quest/racha es parte de la regla H2 de producto.
+      final tasks = [
+        for (var day = 1; day <= 10; day++)
+          Task(
+            id: 's$day',
+            title: 'sub',
+            scheduledDate: DateTime(2026, 8, day),
+            isCompleted: true,
+            completedAt: DateTime(2026, 8, day),
+            createdAt: DateTime(2026, 8, day),
+            parentTaskId: 'parent',
+            isSubtask: true,
+          ),
+      ];
+      expect(FortnightCalculator.completedCountIn(tasks, period), 0,
+          reason: 'las subtareas no son "misiones" del Slate System');
+    });
+
     test('badgesUnlockedIn cuenta según unlockedAt dentro del periodo', () {
       final badges = [
         Badge(

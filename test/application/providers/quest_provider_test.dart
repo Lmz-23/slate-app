@@ -21,6 +21,8 @@ Task _task(
   DateTime day, {
   bool isCompleted = false,
   DateTime? completedAt,
+  bool isSubtask = false,
+  String? parentTaskId,
 }) {
   return Task(
     id: id,
@@ -29,6 +31,8 @@ Task _task(
     isCompleted: isCompleted,
     completedAt: completedAt,
     createdAt: day,
+    parentTaskId: parentTaskId,
+    isSubtask: isSubtask,
   );
 }
 
@@ -299,6 +303,76 @@ void main() {
       final second = await notifier.claim();
       expect(second, isNull);
       expect(notifier.state.isClaimed, isTrue);
+    });
+  });
+
+  group('H2 — subtareas NO cuentan (regla de producto)', () {
+    test('una subtarea completada NO sube completedToday', () async {
+      await tasksBox.add(_task('a', now));
+      await tasksBox.add(_task('b', now));
+      await tasksBox.add(_task('c', now));
+      await tasksBox.add(_task('a1', now,
+          isSubtask: true, parentTaskId: 'a'));
+      notifier = createNotifier();
+
+      await tasksBox.update(_task('a', now,
+          isCompleted: true, completedAt: DateTime(2026, 8, 10, 10)));
+      await tasksBox.update(_task('b', now,
+          isCompleted: true, completedAt: DateTime(2026, 8, 10, 11)));
+      await tasksBox.update(_task('a1', now,
+          isCompleted: true,
+          completedAt: DateTime(2026, 8, 10, 12),
+          isSubtask: true,
+          parentTaskId: 'a'));
+      notifier.refresh();
+
+      expect(notifier.state.completedToday, 2,
+          reason: 'la subtarea a1 no es una misión (solo +2 XP si se marca)');
+      expect(notifier.state.canClaim, isFalse);
+    });
+
+    test('3 subtareas NO hacen visible la quest', () async {
+      await tasksBox.add(_task('a1', now,
+          isSubtask: true, parentTaskId: 'a'));
+      await tasksBox.add(_task('a2', now,
+          isSubtask: true, parentTaskId: 'a'));
+      await tasksBox.add(_task('a3', now,
+          isSubtask: true, parentTaskId: 'a'));
+      notifier = createNotifier();
+
+      expect(notifier.state.isVisible, isFalse,
+          reason: 'las subtareas son sub-bloques, no misiones');
+    });
+
+    test('el arrastre de la principal con subtareas NO satisface la quest',
+        () async {
+      // Una principal + 2 subtareas = 3 ítems marcables, pero solo la
+      // principal cuenta como misión para la quest.
+      await tasksBox.add(_task('a', now));
+      await tasksBox.add(_task('a1', now,
+          isSubtask: true, parentTaskId: 'a'));
+      await tasksBox.add(_task('a2', now,
+          isSubtask: true, parentTaskId: 'a'));
+      notifier = createNotifier();
+
+      // Completar la principal arrastra a1 y a2 (como hace toggleComplete).
+      await tasksBox.update(_task('a', now,
+          isCompleted: true, completedAt: DateTime(2026, 8, 10, 10)));
+      await tasksBox.update(_task('a1', now,
+          isCompleted: true,
+          completedAt: DateTime(2026, 8, 10, 10),
+          isSubtask: true,
+          parentTaskId: 'a'));
+      await tasksBox.update(_task('a2', now,
+          isCompleted: true,
+          completedAt: DateTime(2026, 8, 10, 10),
+          isSubtask: true,
+          parentTaskId: 'a'));
+      notifier.refresh();
+
+      expect(notifier.state.completedToday, 1);
+      expect(notifier.state.canClaim, isFalse,
+          reason: '3 marcas con subs no bastan: solo cuenta la principal');
     });
   });
 

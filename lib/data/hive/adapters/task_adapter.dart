@@ -30,13 +30,18 @@ class TaskAdapter extends TypeAdapter<Task> {
       createdAt: fields[10] as DateTime,
       completedAt: fields[11] as DateTime?,
       parentTaskId: fields[12] as String?,
+      // F4: campos nuevos con retrocompatibilidad — si el dato persistido se
+      // escribió antes de F4 (13 campos) faltan las claves 13/14 y el `??`
+      // devuelve los valores por defecto (false).
+      isSubtask: fields[13] as bool? ?? false,
+      subtaskXpGranted: fields[14] as bool? ?? false,
     );
   }
 
   @override
   void write(BinaryWriter writer, Task obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -62,6 +67,10 @@ class TaskAdapter extends TypeAdapter<Task> {
       ..writeByte(11)
       ..write(obj.completedAt)
       ..writeByte(12)
-      ..write(obj.parentTaskId);
+      ..write(obj.parentTaskId)
+      ..writeByte(13)
+      ..write(obj.isSubtask)
+      ..writeByte(14)
+      ..write(obj.subtaskXpGranted);
   }
 }

@@ -133,9 +133,15 @@ class FortnightCalculator {
   }
 
   /// Tareas completadas dentro de [period] (según `Task.completedAt`).
+  ///
+  /// F4-fix H2 (regla de producto): las SUBTAREAS no cuentan como tareas para
+  /// el resumen quincenal; solo las tareas con `isSubtask == false`.
   static int completedCountIn(List<Task> tasks, Fortnight period) => tasks
       .where((t) =>
-          t.isCompleted && t.completedAt != null && period.contains(t.completedAt!))
+          !t.isSubtask &&
+          t.isCompleted &&
+          t.completedAt != null &&
+          period.contains(t.completedAt!))
       .length;
 
   /// Insignias desbloqueadas dentro de [period] (según `Badge.unlockedAt`).

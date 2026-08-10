@@ -133,8 +133,14 @@ class ReminderScheduleCalculator {
   /// Se basa en `Task.completedAt` (instante real en el que se marcó como
   /// completada), no en la fecha programada: una tarea de ayer marcada hoy
   /// cuenta como "completada hoy".
+  ///
+  /// F4-fix H2 (regla de producto, coherencia con la racha): las SUBTAREAS NO
+  /// cuentan como "tarea completada" para la alerta de racha en peligro. Esta
+  /// es la misma base que usa [QuestCalculator.completedCountOn], así que
+  /// quest y alerta cuentan "completadas hoy" de forma coherente.
   static bool noTasksCompletedOn(List<Task> allTasks, DateTime day) =>
       !allTasks.any((t) =>
+          !t.isSubtask &&
           t.isCompleted &&
           t.completedAt != null &&
           _sameDay(t.completedAt!, day));

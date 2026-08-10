@@ -61,8 +61,12 @@ class StreakCalculator {
 
     // Día activo: día calendario (año/mes/día) con al menos una tarea
     // completada, acreditando scheduledDate (R1a) con clamp de futuras a hoy.
+    // F4-fix H2 (regla de producto): las SUBTAREAS no activan la racha (no
+    // son "misiones" del Slate System); solo cuentan tareas con
+    // `isSubtask == false`.
     final activeDays = <DateTime>{};
     for (final task in tasks) {
+      if (task.isSubtask) continue;
       if (!task.isCompleted) continue;
       final taskDay = DateTime.utc(
         task.scheduledDate.year,

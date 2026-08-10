@@ -8,6 +8,8 @@ import 'package:hive/hive.dart';
 import 'package:slate_app/application/providers/backup_provider.dart';
 import 'package:slate_app/application/providers/category_provider.dart';
 import 'package:slate_app/application/providers/notification_providers.dart';
+import 'package:slate_app/application/providers/player_provider.dart';
+import 'package:slate_app/application/providers/quest_provider.dart';
 import 'package:slate_app/application/providers/settings_provider.dart';
 import 'package:slate_app/application/providers/streak_provider.dart';
 import 'package:slate_app/application/providers/task_provider.dart';
@@ -16,11 +18,15 @@ import 'package:slate_app/data/backup/backup_file_store.dart';
 import 'package:slate_app/data/backup/backup_service.dart';
 import 'package:slate_app/data/hive/adapters/badge_adapter.dart';
 import 'package:slate_app/data/hive/adapters/category_adapter.dart';
+import 'package:slate_app/data/hive/adapters/companion_state_adapter.dart';
+import 'package:slate_app/data/hive/adapters/player_profile_adapter.dart';
 import 'package:slate_app/data/hive/adapters/streak_adapter.dart';
 import 'package:slate_app/data/hive/adapters/task_adapter.dart';
 import 'package:slate_app/data/hive/adapters/user_settings_adapter.dart';
 import 'package:slate_app/data/hive/boxes/badges_box.dart';
 import 'package:slate_app/data/hive/boxes/categories_box.dart';
+import 'package:slate_app/data/hive/boxes/companion_state_box.dart';
+import 'package:slate_app/data/hive/boxes/player_progress_box.dart';
 import 'package:slate_app/data/hive/boxes/settings_box.dart';
 import 'package:slate_app/data/hive/boxes/streaks_box.dart';
 import 'package:slate_app/data/hive/boxes/tasks_box.dart';
@@ -43,6 +49,8 @@ void main() {
   late SettingsBox settingsBox;
   late ThematicTextCache cache;
   late Box<dynamic> metaBox;
+  late PlayerProgressBox playerBox;
+  late CompanionStateBox companionBox;
   late BackupService service;
 
   const taskIds = ['b', 'a'];
@@ -67,6 +75,8 @@ void main() {
     Hive.registerAdapter(BadgeAdapter());
     Hive.registerAdapter(StreakAdapter());
     Hive.registerAdapter(UserSettingsAdapter());
+    Hive.registerAdapter(PlayerProfileAdapter());
+    Hive.registerAdapter(CompanionStateAdapter());
   });
 
   setUp(() async {
@@ -83,6 +93,10 @@ void main() {
     cache = ThematicTextCache();
     await cache.init();
     metaBox = await Hive.openBox<dynamic>('app_meta');
+    playerBox = PlayerProgressBox();
+    await playerBox.init();
+    companionBox = CompanionStateBox();
+    await companionBox.init();
 
     service = BackupService(
       tasksBox: tasksBox,
@@ -105,6 +119,8 @@ void main() {
     await Hive.deleteBoxFromDisk('settings');
     await Hive.deleteBoxFromDisk('app_meta');
     await Hive.deleteBoxFromDisk('thematic_texts_cache');
+    await Hive.deleteBoxFromDisk('player_progress');
+    await Hive.deleteBoxFromDisk('companion_state');
   });
 
   tearDownAll(() async {
@@ -290,6 +306,8 @@ void main() {
         settingsBoxProvider.overrideWithValue(settingsBox),
         thematicTextCacheProvider.overrideWithValue(cache),
         appMetaBoxProvider.overrideWithValue(metaBox),
+        playerProgressBoxProvider.overrideWithValue(playerBox),
+        companionStateBoxProvider.overrideWithValue(companionBox),
         backupFileStoreProvider
             .overrideWithValue(BackupFileStore(baseDirectory: tempDir)),
       ]);

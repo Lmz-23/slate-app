@@ -7,6 +7,8 @@ import '../../data/backup/backup_file_store.dart';
 import '../../data/backup/backup_service.dart';
 import 'category_provider.dart';
 import 'notification_providers.dart';
+import 'player_provider.dart';
+import 'quest_provider.dart';
 import 'settings_provider.dart';
 import 'streak_provider.dart';
 import 'task_provider.dart';
@@ -32,6 +34,9 @@ final backupServiceProvider = Provider<BackupService>((ref) {
     settingsBox: ref.watch(settingsBoxProvider),
     thematicCache: ref.watch(thematicTextCacheProvider),
     appMetaBox: ref.watch(appMetaBoxProvider),
+    // F4: las cajas del Jugador (F2) y del Sistema (F3) entran en el roundtrip.
+    playerProgressBox: ref.watch(playerProgressBoxProvider),
+    companionStateBox: ref.watch(companionStateBoxProvider),
     fileStore: ref.watch(backupFileStoreProvider),
   );
 });
@@ -121,6 +126,14 @@ class BackupController extends StateNotifier<BackupState> {
       _ref.read(streakProvider.notifier).refresh();
       _ref.read(badgesProvider.notifier).refresh();
       _ref.read(settingsProvider.notifier).refresh();
+      // F4: el perfil de Jugador (XP/nivel) y el estado del Sistema (quest)
+      // también se restauran si el backup los incluía. Se usa `invalidate`
+      // (rebuilt perezoso en la siguiente lectura) en lugar de `refresh` porque
+      // estos providers no siempre están materializados (p. ej. en tests que
+      // no sobrescriben sus cajas) y `invalidate` es inofensivo si el provider
+      // nunca se leyó.
+      _ref.invalidate(playerProvider);
+      _ref.invalidate(questProvider);
 
       state = state.copyWith(
         busy: false,

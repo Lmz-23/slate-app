@@ -17,16 +17,28 @@ class QuestCalculator {
   /// el día [day] (pendientes o ya completadas, con horario o sin él). La
   /// decisión se toma una vez por día y después persiste (ver
   /// [CompanionState.questVisibleDecision]): borrar tareas no la revierte.
+  ///
+  /// F4-fix H2 (regla de producto): las SUBTAREAS NO cuentan como "misiones"
+  /// del Slate System (son sub-bloques de una tarea), por lo que tampoco
+  /// hacen visible la quest.
   static bool shouldBeVisible(List<Task> tasks, DateTime day) =>
-      tasks.where((t) => _sameDay(t.scheduledDate, day)).length >=
+      tasks.where((t) => !t.isSubtask && _sameDay(t.scheduledDate, day)).length >=
       requiredCompletions;
 
   /// Tareas completadas en [day] según `Task.completedAt` (el instante REAL de
   /// marcado, no la fecha programada). Es la misma base que usa la alerta de
   /// racha en peligro (`noTasksCompletedOn`), para que quest y racha cuenten
   /// "completadas hoy" de forma coherente.
+  ///
+  /// F4-fix H2 (regla de producto): las SUBTAREAS no cuentan como tareas para
+  /// la quest. Su único XP individual (+2) ya se otorga en
+  /// [TasksNotifier.toggleComplete]; aquí solo cuentan las tareas con
+  /// `isSubtask == false`.
   static int completedCountOn(List<Task> tasks, DateTime day) => tasks
       .where((t) =>
-          t.isCompleted && t.completedAt != null && _sameDay(t.completedAt!, day))
+          !t.isSubtask &&
+          t.isCompleted &&
+          t.completedAt != null &&
+          _sameDay(t.completedAt!, day))
       .length;
 }

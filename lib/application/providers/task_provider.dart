@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +12,7 @@ import '../../data/repositories/task_repository_impl.dart';
 import '../services/timezone_service.dart';
 import 'now_provider.dart';
 import 'notification_providers.dart';
+import 'player_provider.dart';
 import 'settings_provider.dart';
 
 final tasksBoxProvider = Provider<TasksBox>((ref) {
@@ -35,8 +37,13 @@ final tasksBySelectedDateProvider = Provider<List<Task>>((ref) {
   final selectedDate = ref.watch(selectedDateProvider);
   final startOfDay = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
   final endOfDay = startOfDay.add(const Duration(days: 1));
+  // F4-fix H1: las SUBTAREAS se excluyen de las listas del día. Se renderizan
+  // ÚNICAMENTE anidadas dentro de la tarjeta de su principal (TaskTile), por lo
+  // que incluirlas aquí las duplicaría como tarjetas sueltas (p. ej. en "Sin
+  // horario", ya que addSubtask no les asigna scheduledTime).
   return tasks.where((task) {
-    return task.scheduledDate.isAfter(startOfDay.subtract(const Duration(seconds: 1))) &&
+    return !task.isSubtask &&
+        task.scheduledDate.isAfter(startOfDay.subtract(const Duration(seconds: 1))) &&
         task.scheduledDate.isBefore(endOfDay);
   }).toList()
     ..sort((a, b) {
@@ -68,7 +75,18 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     state = _repository.getAll();
   }
 
-  Future<void> addTask({
+  /// Subtareas DIRECTAS de [parentId] (F4): tareas con `parentTaskId ==
+  /// parentId` y `isSubtask == true`. Las ocurrencias de una serie recurrente
+  /// (`parentTaskId != null && isSubtask == false`) NO entran aquí.
+  List<Task> _subtasksOf(String parentId) {
+    return state.where((t) => t.parentTaskId == parentId && t.isSubtask).toList();
+  }
+
+  PlayerNotifier get _player => _ref.read(playerProvider.notifier);
+
+  /// Crea una tarea y devuelve su id (F4: el formulario lo usa como
+  /// `parentTaskId` para las subtareas creadas en el mismo guardado).
+  Future<String> addTask({
     required String title,
     String? notes,
     DateTime? scheduledTime,
@@ -111,6 +129,34 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     // "Textos con IA". Solo para la tarea raíz: las ocurrencias comparten
     // título y no merecen llamadas repetidas a la API.
     unawaited(_maybeGenerateThematicVariants(task));
+
+    return task.id;
+  }
+
+  /// F4: crea una SUBTAREA ligada a [parentTaskId] (la tarea principal).
+  ///
+  /// Las subtareas comparten la fecha de la principal, sin horario propio ni
+  /// recurrencia (nunca generan serie propia). Se guardan SIN efectos
+  /// colaterales (sin recordatorio ni variante IA): su único XP es el +2 al
+  /// completarlas explícitamente.
+  Future<void> addSubtask({
+    required String title,
+    required String parentTaskId,
+    required DateTime scheduledDate,
+  }) async {
+    final task = Task(
+      id: _uuid.v4(),
+      title: title,
+      scheduledDate: scheduledDate,
+      priority: TaskPriority.normal,
+      recurrence: RecurrenceType.none,
+      categoryId: _repository.getById(parentTaskId)?.categoryId,
+      createdAt: DateTime.now(),
+      parentTaskId: parentTaskId,
+      isSubtask: true,
+    );
+    await _repository.add(task);
+    refresh();
   }
 
   Future<void> _generateRecurringTasks(Task task) async {
@@ -136,6 +182,18 @@ class TasksNotifier extends StateNotifier<List<Task>> {
             shouldGenerate = true;
           }
           break;
+        case RecurrenceType.monthly:
+          // F4: misma "ancla" de día de mes que la tarea original, recortada al
+          // último día del mes cuando este no la tiene (31→28/29/30; 30→28/29…
+          // y 29-feb → 28 en años no bisiestos).
+          final anchorDay = math.min(
+            task.scheduledDate.day,
+            DateTime(nextDate.year, nextDate.month + 1, 0).day,
+          );
+          if (nextDate.day == anchorDay) {
+            shouldGenerate = true;
+          }
+          break;
         case RecurrenceType.none:
           break;
       }
@@ -157,6 +215,7 @@ class TasksNotifier extends StateNotifier<List<Task>> {
   }
 
   Future<void> updateTask(Task task) async {
+    final previous = _repository.getById(task.id);
     await _repository.update(task);
     refresh();
     // Reprograma el recordatorio con el MISMO id (se deriva de task.id): si la
@@ -166,16 +225,57 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     // Slate System: al guardar una edición se regenera la variante IA si el
     // título cambió (la clave de caché incluye el título normalizado).
     unawaited(_maybeGenerateThematicVariants(task));
+
+    // F4-fix H3 — invariante de fecha subtarea ↔ principal:
+    //
+    // - Al editar una PRINCIPAL y cambiar su fecha, se PROPAGA el cambio a sus
+    //   subtareas DIRECTAS (misma fecha). Una subtarea nunca puede quedar en
+    //   un día distinto del de su principal (el formulario además bloquea el
+    //   campo de fecha al editar una subtarea, ver TaskFormSheet).
+    // - Al editar una SUBTAREA, se REASIGNA su fecha a la de la principal como
+    //   doble red de seguridad: aunque un llamador intente guardarla con otra
+    //   fecha, la invariante se restaura en la capa de dominio.
+    if (previous != null && !task.isSubtask) {
+      if (!_isSameCalendarDay(previous.scheduledDate, task.scheduledDate)) {
+        final children = _subtasksOf(task.id);
+        for (final child in children) {
+          await _repository.update(
+            child.copyWith(scheduledDate: task.scheduledDate),
+          );
+        }
+        if (children.isNotEmpty) refresh();
+      }
+    } else if (task.isSubtask && task.parentTaskId != null) {
+      final parent = _repository.getById(task.parentTaskId!);
+      if (parent != null &&
+          !_isSameCalendarDay(parent.scheduledDate, task.scheduledDate)) {
+        await _repository.update(
+          task.copyWith(scheduledDate: parent.scheduledDate),
+        );
+        refresh();
+      }
+    }
   }
 
+  static bool _isSameCalendarDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
   Future<void> deleteTask(String id) async {
+    // F4: borrar la tarea principal arrastra también sus SUBTAREAS directas
+    // (evita huérfanas con parentTaskId apuntando a un id inexistente).
+    final children = _subtasksOf(id).map((t) => t.id).toList();
+
     // Actualización SÍNCRONA y optimista: el ítem desaparece del estado (y por
     // tanto del árbol de widgets) antes de que termine el borrado en Hive.
     // Esto evita el assert "A dismissed Dismissible widget is still part of
     // the tree" cuando se borra una tarjeta desde el Dismissible.
-    state = state.where((t) => t.id != id).toList();
+    state = state.where((t) => t.id != id && !children.contains(t.id)).toList();
     await _repository.delete(id);
     await _cancelReminder(id);
+    for (final childId in children) {
+      await _repository.delete(childId);
+      await _cancelReminder(childId);
+    }
   }
 
   /// Elimina una serie completa de tareas recurrentes.
@@ -217,25 +317,100 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     }
   }
 
-  Future<void> toggleComplete(String id) async {
+  /// Marca/desmarca una tarea aplicando las reglas de producto de F4 y
+  /// notificando al Jugador (XP) desde aquí.
+  ///
+  /// Devuelve el nivel alcanzado si la transición produjo un level-up NUEVO
+  /// (`null` en caso contrario), igual que los métodos de [PlayerNotifier],
+  /// para que la UI muestre el SnackBar "◆ Nivel subió" una sola vez.
+  ///
+  /// Reglas:
+  /// - SUBTAREA explícita: completar da +2 XP ([PlayerNotifier.addSubtaskXp]),
+  ///   desmarcar resta -2 ([PlayerNotifier.removeSubtaskXp]); el flag
+  ///   [Task.subtaskXpGranted] sigue la concesión para conservar la simetría.
+  /// - TAREA PRINCIPAL: completar da +XP por prioridad ([PlayerNotifier.addTaskXp])
+  ///   y ARRASTRA todas sus subtareas a completadas SIN XP individual; al
+  ///   desmarcar se revierte el arrastre (subtareas incompletas), se resta el
+  ///   XP de la principal y -2 por cada subtarea cuyo XP sí se había concedido.
+  Future<int?> toggleComplete(String id) async {
     final task = _repository.getById(id);
-    if (task != null) {
+    if (task == null) return null;
+
+    // ── Subtarea: toggle explícito con +2/-2 ────────────────────────────────
+    if (task.isSubtask) {
       final updated = task.copyWith(
         isCompleted: !task.isCompleted,
         completedAt: !task.isCompleted ? DateTime.now() : null,
+        subtaskXpGranted: !task.isCompleted,
       );
       await _repository.update(updated);
+      int? levelUp;
+      if (updated.isCompleted) {
+        levelUp = await _player.addSubtaskXp();
+      } else if (task.subtaskXpGranted) {
+        // Desmarcar resta -2 SOLO si el +2 estaba en pie (marcado explícito).
+        // Una subtarea arrastrada por la principal nunca recibió XP: si el
+        // usuario la desmarca directamente, no se penaliza.
+        await _player.removeSubtaskXp();
+      }
       refresh();
 
-      // Al completar se CANCELA el recordatorio de esa ocurrencia; al
-      // desmarcar se reprograma (si sigue con horario y notificaciones
-      // activas).
       if (updated.isCompleted) {
         await _cancelReminder(updated.id);
       } else {
         await _syncReminderForTask(updated);
       }
+      return levelUp;
     }
+
+    // ── Tarea principal: toggle + arrastre/revertido de subtareas ──────────
+    final children = _subtasksOf(task.id);
+    final updated = task.copyWith(
+      isCompleted: !task.isCompleted,
+      completedAt: !task.isCompleted ? DateTime.now() : null,
+    );
+    await _repository.update(updated);
+    int? levelUp;
+
+    if (updated.isCompleted) {
+      // Arrastre: completar las subtareas pendientes sin otorgar XP individual
+      // (las ya completadas por marcado explícito conservan su XP y su marca).
+      for (final child in children.where((c) => !c.isCompleted)) {
+        await _repository.update(
+          child.copyWith(isCompleted: true, completedAt: DateTime.now()),
+        );
+      }
+      levelUp = await _player.addTaskXp(task.priority);
+
+      await _cancelReminder(updated.id);
+      for (final child in children.where((c) => !c.isCompleted)) {
+        await _cancelReminder(child.id);
+      }
+    } else {
+      // Revertido: descompletar todas las subtareas; restar -2 SOLO a las que
+      // recibieron XP (subtaskXpGranted) para no penalizar el arrastre.
+      for (final child in children.where((c) => c.isCompleted)) {
+        await _repository.update(
+          child.copyWith(
+            isCompleted: false,
+            completedAt: null,
+            subtaskXpGranted: false,
+          ),
+        );
+        if (child.subtaskXpGranted) {
+          await _player.removeSubtaskXp();
+        }
+      }
+      await _player.removeTaskXp(task.priority);
+
+      await _syncReminderForTask(updated);
+      for (final child in children.where((c) => c.isCompleted)) {
+        await _syncReminderForTask(child);
+      }
+    }
+
+    refresh();
+    return levelUp;
   }
 
   Future<void> _syncReminderForTask(Task task) async {

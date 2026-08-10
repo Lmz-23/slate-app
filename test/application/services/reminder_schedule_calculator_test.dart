@@ -10,6 +10,7 @@ Task _task(
   DateTime? scheduledTime,
   bool isCompleted = false,
   DateTime? completedAt,
+  bool isSubtask = false,
 }) {
   return Task(
     id: id,
@@ -19,6 +20,7 @@ Task _task(
     isCompleted: isCompleted,
     completedAt: completedAt,
     createdAt: scheduledDate,
+    isSubtask: isSubtask,
   );
 }
 
@@ -192,6 +194,22 @@ void main() {
         ReminderScheduleCalculator.noTasksCompletedOn(
             [completedYesterday], day),
         isTrue,
+      );
+    });
+
+    test('noTasksCompletedOn: una subtarea completada HOY NO cuenta como '
+        '"tarea completada" (H2 regla de producto)', () {
+      final subtaskDoneToday = _task(
+        's1',
+        day,
+        isCompleted: true,
+        completedAt: DateTime(2026, 1, 15, 9, 0),
+        isSubtask: true,
+      );
+      expect(
+        ReminderScheduleCalculator.noTasksCompletedOn([subtaskDoneToday], day),
+        isTrue,
+        reason: 'coherencia con la racha: las subtareas no son "misiones"',
       );
     });
   });

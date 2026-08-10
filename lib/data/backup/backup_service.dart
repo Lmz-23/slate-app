@@ -4,6 +4,8 @@ import '../backup/backup_codec.dart';
 import '../backup/backup_file_store.dart';
 import '../hive/boxes/badges_box.dart';
 import '../hive/boxes/categories_box.dart';
+import '../hive/boxes/companion_state_box.dart';
+import '../hive/boxes/player_progress_box.dart';
 import '../hive/boxes/settings_box.dart';
 import '../hive/boxes/streaks_box.dart';
 import '../hive/boxes/tasks_box.dart';
@@ -49,6 +51,11 @@ class BackupService {
     required SettingsBox settingsBox,
     ThematicTextCache? thematicCache,
     Box<dynamic>? appMetaBox,
+    // F4: cajas del Jugador/Sistema. OPCIONALES para no romper constructores
+    // existentes: si no se inyectan, el backup simplemente no incluye esas
+    // secciones (equivalente al comportamiento pre-F4).
+    PlayerProgressBox? playerProgressBox,
+    CompanionStateBox? companionStateBox,
     BackupFileStore? fileStore,
   })  : _tasksBox = tasksBox,
         _categoriesBox = categoriesBox,
@@ -57,6 +64,8 @@ class BackupService {
         _settingsBox = settingsBox,
         _thematicCache = thematicCache,
         _appMetaBoxOverride = appMetaBox,
+        _playerBox = playerProgressBox,
+        _companionBox = companionStateBox,
         _fileStore = fileStore ?? BackupFileStore();
 
   final TasksBox _tasksBox;
@@ -66,6 +75,8 @@ class BackupService {
   final SettingsBox _settingsBox;
   final ThematicTextCache? _thematicCache;
   final Box<dynamic>? _appMetaBoxOverride;
+  final PlayerProgressBox? _playerBox;
+  final CompanionStateBox? _companionBox;
   final BackupFileStore _fileStore;
 
   Future<Box<dynamic>> _appMetaBox() async {
@@ -96,6 +107,10 @@ class BackupService {
       userSettings: settings,
       appMeta: appMeta,
       thematicTextCache: cache,
+      // F4: se leen SIEMPRE las cajas actuales (fuente de verdad). Si no se
+      // inyectaron (constructor sin boxes), la sección se omite del JSON.
+      playerProgress: _playerBox?.getProfile(),
+      companionState: _companionBox?.getState(),
       exportedAt: exportedAt,
     );
 
@@ -177,6 +192,17 @@ class BackupService {
       if (raw is Map<String, dynamic>) {
         await _thematicCache?.putRaw(entry.key, raw);
       }
+    }
+
+    // F4: perfil de Jugador y estado del Sistema. Solo se sobrescriben cuando
+    // el backup LOS INCLUYE: un backup anterior a F4 (secciones `null`) NO
+    // toca estas cajas, conservando el progreso actual (XP/nivel) y el estado
+    // de quest/quincena del usuario.
+    if (decoded.playerProgress != null) {
+      await _playerBox?.updateProfile(decoded.playerProgress!);
+    }
+    if (decoded.companionState != null) {
+      await _companionBox?.updateState(decoded.companionState!);
     }
   }
 }

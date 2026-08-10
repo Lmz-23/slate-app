@@ -6,7 +6,6 @@ import '../../../../domain/entities/task.dart';
 import '../../../../application/providers/task_provider.dart';
 import '../../../../application/providers/streak_provider.dart';
 import '../../../../application/providers/settings_provider.dart';
-import '../../../../application/providers/player_provider.dart';
 import '../../../../application/services/timezone_service.dart';
 import '../../../widgets/common/level_up_snackbar.dart';
 import '../../../widgets/task_tile.dart';
@@ -68,6 +67,8 @@ class TaskSection extends ConsumerWidget {
               onEdit: () => _showEditForm(context, task),
               onDelete: () => _deleteTask(ref, task.id),
               onDeleteSeries: () => _deleteTaskAndRecurring(ref, task.id),
+              onToggleSubtask: (childId) =>
+                  _toggleComplete(context, ref, childId),
             );
           },
         ),
@@ -89,16 +90,10 @@ class TaskSection extends ConsumerWidget {
 
   Future<void> _toggleComplete(
       BuildContext context, WidgetRef ref, String id) async {
-    // Captura el estado ANTES del toggle para saber si la transición es
-    // completar (suma XP) o desmarcar (resta XP).
-    final task = ref.read(tasksProvider).where((t) => t.id == id).firstOrNull;
-    if (task == null) return;
-    final wasCompleted = task.isCompleted;
-
-    // Se espera a que toggleComplete actualice el estado (refresh() es
-    // síncrono después del update en Hive) para que tasksProvider refleje la
-    // transición completa→incompleta ANTES del recálculo de racha.
-    await ref.read(tasksProvider.notifier).toggleComplete(id);
+    // F2+F4: TODO el XP (tarea principal +10/+15/+20, subtarea +2, arrastre y
+    // revertido con simetría anti-exploit) lo aplica TasksNotifier.toggleComplete,
+    // que devuelve el nivel alcanzado si hubo un level-up NUEVO (null si no).
+    final levelUpLevel = await ref.read(tasksProvider.notifier).toggleComplete(id);
 
     // La racha se recalcula SIEMPRE (al completar Y al descompletar, R3b).
     // La fuente de verdad son las tareas completadas (tasksProvider), por lo
@@ -113,19 +108,10 @@ class TaskSection extends ConsumerWidget {
           now: now,
         );
 
-    // F2 (Nivel de Jugador + XP): complementa a racha/insignias, no las
-    // sustituye. Completar suma +10/+15/+20 según prioridad; desmarcar RESTA
-    // el mismo XP (simetría anti-exploit) pero el nivel alcanzado NUNCA baja.
-    final playerNotifier = ref.read(playerProvider.notifier);
-    final int? levelUpLevel;
-    if (wasCompleted) {
-      await playerNotifier.removeTaskXp(task.priority);
-      levelUpLevel = null;
-    } else {
-      levelUpLevel = await playerNotifier.addTaskXp(task.priority);
-      if (levelUpLevel != null && context.mounted) {
-        showLevelUpSnackBar(context, levelUpLevel);
-      }
+    // El SnackBar "◆ Nivel subió" lo muestra CUALQUIER fuente de XP que cruce
+    // un nivel NUEVO (tarea principal o subtarea explícita).
+    if (levelUpLevel != null && context.mounted) {
+      showLevelUpSnackBar(context, levelUpLevel);
     }
   }
 

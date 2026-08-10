@@ -14,7 +14,8 @@ import 'package:slate_app/domain/entities/task.dart';
 import 'package:slate_app/domain/enums/badge_type.dart';
 
 /// Crea una tarea completada (o pendiente) programada en [scheduledDate].
-Task _task(String id, DateTime scheduledDate, {bool isCompleted = true}) {
+Task _task(String id, DateTime scheduledDate,
+    {bool isCompleted = true, bool isSubtask = false, String? parentTaskId}) {
   return Task(
     id: id,
     title: 'Tarea $id',
@@ -22,6 +23,8 @@ Task _task(String id, DateTime scheduledDate, {bool isCompleted = true}) {
     isCompleted: isCompleted,
     createdAt: scheduledDate,
     completedAt: isCompleted ? scheduledDate : null,
+    parentTaskId: parentTaskId,
+    isSubtask: isSubtask,
   );
 }
 
@@ -209,6 +212,38 @@ void main() {
 
       expect(notifier.state.currentStreak, 3);
       expect(badgeRepository.getAll(), hasLength(1)); // streak3, sin duplicados
+    });
+
+    test('una subtarea completada NO activa la racha (H2 regla de producto)',
+        () async {
+      // Solo una subtarea completada HOY → la racha permanece en 0 (las
+      // subtareas no son "misiones" del Slate System).
+      await notifier.recalculate(
+        tasks: [
+          _task('s1', _d(2026, 1, 14),
+              isSubtask: true, parentTaskId: 'main'),
+        ],
+        now: _now(2026, 1, 14),
+      );
+
+      expect(notifier.state.currentStreak, 0);
+      expect(notifier.state.lastCompletedDate, isNull);
+      expect(badgeRepository.getAll(), isEmpty);
+
+      // La PRINCIPAL completada con su subtarea arrastrada SÍ activa el día.
+      await notifier.recalculate(
+        tasks: [
+          _task('main', _d(2026, 1, 14)),
+          _task('s1', _d(2026, 1, 14),
+              isSubtask: true, parentTaskId: 'main'),
+        ],
+        now: _now(2026, 1, 14),
+      );
+
+      expect(notifier.state.currentStreak, 1);
+      expect(notifier.state.lastCompletedDate, _day(2026, 1, 14));
+      expect(badgeRepository.getAll(), isEmpty,
+          reason: '1 día no alcanza el umbral streak3');
     });
   });
 }

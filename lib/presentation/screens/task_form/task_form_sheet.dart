@@ -34,6 +34,9 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
   final _titleController = TextEditingController();
   final _notesController = TextEditingController();
 
+  // F4: editores de subtareas (UI mínima: campos de texto + filas dinámicas).
+  final List<TextEditingController> _subtaskControllers = [];
+
   late DateTime _selectedDate;
   TimeOfDay? _selectedTime;
   TaskPriority _priority = TaskPriority.normal;
@@ -44,6 +47,10 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
   String _partialText = '';
 
   Task? _existingTask;
+
+  /// F4-fix H3: ¿la tarea en edición es una SUBTAREA? Si lo es, la fecha NO se
+  /// puede cambiar desde el formulario (sigue SIEMPRE a la de la principal).
+  bool get _isEditingSubtask => _existingTask?.isSubtask ?? false;
 
   @override
   void initState() {
@@ -81,6 +88,9 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
   void dispose() {
     _titleController.dispose();
     _notesController.dispose();
+    for (final controller in _subtaskControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -352,10 +362,17 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
-            _buildDateTimeRow(),
-            if (_selectedTime != null) ...[
-              const SizedBox(height: AppSpacing.sm),
-              _buildReminderHint(),
+            // F4-fix H3: al editar una subtarea NO se muestra el selector de
+            // fecha/hora; en su lugar una fila solo-lectura con la fecha de la
+            // principal (la invariante subtarea↔principal se mantiene).
+            if (_isEditingSubtask)
+              _buildSubtaskDateLockRow()
+            else ...[
+              _buildDateTimeRow(),
+              if (_selectedTime != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                _buildReminderHint(),
+              ],
             ],
             const SizedBox(height: AppSpacing.md),
             PrioritySelector(
@@ -386,6 +403,10 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
                 hintText: 'Notas (opcional)',
               ),
             ),
+            if (!(_existingTask?.isSubtask ?? false)) ...[
+              const SizedBox(height: AppSpacing.md),
+              _buildSubtaskEditor(),
+            ],
             const SizedBox(height: AppSpacing.xl),
             SizedBox(
               width: double.infinity,
@@ -415,6 +436,127 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
     );
   }
 
+  /// F4: editor MÍNIMO de subtareas. Cada fila es un texto (obligatorio para
+  /// guardarse) con su botón de borrado; al guardar se crean las subtareas
+  /// ligadas a la tarea principal. En modo edición solo AÑADE nuevas; las
+  /// subtareas existentes se gestionan desde la tarjeta.
+  Widget _buildSubtaskEditor() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Subtareas',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _subtaskControllers.add(TextEditingController());
+                });
+              },
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Añadir'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        for (final controller in _subtaskControllers) ...[
+          Row(
+            children: [
+              const Icon(Icons.drag_indicator,
+                  size: 16, color: AppColors.textTertiary),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textPrimary,
+                  ),
+                  decoration: const InputDecoration(
+                    hintText: 'Detalle de la subtarea',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    final index = _subtaskControllers.indexOf(controller);
+                    if (index >= 0) {
+                      final removed = _subtaskControllers.removeAt(index);
+                      removed.dispose();
+                    }
+                  });
+                },
+                icon: const Icon(Icons.close,
+                    size: 16, color: AppColors.textTertiary),
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// F4-fix H3: fila solo-lectura que sustituye al selector de fecha cuando se
+  /// edita una SUBTAREA. Muestra la fecha de la tarea principal y avisa de que
+  /// la subtarea no tiene fecha propia. La invariante se refuerza además en
+  /// `TasksNotifier.updateTask` (la subtarea se reasigna a la fecha de la
+  /// principal en el guardado).
+  Widget _buildSubtaskDateLockRow() {
+    final tasks = ref.watch(tasksProvider);
+    final parentId = _existingTask?.parentTaskId;
+    final parent = parentId != null
+        ? tasks.where((t) => t.id == parentId).firstOrNull
+        : null;
+    final lockedDate = parent?.scheduledDate ??
+        _existingTask?.scheduledDate ??
+        widget.initialDate;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.md,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLight,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.lock_outline,
+            size: 20,
+            color: AppColors.textSecondary,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              '${lockedDate.formattedDate} · la fecha sigue a la tarea principal',
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildReminderHint() {
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -425,20 +567,20 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
         color: AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
       ),
-      child: Row(
+      child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
+          Icon(
             Icons.notifications_active_outlined,
             size: 16,
             color: AppColors.primary,
           ),
-          const SizedBox(width: AppSpacing.sm),
+          SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               'Por defecto te avisaremos justo a la hora de la tarea. '
               'Puedes adelantar el aviso en Ajustes › Recordatorios.',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 color: AppColors.textSecondary,
                 height: 1.4,
@@ -522,6 +664,10 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
   }
 
   Future<void> _pickDate() async {
+    // F4-fix H3: una subtarea nunca tiene fecha propia; el formulario no abre
+    // el selector de fecha en edición de subtarea.
+    if (_isEditingSubtask) return;
+
     final date = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
@@ -565,7 +711,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
     }
   }
 
-  void _saveTask() {
+  Future<void> _saveTask() async {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -585,7 +731,13 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
       );
     }
 
+    final tasksNotifier = ref.read(tasksProvider.notifier);
+    late final String mainTaskId;
+
     if (_existingTask != null) {
+      // F4-fix H3: al editar una SUBTAREA la fecha enviada siempre es la que
+      // ya tenía (el selector está oculto). Aun así, `TasksNotifier.updateTask`
+      // la REASIGNA a la fecha vigente de la principal como invariante.
       final updated = _existingTask!.copyWith(
         title: title,
         notes: _notesController.text.isEmpty ? null : _notesController.text,
@@ -596,20 +748,37 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
         recurrenceDays: _recurrenceDays.isEmpty ? null : _recurrenceDays,
         categoryId: _categoryId,
       );
-      ref.read(tasksProvider.notifier).updateTask(updated);
+      await tasksNotifier.updateTask(updated);
+      mainTaskId = _existingTask!.id;
     } else {
-      ref.read(tasksProvider.notifier).addTask(
-            title: title,
-            notes: _notesController.text.isEmpty ? null : _notesController.text,
-            scheduledDate: _selectedDate,
-            scheduledTime: scheduledTime,
-            priorityIndex: _priority.index,
-            recurrenceIndex: _recurrence.index,
-            recurrenceDays: _recurrenceDays.isEmpty ? null : _recurrenceDays,
-            categoryId: _categoryId,
-          );
+      mainTaskId = await tasksNotifier.addTask(
+        title: title,
+        notes: _notesController.text.isEmpty ? null : _notesController.text,
+        scheduledDate: _selectedDate,
+        scheduledTime: scheduledTime,
+        priorityIndex: _priority.index,
+        recurrenceIndex: _recurrence.index,
+        recurrenceDays: _recurrenceDays.isEmpty ? null : _recurrenceDays,
+        categoryId: _categoryId,
+      );
     }
 
-    Navigator.pop(context);
+    // F4: crea las subtareas escritas en el editor, ligadas a la principal.
+    if (!(_existingTask?.isSubtask ?? false)) {
+      for (final controller in _subtaskControllers) {
+        final subtaskTitle = controller.text.trim();
+        if (subtaskTitle.isNotEmpty) {
+          await tasksNotifier.addSubtask(
+            title: subtaskTitle,
+            parentTaskId: mainTaskId,
+            scheduledDate: _selectedDate,
+          );
+        }
+      }
+    }
+
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
 }

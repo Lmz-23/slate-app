@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import '../../domain/entities/badge.dart';
 import '../../domain/entities/category.dart';
+import '../../domain/entities/companion_state.dart';
+import '../../domain/entities/player_profile.dart';
 import '../../domain/entities/streak.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/user_settings.dart';
@@ -26,6 +28,11 @@ class BackupException implements Exception {
 ///
 /// [appMeta] y [thematicTextCache] son mapas genéricos (primitivas) que se
 /// conservan tal cual estaban en sus cajas.
+///
+/// F4: [playerProgress] y [companionState] son OPCIONALES (`null` cuando el
+/// backup no los incluía, p. ej. exportado por una versión anterior a F4). El
+/// importador decide cómo tratar la ausencia (BackupService no sobrescribe
+/// esas cajas si la sección falta).
 class DecodedBackup {
   const DecodedBackup({
     required this.schemaVersion,
@@ -37,6 +44,8 @@ class DecodedBackup {
     required this.userSettings,
     required this.appMeta,
     required this.thematicTextCache,
+    this.playerProgress,
+    this.companionState,
   });
 
   final int schemaVersion;
@@ -50,6 +59,12 @@ class DecodedBackup {
 
   final Map<String, dynamic> appMeta;
   final Map<String, dynamic> thematicTextCache;
+
+  /// F4: perfil de Jugador (XP/nivel) si el backup lo incluye.
+  final PlayerProfile? playerProgress;
+
+  /// F4: estado del Sistema/Compañero (quest/quincena) si el backup lo incluye.
+  final CompanionState? companionState;
 }
 
 /// Codec del archivo portable de backup de Slate (JSON versionado).
@@ -75,9 +90,17 @@ class DecodedBackup {
 ///     "userSettings": { ... },
 ///     "appMeta": { ... },
 ///     "thematicTextCache": { ... }
+///     "playerProgress": { ... }     // F4 (opcional, ausente en v1 anterior)
+///     "companionState": { ... }     // F4 (opcional, ausente en v1 anterior)
 ///   }
 /// }
 /// ```
+///
+/// DECISIÓN F4 (schemaVersion): se MANTIENE `1`. Las dos secciones nuevas son
+/// opcionales, por lo que los backups v1 generados por versiones anteriores se
+/// siguen importando sin migración (las secciones ausentes quedan `null`), y
+/// la regla "el import solo acepta la versión exacta" no cambia. Subir a
+/// `2` habría roto la restauración de backups existentes sin aportar nada.
 class BackupCodec {
   BackupCodec._();
 
@@ -93,6 +116,11 @@ class BackupCodec {
   // ─────────────────────────────────────────────────────────────────────────
 
   /// Serializa el estado completo a un JSON legible (2 espacios) y versionado.
+  ///
+  /// F4: [playerProgress] y [companionState] son OPCIONALES. Cuando son `null`
+  /// (p. ej. en tests antiguos o si el llamador no los facilita) la sección se
+  /// OMITE del JSON, de modo que un backup sin esas secciones sigue siendo un
+  /// v1 válido y compatible hacia atrás.
   static String encode({
     required List<Task> tasks,
     required List<Category> categories,
@@ -101,6 +129,8 @@ class BackupCodec {
     required UserSettings userSettings,
     required Map<String, dynamic> appMeta,
     required Map<String, dynamic> thematicTextCache,
+    PlayerProfile? playerProgress,
+    CompanionState? companionState,
     DateTime? exportedAt,
   }) {
     final json = <String, dynamic>{
@@ -115,6 +145,8 @@ class BackupCodec {
         'userSettings': _settingsToJson(userSettings),
         'appMeta': appMeta,
         'thematicTextCache': thematicTextCache,
+        if (playerProgress != null) 'playerProgress': _playerToJson(playerProgress),
+        if (companionState != null) 'companionState': _companionToJson(companionState),
       },
     };
 
@@ -214,6 +246,20 @@ class BackupCodec {
         'La sección "thematicTextCache" debe ser un objeto.',
       );
     }
+    // F4: secciones opcionales. Si están presentes deben ser objetos; su
+    // ausencia es válida (backup de una versión anterior a F4).
+    final playerRaw = data['playerProgress'];
+    if (playerRaw != null && playerRaw is! Map<String, dynamic>) {
+      throw const BackupException(
+        'La sección "playerProgress" debe ser un objeto.',
+      );
+    }
+    final companionRaw = data['companionState'];
+    if (companionRaw != null && companionRaw is! Map<String, dynamic>) {
+      throw const BackupException(
+        'La sección "companionState" debe ser un objeto.',
+      );
+    }
 
     try {
       final tasks = ((data['tasks'] as List?) ?? const [])
@@ -231,6 +277,12 @@ class BackupCodec {
       final userSettings = settingsRaw == null
           ? const UserSettings()
           : _settingsFromJson(settingsRaw);
+      final playerProgress = playerRaw == null
+          ? null
+          : _playerFromJson(playerRaw);
+      final companionState = companionRaw == null
+          ? null
+          : _companionFromJson(companionRaw);
 
       return DecodedBackup(
         schemaVersion: version,
@@ -242,6 +294,8 @@ class BackupCodec {
         userSettings: userSettings,
         appMeta: appMetaRaw ?? <String, dynamic>{},
         thematicTextCache: cacheRaw ?? <String, dynamic>{},
+        playerProgress: playerProgress,
+        companionState: companionState,
       );
     } on BackupException {
       rethrow;
@@ -314,6 +368,10 @@ class BackupCodec {
       'createdAt': _encDate(t.createdAt),
       'completedAt': _encDate(t.completedAt),
       'parentTaskId': t.parentTaskId,
+      // F4: campos de subtarea. Opcionales en el JSON (ausencia = false) para
+      // que un backup anterior a F4 se siga importando sin cambios.
+      'isSubtask': t.isSubtask,
+      'subtaskXpGranted': t.subtaskXpGranted,
     };
   }
 
@@ -333,6 +391,57 @@ class BackupCodec {
       createdAt: _reqDate(m['createdAt'], 'createdAt'),
       completedAt: _optDate(m['completedAt']),
       parentTaskId: m['parentTaskId'] as String?,
+      isSubtask: m['isSubtask'] as bool? ?? false,
+      subtaskXpGranted: m['subtaskXpGranted'] as bool? ?? false,
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PlayerProfile (F4)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  static Map<String, dynamic> _playerToJson(PlayerProfile p) {
+    return <String, dynamic>{
+      'id': p.id,
+      'totalXp': p.totalXp,
+      'level': p.level,
+      'shownLevelUps': p.shownLevelUps.toList()..sort(),
+      'updatedAt': _encDate(p.updatedAt),
+    };
+  }
+
+  static PlayerProfile _playerFromJson(Map<String, dynamic> m) {
+    return PlayerProfile(
+      id: m['id'] as String? ?? 'main_player',
+      totalXp: m['totalXp'] as int? ?? 0,
+      level: m['level'] as int? ?? 1,
+      shownLevelUps:
+          ((m['shownLevelUps'] as List?) ?? const []).cast<int>().toSet(),
+      updatedAt: _reqDate(m['updatedAt'], 'updatedAt'),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // CompanionState (F4)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  static Map<String, dynamic> _companionToJson(CompanionState s) {
+    return <String, dynamic>{
+      'id': s.id,
+      'questClaimedOn': s.questClaimedOn,
+      'questVisibleOn': s.questVisibleOn,
+      'questVisibleDecision': s.questVisibleDecision,
+      'updatedAt': _encDate(s.updatedAt),
+    };
+  }
+
+  static CompanionState _companionFromJson(Map<String, dynamic> m) {
+    return CompanionState(
+      id: m['id'] as String? ?? 'main_companion',
+      questClaimedOn: m['questClaimedOn'] as String?,
+      questVisibleOn: m['questVisibleOn'] as String?,
+      questVisibleDecision: m['questVisibleDecision'] as bool? ?? false,
+      updatedAt: _reqDate(m['updatedAt'], 'updatedAt'),
     );
   }
 

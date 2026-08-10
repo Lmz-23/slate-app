@@ -26,6 +26,10 @@ class TaskTile extends ConsumerStatefulWidget {
   /// Se invoca al confirmar la eliminación de TODA la serie.
   final VoidCallback? onDeleteSeries;
 
+  /// F4: se invoca al tocar una SUBTAREA anidada (marca/desmarca la subtarea
+  /// SIN tocar la principal).
+  final ValueChanged<String>? onToggleSubtask;
+
   const TaskTile({
     super.key,
     required this.task,
@@ -33,6 +37,7 @@ class TaskTile extends ConsumerStatefulWidget {
     this.onEdit,
     this.onDelete,
     this.onDeleteSeries,
+    this.onToggleSubtask,
   });
 
   @override
@@ -145,6 +150,11 @@ class _TaskTileState extends ConsumerState<TaskTile> {
     final category = task.categoryId != null
         ? categories.where((c) => c.id == task.categoryId).firstOrNull
         : null;
+    // F4: subtareas directas de esta tarea (marca explícita isSubtask).
+    final subtasks = ref
+        .watch(tasksProvider)
+        .where((t) => t.parentTaskId == task.id && t.isSubtask)
+        .toList();
 
     return Dismissible(
       key: Key(task.id),
@@ -238,6 +248,12 @@ class _TaskTileState extends ConsumerState<TaskTile> {
                       ],
                     ),
                   ],
+                  // F4: subtareas anidadas de la tarea principal. Cada fila se
+                  // toca para marcar/desmarcar SOLO esa subtarea (+2 XP).
+                  if (subtasks.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    ...subtasks.map(_buildSubtaskRow),
+                  ],
                 ],
               ),
             ),
@@ -295,6 +311,55 @@ class _TaskTileState extends ConsumerState<TaskTile> {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(2),
+      ),
+    );
+  }
+
+  /// F4: fila de subtarea anidada. Tocar la fila marca/desmarca la subtarea
+  /// (+2 XP) SIN tocar la tarjeta de la principal.
+  Widget _buildSubtaskRow(Task subtask) {
+    return GestureDetector(
+      onTap: () => widget.onToggleSubtask?.call(subtask.id),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Row(
+          children: [
+            Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color:
+                    subtask.isCompleted ? AppColors.success : Colors.transparent,
+                border: Border.all(
+                  color: subtask.isCompleted
+                      ? AppColors.success
+                      : AppColors.textTertiary,
+                  width: 1.5,
+                ),
+              ),
+              child: subtask.isCompleted
+                  ? const Icon(Icons.check, size: 12, color: Colors.white)
+                  : null,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                subtask.title,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: subtask.isCompleted
+                      ? AppColors.textTertiary
+                      : AppColors.textSecondary,
+                  decoration: subtask.isCompleted
+                      ? TextDecoration.lineThrough
+                      : null,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
