@@ -79,4 +79,12 @@ class ThematicTextsResolver {
       ThematicTextsCatalog.dayClosure(stats),
     );
   }
+
+  /// Alerta de racha en peligro (F2, decisión B).
+  ThematicText resolveStreakAtRisk(int streakDays) {
+    return _fromCache(
+      ThematicTextsCatalog.summaryCacheKey('streak_at_risk'),
+      ThematicTextsCatalog.streakAtRisk(streakDays),
+    );
+  }
 }

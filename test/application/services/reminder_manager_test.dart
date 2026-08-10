@@ -497,4 +497,115 @@ void main() {
       expect(entry.body, contains('Jornada cerrada'));
     });
   });
+
+  group('syncStreakAtRiskReminder (F2, decisión B: alerta de racha)', () {
+    // Día con tareas pendientes pero NINGUNA completada todavía.
+    final sinCompletarHoy = [_task('a', DateTime(2026, 1, 15))];
+    final now = DateTime(2026, 1, 15, 8, 0); // antes de las 12:00
+
+    test('dispara a las 12:00 del mediodía con racha ≥3 y sin completados hoy',
+        () async {
+      await manager.syncStreakAtRiskReminder(
+        now: now,
+        allTasks: sinCompletarHoy,
+        settings: _settings(),
+        currentStreak: 3,
+      );
+
+      final entry = scheduler.scheduled[streakAtRiskReminderId];
+      expect(entry, isNotNull);
+      expect(
+        entry!.fireTime,
+        DateTime(2026, 1, 15, 12, 0),
+        reason: 'la alerta se fija a las 12:00 del MEDIODÍA (12 PM), '
+            'nunca a medianoche',
+      );
+      expect(entry.body,
+          'Tu racha de 3 días se perderá si no completas una misión hoy.');
+    });
+
+    test('el id es 0x60000004 (libre; tareas usan 0x10000000-0x4FFFFFFF',
+        () async {
+      await manager.syncStreakAtRiskReminder(
+        now: now,
+        allTasks: sinCompletarHoy,
+        settings: _settings(),
+        currentStreak: 7,
+      );
+      expect(scheduler.scheduled.containsKey(streakAtRiskReminderId), isTrue);
+      expect(streakAtRiskReminderId, 0x60000004);
+    });
+
+    test('no dispara si ya se completó la primera tarea del día', () async {
+      final tasks = [
+        ...sinCompletarHoy,
+        _task('done', DateTime(2026, 1, 15),
+            isCompleted: true, completedAt: DateTime(2026, 1, 15, 9, 0)),
+      ];
+      await manager.syncStreakAtRiskReminder(
+        now: DateTime(2026, 1, 15, 8, 0),
+        allTasks: tasks,
+        settings: _settings(),
+        currentStreak: 5,
+      );
+
+      expect(scheduler.scheduled.containsKey(streakAtRiskReminderId), isFalse);
+      expect(scheduler.cancelled, contains(streakAtRiskReminderId));
+    });
+
+    test('no dispara si la racha es menor que 3', () async {
+      await manager.syncStreakAtRiskReminder(
+        now: now,
+        allTasks: sinCompletarHoy,
+        settings: _settings(),
+        currentStreak: 2,
+      );
+
+      expect(scheduler.scheduled.containsKey(streakAtRiskReminderId), isFalse);
+      expect(scheduler.cancelled, contains(streakAtRiskReminderId));
+    });
+
+    test('cancelación: la hora (12:00) ya pasó → nunca programa al pasado',
+        () async {
+      await manager.syncStreakAtRiskReminder(
+        now: DateTime(2026, 1, 15, 13, 0),
+        allTasks: sinCompletarHoy,
+        settings: _settings(),
+        currentStreak: 10,
+      );
+
+      expect(scheduler.scheduled.containsKey(streakAtRiskReminderId), isFalse);
+      expect(scheduler.cancelled, contains(streakAtRiskReminderId));
+    });
+
+    test('cancelación: notificaciones desactivadas', () async {
+      await manager.syncStreakAtRiskReminder(
+        now: now,
+        allTasks: sinCompletarHoy,
+        settings: _settings(notificationsEnabled: false),
+        currentStreak: 6,
+      );
+
+      expect(scheduler.scheduled.containsKey(streakAtRiskReminderId), isFalse);
+      expect(scheduler.cancelled, contains(streakAtRiskReminderId));
+    });
+
+    test('con resolver: usa el texto temático "⚠ Racha en peligro"', () async {
+      final themedManager = ReminderManager(
+        scheduler: scheduler,
+        resolver: const ThematicTextsResolver(),
+      );
+      await themedManager.syncStreakAtRiskReminder(
+        now: now,
+        allTasks: sinCompletarHoy,
+        settings: _settings(),
+        currentStreak: 7,
+      );
+
+      final entry = scheduler.scheduled[streakAtRiskReminderId]!;
+      expect(entry.title, contains('⚠'));
+      expect(entry.title, contains('Racha en peligro'));
+      expect(entry.body, contains('Tu racha de 7 días'));
+    });
+  });
 }

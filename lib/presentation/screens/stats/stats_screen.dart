@@ -5,7 +5,9 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../application/providers/streak_provider.dart';
 import '../../../application/providers/task_provider.dart';
 import '../../../application/providers/now_provider.dart';
+import '../../../application/providers/player_provider.dart';
 import 'widgets/streak_display.dart';
+import 'widgets/player_card.dart';
 import 'widgets/badge_vault.dart';
 import 'widgets/monthly_calendar.dart';
 
@@ -15,6 +17,7 @@ class StatsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final streak = ref.watch(streakProvider);
+    final player = ref.watch(playerProvider);
     final badges = ref.watch(badgesProvider);
     final tasks = ref.watch(tasksProvider);
     final now = ref.watch(nowProvider).value ?? DateTime.now();
@@ -37,7 +40,17 @@ class StatsScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              StreakDisplay(streak: streak),
+              // F2: la tarjeta "Jugador" (nivel/XP/rango) va JUNTO al
+              // StreakDisplay. XP/Nivel complementan a la racha; no la
+              // sustituyen.
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: StreakDisplay(streak: streak)),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(child: PlayerCard(profile: player)),
+                ],
+              ),
               const SizedBox(height: AppSpacing.lg),
               _buildWeeklyProgress(weeklyProgress),
               const SizedBox(height: AppSpacing.lg),

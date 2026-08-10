@@ -84,6 +84,28 @@ void main() {
       expect(text.body, isNot(contains('Racha vigente')));
       expect(text.body, isNot(contains('Hito alcanzado')));
     });
+
+    test('alerta de racha en peligro: título y cuerpo exactos (F2)', () {
+      final text = ThematicTextsCatalog.streakAtRisk(5);
+      expect(text.title, contains('⚠'));
+      expect(text.title, contains('Racha en peligro'));
+      expect(
+        text.body,
+        contains('Tu racha de 5 días se perderá si no completas una misión hoy.'),
+      );
+    });
+
+    test('alerta de racha en peligro: singular con 1 día', () {
+      final text = ThematicTextsCatalog.streakAtRisk(1);
+      expect(text.body, contains('Tu racha de 1 día se perderá'));
+    });
+
+    test('transición "Nivel subió" (SnackBar in-app), glifo ◆', () {
+      final message = ThematicTextsCatalog.levelUpMessage(2);
+      expect(message, contains('◆'));
+      expect(message, contains('Nivel subió'));
+      expect(message, contains('Nivel 2'));
+    });
   });
 
   group('ThematicTextsCatalog - claves de caché', () {

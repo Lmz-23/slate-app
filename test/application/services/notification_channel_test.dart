@@ -6,13 +6,56 @@ import 'package:hive/hive.dart';
 
 import 'package:slate_app/application/providers/notification_providers.dart';
 import 'package:slate_app/application/providers/settings_provider.dart';
+import 'package:slate_app/application/providers/streak_provider.dart';
 import 'package:slate_app/application/providers/task_provider.dart';
 import 'package:slate_app/application/services/notification_service.dart';
+import 'package:slate_app/application/services/reminder_manager.dart';
+import 'package:slate_app/application/services/reminder_scheduler.dart';
+import 'package:slate_app/data/hive/adapters/badge_adapter.dart';
+import 'package:slate_app/data/hive/adapters/streak_adapter.dart';
 import 'package:slate_app/data/hive/adapters/task_adapter.dart';
 import 'package:slate_app/data/hive/adapters/user_settings_adapter.dart';
+import 'package:slate_app/data/hive/boxes/badges_box.dart';
 import 'package:slate_app/data/hive/boxes/settings_box.dart';
+import 'package:slate_app/data/hive/boxes/streaks_box.dart';
 import 'package:slate_app/data/hive/boxes/tasks_box.dart';
 import 'package:slate_app/domain/entities/user_settings.dart';
+
+/// Fake del contrato de bajo nivel: programación instantánea y sin plugin.
+/// Permite que la cadena asíncrona del controlador (`_scheduleEverything`)
+/// drene de forma determinista antes de que el test termine.
+class ChannelFakeScheduler implements ReminderScheduler {
+  final scheduled = <int, ({DateTime fireTime, String title, String body})>{};
+  final cancelled = <int>[];
+
+  @override
+  Future<void> init({required String timezone}) async {}
+
+  @override
+  Future<bool> canScheduleExactNotifications() async => true;
+
+  @override
+  Future<bool> requestExactAlarmsPermission() async => true;
+
+  @override
+  Future<void> schedule({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime fireTime,
+  }) async {
+    if (!fireTime.isAfter(DateTime.now())) {
+      throw ArgumentError('fireTime must be in the future');
+    }
+    scheduled[id] = (fireTime: fireTime, title: title, body: body);
+  }
+
+  @override
+  Future<void> cancel(int id) async {
+    cancelled.add(id);
+    scheduled.remove(id);
+  }
+}
 
 /// Verifica que el canal `task_reminders` se deriva y recrea con los toggles de
 /// sonido/vibración/badge (Mejora 2).
@@ -58,6 +101,9 @@ void main() {
     late Directory tempDir;
     late SettingsBox settingsBox;
     late TasksBox tasksBox;
+    late StreaksBox streaksBox;
+    late BadgesBox badgesBox;
+    late ChannelFakeScheduler scheduler;
     late ProviderContainer container;
 
     setUpAll(() async {
@@ -65,6 +111,8 @@ void main() {
       Hive.init(tempDir.path);
       Hive.registerAdapter(TaskAdapter());
       Hive.registerAdapter(UserSettingsAdapter());
+      Hive.registerAdapter(StreakAdapter());
+      Hive.registerAdapter(BadgeAdapter());
     });
 
     setUp(() async {
@@ -72,11 +120,24 @@ void main() {
       await settingsBox.init();
       tasksBox = TasksBox();
       await tasksBox.init();
+      streaksBox = StreaksBox();
+      await streaksBox.init();
+      badgesBox = BadgesBox();
+      await badgesBox.init();
 
+      scheduler = ChannelFakeScheduler();
       container = ProviderContainer(
         overrides: [
           settingsBoxProvider.overrideWithValue(settingsBox),
           tasksBoxProvider.overrideWithValue(tasksBox),
+          streaksBoxProvider.overrideWithValue(streaksBox),
+          badgesBoxProvider.overrideWithValue(badgesBox),
+          // El canal se recrea a través de `NotificationService`; la
+          // programación de recordatorios usa el fake para que la cadena
+          // asíncrona del controlador drene sin depender del plugin.
+          reminderManagerProvider.overrideWithValue(
+            ReminderManager(scheduler: scheduler),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -91,11 +152,20 @@ void main() {
       await Hive.close();
       await Hive.deleteBoxFromDisk('settings');
       await Hive.deleteBoxFromDisk('tasks');
+      await Hive.deleteBoxFromDisk('streaks');
+      await Hive.deleteBoxFromDisk('badges');
     });
 
     tearDownAll(() async {
       await tempDir.delete(recursive: true);
     });
+
+    /// Espera a que drenen las cadenas asíncronas lanzadas con `unawaited`.
+    Future<void> settle() async {
+      for (var i = 0; i < 20; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+    }
 
     test('cambiar notificationSound en Ajustes recrea el canal al instante',
         () async {
@@ -106,6 +176,7 @@ void main() {
       await container
           .read(settingsProvider.notifier)
           .updateNotificationSound(false);
+      await settle();
 
       expect(service.channelSettings.playSound, isFalse);
     });
@@ -118,6 +189,7 @@ void main() {
       await container
           .read(settingsProvider.notifier)
           .updateNotificationVibration(false);
+      await settle();
 
       expect(service.channelSettings.enableVibration, isFalse);
       expect(service.channelSettings.playSound, isFalse);
@@ -131,6 +203,7 @@ void main() {
       await container
           .read(settingsProvider.notifier)
           .updateNotificationBadge(false);
+      await settle();
 
       expect(service.channelSettings.showBadge, isFalse);
       expect(service.channelSettings.playSound, isTrue);

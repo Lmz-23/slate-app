@@ -10,6 +10,7 @@
 ///     del id de la tarea).
 ///   - Recordatorios diarios: `0x60000001` (resumen de la mañana),
 ///     `0x60000002` (resumen de la tarde) y `0x60000003` (cierre de jornada).
+///   - Alerta de racha en peligro: `0x60000004` (F2).
 library;
 
 /// FNV-1a de 32 bits. Determinista, rápido y estable entre ejecuciones de la
@@ -44,3 +45,18 @@ const int eveningDailyReminderId = 0x60000002;
 /// a la hora de reset del día siguiente y reporta el resultado del día que
 /// acaba de cerrar.
 const int dayClosureReminderId = 0x60000003;
+
+/// Id de la alerta de racha en peligro (F2, decisión B).
+///
+/// Se programa HOY a las 12:00 del mediodía si la racha está activa (≥3 días)
+/// y aún no se ha completado ninguna misión. Se cancela al completar la
+/// primera tarea del día, si la racha cae bajo 3, si las notificaciones se
+/// desactivan o si la hora ya pasó (patrón Fix A: nunca programar al pasado).
+const int streakAtRiskReminderId = 0x60000004;
+
+/// Hora fija de la alerta de racha en peligro: **12:00 del MEDIODÍA (12 PM)**.
+///
+/// NUNCA medianoche (00:00). La constante expresa la semántica de forma
+/// inequívoca: la alerta se dispara a mediodía, cuando al usuario le queda
+/// toda la tarde para completar una misión y salvar la racha.
+const int streakAtRiskReminderHour = 12;

@@ -20,6 +20,19 @@ import 'package:slate_app/data/hive/boxes/settings_box.dart';
 import 'package:slate_app/data/hive/boxes/streaks_box.dart';
 import 'package:slate_app/data/hive/boxes/tasks_box.dart';
 import 'package:slate_app/domain/entities/task.dart';
+import 'package:slate_app/domain/entities/streak.dart';
+
+bool _adaptersRegistered = false;
+
+/// Registra una sola vez los adapters Hive del test (compartidos entre grupos).
+void _registerHiveAdapters() {
+  if (_adaptersRegistered) return;
+  Hive.registerAdapter(TaskAdapter());
+  Hive.registerAdapter(UserSettingsAdapter());
+  Hive.registerAdapter(StreakAdapter());
+  Hive.registerAdapter(BadgeAdapter());
+  _adaptersRegistered = true;
+}
 
 /// Fake del contrato de bajo nivel que reproduce el comportamiento del plugin
 /// real (`flutter_local_notifications.zonedSchedule`): lanza `ArgumentError`
@@ -73,10 +86,7 @@ void main() {
     setUpAll(() async {
       tempDir = await Directory.systemTemp.createTemp('slate_controller_test');
       Hive.init(tempDir.path);
-      Hive.registerAdapter(TaskAdapter());
-      Hive.registerAdapter(UserSettingsAdapter());
-      Hive.registerAdapter(StreakAdapter());
-      Hive.registerAdapter(BadgeAdapter());
+      _registerHiveAdapters();
     });
 
     setUp(() async {
@@ -175,6 +185,116 @@ void main() {
         isTrue,
         reason: 'una tarea con hora pasada no debe abortar el cierre de jornada',
       );
+    });
+  });
+
+  group('DailyReminderController - alerta de racha en peligro (F2)', () {
+    late Directory tempDir;
+    late SettingsBox settingsBox;
+    late TasksBox tasksBox;
+    late StreaksBox streaksBox;
+    late BadgesBox badgesBox;
+    late ControllerFakeScheduler scheduler;
+    late ProviderContainer container;
+
+    setUpAll(() async {
+      tempDir = await Directory.systemTemp.createTemp('slate_controller_alerta');
+      Hive.init(tempDir.path);
+      _registerHiveAdapters();
+    });
+
+    setUp(() async {
+      settingsBox = SettingsBox();
+      await settingsBox.init();
+      tasksBox = TasksBox();
+      await tasksBox.init();
+      streaksBox = StreaksBox();
+      await streaksBox.init();
+      badgesBox = BadgesBox();
+      await badgesBox.init();
+
+      scheduler = ControllerFakeScheduler();
+      container = ProviderContainer(
+        overrides: [
+          settingsBoxProvider.overrideWithValue(settingsBox),
+          tasksBoxProvider.overrideWithValue(tasksBox),
+          streaksBoxProvider.overrideWithValue(streaksBox),
+          badgesBoxProvider.overrideWithValue(badgesBox),
+          reminderManagerProvider.overrideWithValue(
+            ReminderManager(scheduler: scheduler),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+    });
+
+    tearDown(() async {
+      await Hive.close();
+      await Hive.deleteBoxFromDisk('settings');
+      await Hive.deleteBoxFromDisk('tasks');
+      await Hive.deleteBoxFromDisk('streaks');
+      await Hive.deleteBoxFromDisk('badges');
+    });
+
+    tearDownAll(() async {
+      await tempDir.delete(recursive: true);
+    });
+
+    Future<void> settle() async {
+      for (var i = 0; i < 20; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+    }
+
+    DateTime today() =>
+        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+
+    /// Siembra una racha activa de [streakDays] y una tarea pendiente HOY.
+    Future<void> seedActiveStreak(int streakDays) async {
+      await streaksBox.updateStreak(Streak(
+        id: 'main_streak',
+        currentStreak: streakDays,
+        longestStreak: streakDays,
+        updatedAt: DateTime.now(),
+      ));
+      await tasksBox.add(Task(
+        id: 't1',
+        title: 'Misión de hoy',
+        scheduledDate: today(),
+        createdAt: DateTime.now(),
+      ));
+    }
+
+    test('con racha < 3 la alerta NUNCA se programa (aunque no haya '
+        'completados hoy)', () async {
+      await seedActiveStreak(2);
+      container.read(dailyReminderControllerProvider);
+      await settle();
+
+      expect(
+        scheduler.scheduled.containsKey(streakAtRiskReminderId),
+        isFalse,
+        reason: 'racha < 3 → la alerta 0x60000004 se cancela',
+      );
+      expect(scheduler.cancelled, contains(streakAtRiskReminderId));
+    });
+
+    test('al completar la primera tarea del día la alerta se CANCELA', () async {
+      await seedActiveStreak(3);
+      container.read(dailyReminderControllerProvider);
+      await settle();
+
+      // Completar la única tarea del día activa la cancelación vía el cambio
+      // de tasksProvider (la condición "sin completados hoy" deja de cumplirse).
+      await container.read(tasksProvider.notifier).toggleComplete('t1');
+      await settle();
+
+      expect(
+        scheduler.scheduled.containsKey(streakAtRiskReminderId),
+        isFalse,
+        reason: 'tras la primera completación del día la alerta queda cancelada',
+      );
+      expect(scheduler.cancelled, contains(streakAtRiskReminderId));
     });
   });
 }

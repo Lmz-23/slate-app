@@ -20,6 +20,11 @@ import 'thematic_texts_resolver.dart';
 /// - Resumen diario (10:00 y 19:00) según las decisiones P3/P5.
 /// - Cierre de jornada (`0x60000003`) según la decisión C: reporta el día al
 ///   siguiente reset.
+/// - Alerta de racha en peligro (`0x60000004`) según la decisión B (F2): se
+///   programa HOY a las 12:00 del mediodía cuando la racha está activa (≥3) y
+///   aún no se completó ninguna misión; se cancela al completar la primera del
+///   día, si la racha cae bajo 3, si las notificaciones están OFF o si la hora
+///   ya pasó (patrón Fix A: nunca programar al pasado).
 ///
 /// Si se inyecta un [resolver] de textos temáticos (Slate System), los títulos
 /// y cuerpos se toman de él SIEMPRE (el resolver es la fuente única; nunca
@@ -249,4 +254,58 @@ class ReminderManager {
 
   /// Cancela directamente el cierre de jornada.
   Future<void> cancelDayClosure() => _scheduler.cancel(dayClosureReminderId);
+
+  /// Decide y programa/cancela la alerta de racha en peligro (`0x60000004`)
+  /// para HOY a las 12:00 del MEDIODÍA (decisión B, F2).
+  ///
+  /// Reglas:
+  /// - Se programa SOLO si: notificaciones activas, racha activa ≥ 3 días
+  ///   ([ReminderScheduleCalculator.streakAtRiskMinStreak]) y NO se ha
+  ///   completado ninguna misión hoy (usa la lógica existente de conteo de
+  ///   completados del día).
+  /// - Se CANCELA si: toggles desactivados, racha < 3, ya se completó la
+  ///   primera tarea del día, o la hora de disparo ya pasó (patrón Fix A:
+  ///   nunca programar al pasado).
+  ///
+  /// [currentStreak] lo aporta el controlador leyendo `streakProvider`.
+  Future<void> syncStreakAtRiskReminder({
+    required DateTime now,
+    required List<Task> allTasks,
+    required UserSettings settings,
+    required int currentStreak,
+  }) async {
+    final today = DateTime(now.year, now.month, now.day);
+    final fireTime = DateTime(
+      today.year,
+      today.month,
+      today.day,
+      streakAtRiskReminderHour,
+      0,
+    );
+
+    final shouldSchedule = settings.notificationsEnabled &&
+        ReminderScheduleCalculator.shouldFireStreakAtRiskReminder(
+          allTasks: allTasks,
+          day: today,
+          currentStreak: currentStreak,
+        ) &&
+        fireTime.isAfter(now);
+
+    if (shouldSchedule) {
+      final themed = _resolver?.resolveStreakAtRisk(currentStreak);
+      await _scheduler.schedule(
+        id: streakAtRiskReminderId,
+        title: themed?.title ?? 'Racha en peligro',
+        body: themed?.body ??
+            ReminderScheduleCalculator.streakAtRiskBody(currentStreak),
+        fireTime: fireTime,
+      );
+    } else {
+      await _scheduler.cancel(streakAtRiskReminderId);
+    }
+  }
+
+  /// Cancela directamente la alerta de racha en peligro.
+  Future<void> cancelStreakAtRiskReminder() =>
+      _scheduler.cancel(streakAtRiskReminderId);
 }

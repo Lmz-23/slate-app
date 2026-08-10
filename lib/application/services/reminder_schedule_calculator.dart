@@ -155,6 +155,20 @@ class ReminderScheduleCalculator {
   }) =>
       hasPendingTasksOn(allTasks, day) && noTasksCompletedOn(allTasks, day);
 
+  /// Racha mínima para que la alerta de racha en peligro tenga sentido
+  /// (decisión B): con menos de 3 días la pérdida aún no merece una alerta.
+  static const int streakAtRiskMinStreak = 3;
+
+  /// Condición de la alerta de racha en peligro (F2, decisión B):
+  /// racha activa ≥ 3 días Y no se ha completado ninguna misión hoy.
+  static bool shouldFireStreakAtRiskReminder({
+    required List<Task> allTasks,
+    required DateTime day,
+    required int currentStreak,
+  }) =>
+      currentStreak >= streakAtRiskMinStreak &&
+      noTasksCompletedOn(allTasks, day);
+
   /// Cuerpo del recordatorio de tarea, p. ej.:
   /// `Recordatorio: "Comprar leche" a las 14:00`.
   static String taskReminderBody(Task task) {
@@ -192,4 +206,8 @@ class ReminderScheduleCalculator {
     }
     return body;
   }
+
+  /// Cuerpo CANÓNICO (tema OFF) de la alerta de racha en peligro.
+  static String streakAtRiskBody(int streakDays) =>
+      'Tu racha de $streakDays días se perderá si no completas una misión hoy.';
 }

@@ -39,6 +39,7 @@ class DailyReminderController {
   DailyReminderController(this._ref, this._manager, this._service) {
     _ref.listen(nowProvider, (previous, next) => _onNowChanged());
     _ref.listen(tasksProvider, (previous, next) => _onTasksChanged());
+    _ref.listen(streakProvider, (previous, next) => _onStreakChanged());
     _ref.listen(
       settingsProvider,
       (previous, next) => _onSettingsChanged(previous, next),
@@ -88,6 +89,15 @@ class DailyReminderController {
   void _onTasksChanged() {
     // Al cambiar tareas solo se redeciden los resúmenes del día (2 ids).
     // Los recordatorios individuales YA se sincronizan en TasksNotifier.
+    _syncDailyRemindersOnly();
+  }
+
+  void _onStreakChanged() {
+    // La racha se recalcula DESPUÉS de los cambios de tareas (TaskSection
+    // llama a recalculate tras toggleComplete). Al escuchar el cambio se
+    // vuelve a decidir con la racha NUEVA: si cayó bajo 3, la alerta de racha
+    // en peligro (0x60000004) queda cancelada aunque el evento de tareas la
+    // hubiera procesado con la racha anterior.
     _syncDailyRemindersOnly();
   }
 
@@ -148,6 +158,12 @@ class DailyReminderController {
       debugPrint(
           'DailyReminderController: error en cierre de jornada: $e');
     }
+    try {
+      // F2 (decisión B): alerta de racha en peligro a las 12:00 si procede.
+      await _syncStreakAtRisk(now, tasks, settings);
+    } catch (e) {
+      debugPrint('DailyReminderController: error en alerta de racha: $e');
+    }
 
     _lastScheduledDay = now;
     _lastNotificationSignature = _notificationSignature(settings);
@@ -185,6 +201,26 @@ class DailyReminderController {
     return all.isEmpty ? null : all.last;
   }
 
+  /// Decide la alerta de racha en peligro (0x60000004) con la racha actual.
+  ///
+  /// El controlador ya lee `streakProvider` (para el cierre de jornada); aquí
+  /// se lo reutiliza y se delega la programación/cancelación al manager, que
+  /// aplica la condición (racha ≥ 3 y sin completados hoy) y la defensa de no
+  /// programar al pasado.
+  Future<void> _syncStreakAtRisk(
+    DateTime now,
+    List<Task> tasks,
+    UserSettings settings,
+  ) async {
+    final streak = _ref.read(streakProvider);
+    await _manager.syncStreakAtRiskReminder(
+      now: now,
+      allTasks: tasks,
+      settings: settings,
+      currentStreak: streak.currentStreak,
+    );
+  }
+
   /// Solo re-decide los resúmenes diarios (10:00/19:00). Barato y se llama en
   /// cada cambio de tareas.
   void _syncDailyRemindersOnly() {
@@ -209,6 +245,11 @@ class DailyReminderController {
     } catch (e) {
       debugPrint(
           'DailyReminderController: error en cierre de jornada: $e');
+    }
+    try {
+      await _syncStreakAtRisk(now, tasks, settings);
+    } catch (e) {
+      debugPrint('DailyReminderController: error en alerta de racha: $e');
     }
     _lastScheduledDay = now;
   }

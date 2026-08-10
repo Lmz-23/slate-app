@@ -6,6 +6,8 @@ import '../../../../domain/entities/task.dart';
 import '../../../../application/providers/task_provider.dart';
 import '../../../../application/providers/streak_provider.dart';
 import '../../../../application/providers/settings_provider.dart';
+import '../../../../application/providers/player_provider.dart';
+import '../../../../application/services/thematic_texts_catalog.dart';
 import '../../../../application/services/timezone_service.dart';
 import '../../../widgets/task_tile.dart';
 import '../../task_form/task_form_sheet.dart';
@@ -62,7 +64,7 @@ class TaskSection extends ConsumerWidget {
             final task = tasks[index];
             return TaskTile(
               task: task,
-              onTap: () => _toggleComplete(ref, task.id),
+              onTap: () => _toggleComplete(context, ref, task.id),
               onEdit: () => _showEditForm(context, task),
               onDelete: () => _deleteTask(ref, task.id),
               onDeleteSeries: () => _deleteTaskAndRecurring(ref, task.id),
@@ -85,7 +87,14 @@ class TaskSection extends ConsumerWidget {
     );
   }
 
-  Future<void> _toggleComplete(WidgetRef ref, String id) async {
+  Future<void> _toggleComplete(
+      BuildContext context, WidgetRef ref, String id) async {
+    // Captura el estado ANTES del toggle para saber si la transición es
+    // completar (suma XP) o desmarcar (resta XP).
+    final task = ref.read(tasksProvider).where((t) => t.id == id).firstOrNull;
+    if (task == null) return;
+    final wasCompleted = task.isCompleted;
+
     // Se espera a que toggleComplete actualice el estado (refresh() es
     // síncrono después del update en Hive) para que tasksProvider refleje la
     // transición completa→incompleta ANTES del recálculo de racha.
@@ -103,6 +112,37 @@ class TaskSection extends ConsumerWidget {
           tasks: ref.read(tasksProvider),
           now: now,
         );
+
+    // F2 (Nivel de Jugador + XP): complementa a racha/insignias, no las
+    // sustituye. Completar suma +10/+15/+20 según prioridad; desmarcar RESTA
+    // el mismo XP (simetría anti-exploit) pero el nivel alcanzado NUNCA baja.
+    final playerNotifier = ref.read(playerProvider.notifier);
+    final int? levelUpLevel;
+    if (wasCompleted) {
+      await playerNotifier.removeTaskXp(task.priority);
+      levelUpLevel = null;
+    } else {
+      levelUpLevel = await playerNotifier.addTaskXp(task.priority);
+      if (levelUpLevel != null && context.mounted) {
+        _showLevelUpSnackBar(context, levelUpLevel);
+      }
+    }
+  }
+
+  void _showLevelUpSnackBar(BuildContext context, int level) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            ThematicTextsCatalog.levelUpMessage(level),
+            style: const TextStyle(color: AppColors.textPrimary),
+          ),
+          backgroundColor: AppColors.surfaceLight,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
   }
 
   void _deleteTask(WidgetRef ref, String id) {

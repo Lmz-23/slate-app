@@ -100,6 +100,20 @@ class ThematicTextsCatalog {
     );
   }
 
+  // ── Alerta de racha en peligro (F2, decisión B) ────────────────────────────
+  static ThematicText streakAtRisk(int streakDays) {
+    final dias = streakDays == 1 ? '1 día' : '$streakDays días';
+    return ThematicText(
+      title: '$_warn Racha en peligro',
+      body: '$_warn Tu racha de $dias se perderá si no completas una misión hoy.',
+    );
+  }
+
+  // ── Transición "Nivel subió" (SnackBar in-app de la tarjeta Jugador) ──────
+  static String levelUpMessage(int level) {
+    return '$_rank Nivel subió — Ahora eres Nivel $level';
+  }
+
   // ── Subnomenclatura de niveles/rangos de insignias (SL) ───────────────────
   /// Título SL del hito [type] (p. ej. "Rango E · Nivel I").
   static String slateBadgeTitle(BadgeType type) => _slateBadges[type]!.title;
