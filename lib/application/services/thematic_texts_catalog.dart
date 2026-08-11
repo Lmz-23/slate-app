@@ -169,48 +169,48 @@ class ThematicTextsCatalog {
   static const Map<BadgeType, _SlateBadgeTheme> _slateBadges = {
     BadgeType.streak3: _SlateBadgeTheme(
       title: 'Rango E · Nivel I',
-      flavor: 'Cazador Novato',
-      icon: 'star',
+      flavor: 'El Despertar',
+      icon: 'eye',
     ),
     BadgeType.streak7: _SlateBadgeTheme(
       title: 'Rango E · Nivel II',
-      flavor: 'Semana Perfecta',
-      icon: 'moon',
+      flavor: 'Primera Llamada',
+      icon: 'flame',
     ),
     BadgeType.streak14: _SlateBadgeTheme(
       title: 'Rango D · Nivel I',
-      flavor: 'Aprendiz',
+      flavor: 'Guía del acero',
       icon: 'sword',
     ),
     BadgeType.streak21: _SlateBadgeTheme(
       title: 'Rango D · Nivel II',
-      flavor: 'Hábito Formado',
+      flavor: 'Sangrado de ojos',
       icon: 'shield',
     ),
     BadgeType.streak30: _SlateBadgeTheme(
       title: 'Rango C · Nivel I',
-      flavor: 'Asedio Prolongado',
-      icon: 'award',
+      flavor: 'Fortaleza inquebrantable',
+      icon: 'military_tech',
     ),
     BadgeType.streak60: _SlateBadgeTheme(
       title: 'Rango B · Nivel I',
-      flavor: 'Doble Asedio',
-      icon: 'medal',
+      flavor: 'Guerrero del tiempo',
+      icon: 'emoji_events',
     ),
     BadgeType.streak90: _SlateBadgeTheme(
       title: 'Rango A · Nivel I',
       flavor: 'Élite Nacional',
-      icon: 'crown',
+      icon: 'workspace_premium',
     ),
     BadgeType.streak180: _SlateBadgeTheme(
       title: 'Rango S · Nivel I',
-      flavor: 'Sobresaliente S',
+      flavor: 'Honor Absoluto',
       icon: 'diamond',
     ),
     BadgeType.streak365: _SlateBadgeTheme(
       title: 'Nivel Nacional',
       flavor: 'Leyenda',
-      icon: 'rocket',
+      icon: 'skull',
     ),
   };
 }

@@ -60,6 +60,9 @@ class BadgePresentation {
       'alarm': Icons.alarm,
       'clock': Icons.access_time,
       'hourglass': Icons.hourglass_empty,
+      'eye': Icons.remove_red_eye,
+      'military_tech': Icons.military_tech,
+      'skull': Icons.face,
     };
     return iconMap[iconName] ?? Icons.star;
   }

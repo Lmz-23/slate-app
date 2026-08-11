@@ -209,9 +209,8 @@ class TasksNotifier extends StateNotifier<List<Task>> {
       nextDate = nextDate.add(const Duration(days: 1));
     }
 
-    for (final t in generatedTasks) {
-      await _repository.add(t);
-    }
+    // Escritura en paralelo: todas las ocurrencias se guardan simultáneamente
+    await Future.wait(generatedTasks.map((t) => _repository.add(t)));
   }
 
   Future<void> updateTask(Task task) async {
@@ -335,6 +334,14 @@ class TasksNotifier extends StateNotifier<List<Task>> {
   Future<int?> toggleComplete(String id) async {
     final task = _repository.getById(id);
     if (task == null) return null;
+
+    // Bloqueo de fechas futuras: no se puede completar una tarea cuya fecha
+    // programada sea posterior a hoy. Protege racha, XP y quest.
+    final now = _ref.read(nowProvider).value ?? DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    if (task.scheduledDate.isAfter(today)) {
+      return null;
+    }
 
     // ── Subtarea: toggle explícito con +2/-2 ────────────────────────────────
     if (task.isSubtask) {

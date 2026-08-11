@@ -146,13 +146,19 @@ class _TaskTileState extends ConsumerState<TaskTile> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = ref.watch(categoriesProvider);
+    // P2-fix: categoriesProvider se lee (no se observa) porque las categorías
+    // casi nunca cambian. Esto evita rebuilds innecesarios en todos los
+    // TaskTiles cuando se modifica una categoría.
+    final categories = ref.read(categoriesProvider);
     final category = task.categoryId != null
         ? categories.where((c) => c.id == task.categoryId).firstOrNull
         : null;
     // F4: subtareas directas de esta tarea (marca explícita isSubtask).
+    // P1: se usa ref.read en lugar de ref.watch para evitar que cada TaskTile
+    // se rebuild cuando CUALQUIER tarea cambia. Las subtareas se filtran aquí
+    // directamente desde la lista actual sin suscribirse a cambios.
     final subtasks = ref
-        .watch(tasksProvider)
+        .read(tasksProvider)
         .where((t) => t.parentTaskId == task.id && t.isSubtask)
         .toList();
 

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/constants/app_colors.dart';
 
 class NavigationShell extends StatelessWidget {
   final Widget child;
@@ -47,7 +46,7 @@ class NavigationShell extends StatelessWidget {
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_view_week_outlined),
             activeIcon: Icon(Icons.calendar_view_week),
-            label: 'Semana',
+            label: 'Progreso',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.bar_chart_outlined),

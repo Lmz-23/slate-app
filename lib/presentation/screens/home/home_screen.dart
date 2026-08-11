@@ -107,20 +107,20 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
+  /// Genera las fechas de la semana centrada en [selectedDate] (±3 días).
+  /// Método estático para evitar recrear la lista en cada build.
+  static List<DateTime> _generateWeekDates(DateTime selectedDate) {
+    final anchor = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    return List.generate(7, (i) => anchor.add(Duration(days: i - 3)));
+  }
+
   Widget _buildDateSelector(BuildContext context, WidgetRef ref, DateTime selectedDate) {
     final now = ref.watch(nowProvider).value ?? DateTime.now();
 
     // La franja de 7 días se centra en la FECHA SELECCIONADA (selectedDate ± 3),
     // no en el día actual, para que al navegar a una fecha lejana la franja
     // muestre los días cercanos a dicha fecha.
-    final anchor = DateTime(
-      selectedDate.year,
-      selectedDate.month,
-      selectedDate.day,
-    );
-    final dates = List.generate(7, (i) {
-      return anchor.add(Duration(days: i - 3));
-    });
+    final dates = _generateWeekDates(selectedDate);
 
     return Row(
       children: [
@@ -237,22 +237,10 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildFAB(BuildContext context, WidgetRef ref, DateTime date) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        FloatingActionButton.small(
-          heroTag: 'voice',
-          onPressed: () => _showVoiceInput(context, ref, date),
-          backgroundColor: AppColors.surface,
-          child: const Icon(Icons.mic, color: AppColors.primary),
-        ),
-        const SizedBox(height: 12),
-        FloatingActionButton(
-          heroTag: 'add',
-          onPressed: () => _showTaskForm(context, ref, date),
-          child: const Icon(Icons.add),
-        ),
-      ],
+    return FloatingActionButton(
+      heroTag: 'add',
+      onPressed: () => _showTaskForm(context, ref, date),
+      child: const Icon(Icons.add),
     );
   }
 
@@ -264,18 +252,6 @@ class HomeScreen extends ConsumerWidget {
       builder: (context) => TaskFormSheet(
         initialDate: date,
         taskId: taskId,
-      ),
-    );
-  }
-
-  void _showVoiceInput(BuildContext context, WidgetRef ref, DateTime date) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => TaskFormSheet(
-        initialDate: date,
-        isVoiceMode: true,
       ),
     );
   }

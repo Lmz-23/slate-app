@@ -110,32 +110,30 @@ void main() {
       expect(notifier.state.completedToday, 0);
     });
 
-    test('la decisión de visibilidad PERSISTE aunque se borren tareas', () async {
+    test('la visibilidad se recalcula dinámicamente al cambiar tareas', () async {
+      // Inicio con 3 tareas → visible.
       await tasksBox.add(_task('a', now));
       await tasksBox.add(_task('b', now));
       await tasksBox.add(_task('c', now));
       notifier = createNotifier();
       expect(notifier.state.isVisible, isTrue);
 
-      // Borrar tareas después NO revierte la visibilidad de hoy.
+      // Borrar tareas recalcula la visibilidad: con 1 tarea ya no es visible.
       await tasksBox.delete('a');
       await tasksBox.delete('b');
       notifier.refresh();
-      expect(notifier.state.isVisible, isTrue,
-          reason: 'una vez visible, sigue visible todo el día');
+      expect(notifier.state.isVisible, isFalse,
+          reason: 'la visibilidad se recalcula dinámicamente');
     });
 
-    test('la decisión de visibilidad sobrevive a un reinicio (persistida)', () async {
+    test('la visibilidad sobrevive a un reinicio si las tareas persisten', () async {
       await tasksBox.add(_task('a', now));
       await tasksBox.add(_task('b', now));
       await tasksBox.add(_task('c', now));
       notifier = createNotifier();
       expect(notifier.state.isVisible, isTrue);
 
-      // Reiniciar el notifier (p. ej. tras cerrar la app): las tareas ya se
-      // borraron, pero la decisión del día persiste en Hive.
-      await tasksBox.delete('a');
-      await tasksBox.delete('b');
+      // Reiniciar el notifier con las tareas aún en la caja.
       final restarted = QuestNotifier(
         repository: CompanionStateRepositoryImpl(companionBox),
         playerNotifier: PlayerNotifier(PlayerRepositoryImpl(playerBox)),
@@ -145,18 +143,19 @@ void main() {
       expect(restarted.state.isVisible, isTrue);
     });
 
-    test('si se decidió OCULTA al inicio, no aparece aunque se añadan tareas',
+    test('si no había suficientes tareas, añadir más hace visible la quest',
         () async {
-      // Solo 2 tareas al inicio del día → quest decidida oculta.
+      // Solo 2 tareas al inicio → no visible.
       await tasksBox.add(_task('a', now));
       await tasksBox.add(_task('b', now));
       notifier = createNotifier();
       expect(notifier.state.isVisible, isFalse);
 
-      // Se añaden más tareas HOY: la decisión del día no cambia.
+      // Se añaden más tareas HOY: la quest se vuelve visible.
       await tasksBox.add(_task('c', now));
       notifier.refresh();
-      expect(notifier.state.isVisible, isFalse);
+      expect(notifier.state.isVisible, isTrue,
+          reason: 'añadir tareas activa dinámicamente la visibilidad');
     });
   });
 

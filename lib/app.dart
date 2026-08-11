@@ -20,7 +20,7 @@ class SlateApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Slate',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: settings.themeMode.themeMode,
       routerConfig: appRouter,

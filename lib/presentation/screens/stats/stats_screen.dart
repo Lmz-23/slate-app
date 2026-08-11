@@ -9,7 +9,6 @@ import '../../../application/providers/player_provider.dart';
 import 'widgets/streak_display.dart';
 import 'widgets/player_card.dart';
 import 'widgets/badge_vault.dart';
-import 'widgets/monthly_calendar.dart';
 
 class StatsScreen extends ConsumerWidget {
   const StatsScreen({super.key});
@@ -53,8 +52,6 @@ class StatsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               _buildWeeklyProgress(weeklyProgress),
-              const SizedBox(height: AppSpacing.lg),
-              MonthlyCalendar(tasks: tasks),
               const SizedBox(height: AppSpacing.lg),
               BadgeVault(badges: badges),
               const SizedBox(height: AppSpacing.xl),

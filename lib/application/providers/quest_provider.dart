@@ -140,12 +140,12 @@ class QuestNotifier extends StateNotifier<QuestState> {
 
     final isClaimed = companion.questClaimedOn == todayKey;
 
-    // Visibilidad: decidir una vez por día y persistir la decisión.
-    var visible = false;
-    if (companion.questVisibleOn == todayKey) {
-      visible = companion.questVisibleDecision;
-    } else {
-      visible = QuestCalculator.shouldBeVisible(_readTasks(), now);
+    // Visibilidad: recalcular siempre basándose en el estado actual de tareas.
+    // La quest aparece si hay ≥3 tareas programadas para hoy (sin importar si ya
+    // se decidió antes). Si el día cambió, companion.questVisibleOn != todayKey
+    // y se persiste la nueva decisión.
+    final visible = QuestCalculator.shouldBeVisible(_readTasks(), now);
+    if (companion.questVisibleOn != todayKey) {
       _repository.updateState(companion.copyWith(
         questVisibleOn: todayKey,
         questVisibleDecision: visible,
