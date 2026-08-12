@@ -49,12 +49,43 @@ class DailyReminderController {
       settingsProvider,
       (previous, next) => _onSettingsChanged(previous, next),
     );
-    _scheduleEverything();
+    // La programación inicial NO ocurre aquí: `_scheduleEverything` lee
+    // `tasksProvider` (→ `getAll()` síncrono) y dispara una ráfaga de
+    // `zonedSchedule` (2 round trips nativos cada uno) que satura el hilo de
+    // plataforma Android durante las primeras frames del cold start. El
+    // arranque llama a `start()` tras la primera frame (ver SlateApp).
   }
 
   final Ref _ref;
   final ReminderManager _manager;
   final NotificationService _service;
+
+  bool _started = false;
+
+  /// Inicia la programación inicial (recordatorios de tareas + resúmenes del
+  /// día + cierre + alertas del Sistema). Se invoca UNA vez desde un
+  /// `addPostFrameCallback` en `SlateApp` para no ejecutar el prefijo síncrono
+  /// (`tasksProvider.getAll()`) ni la ráfaga de `zonedSchedule` dentro del
+  /// primer build (cold start). Idempotente: las llamadas posteriores (p. ej.
+  /// rebuilds de `SlateApp`) son no-op.
+  ///
+  /// El re-sync diario NO depende de este método: al cambiar de día
+  /// (`nowProvider`), al cambiar tareas/racha o al cambiar ajustes se sigue
+  /// reprogramando por los listeners del constructor.
+  void start() {
+    if (_started) return;
+    _started = true;
+    // Poda del task box (una vez por sesión): elimina en segundo plano las
+    // tareas pendientes anteriores a la ventana de retención (45 días) sin
+    // bloquear la primera frame (`start()` ya se ejecuta post-frame desde
+    // SlateApp). El guard interno del notifier garantiza la idempotencia.
+    try {
+      unawaited(_ref.read(tasksProvider.notifier).pruneOldPending());
+    } catch (e) {
+      debugPrint('DailyReminderController: poda del task box omitida: $e');
+    }
+    _scheduleEverything();
+  }
 
   DateTime? _lastScheduledDay;
   String _lastNotificationSignature = '';
@@ -160,8 +191,7 @@ class DailyReminderController {
     try {
       await _syncDayClosureIfEnabled(now, tasks, settings);
     } catch (e) {
-      debugPrint(
-          'DailyReminderController: error en cierre de jornada: $e');
+      debugPrint('DailyReminderController: error en cierre de jornada: $e');
     }
     try {
       // F2 (decisión B): alerta de racha en peligro a las 12:00 si procede.
@@ -254,8 +284,7 @@ class DailyReminderController {
     try {
       await _syncDayClosureIfEnabled(now, tasks, settings);
     } catch (e) {
-      debugPrint(
-          'DailyReminderController: error en cierre de jornada: $e');
+      debugPrint('DailyReminderController: error en cierre de jornada: $e');
     }
     try {
       await _syncStreakAtRisk(now, tasks, settings);

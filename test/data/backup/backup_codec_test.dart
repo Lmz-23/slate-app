@@ -149,6 +149,18 @@ void main() {
       expect(decoded.userSettings.dailyReminderEnabled, isFalse);
       expect(decoded.userSettings.dailyReminderHour1, 8);
     });
+
+    test(
+        'un backup ANTIGUO con themeMode "system" importa como dark sin crash',
+        () {
+      // Los backups anteriores a la eliminación de AppThemeMode.system
+      // exportaban 'themeMode': 'system'. Ya no existe en el enum: debe
+      // caer al fallback dark (identidad de Slate) sin romper el import.
+      final jsonString =
+          sampleBackupString().replaceFirst('"themeMode": "light"', '"themeMode": "system"');
+      final decoded = BackupCodec.decode(jsonString);
+      expect(decoded.userSettings.themeMode, AppThemeMode.dark);
+    });
   });
 
   group('BackupCodec.decode (validación de archivos inválidos)', () {

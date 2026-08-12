@@ -6,22 +6,23 @@ import 'package:slate_app/presentation/screens/stats/widgets/badge_presentation.
 
 void main() {
   group('BadgePresentation.resolveIconData', () {
-    test('usa los iconos sugeridos SL (moon/medal/sword/award disponibles)',
+    test(
+        'usa los iconos actuales SL (flame/emoji_events/military_tech disponibles)',
         () {
       expect(
         BadgePresentation.resolveIconData(type: BadgeType.streak7),
-        Icons.nightlight_round,
-        reason: 'streak7 usa el icono moon',
+        Icons.whatshot,
+        reason: 'streak7 usa el icono flame',
       );
       expect(
         BadgePresentation.resolveIconData(type: BadgeType.streak60),
-        Icons.military_tech,
-        reason: 'streak60 usa el icono medal',
+        Icons.emoji_events,
+        reason: 'streak60 usa el icono emoji_events',
       );
       expect(
         BadgePresentation.resolveIconData(type: BadgeType.streak30),
-        Icons.verified,
-        reason: 'streak30 usa el icono award',
+        Icons.military_tech,
+        reason: 'streak30 usa el icono military_tech',
       );
     });
 

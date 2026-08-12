@@ -1,5 +1,4 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import '../adapters/streak_adapter.dart';
 import '../../../domain/entities/streak.dart';
 
 class StreaksBox {

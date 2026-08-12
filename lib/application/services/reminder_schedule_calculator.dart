@@ -70,6 +70,31 @@ class ReminderScheduleCalculator {
   static DateTime taskReminderFireTime(Task task, int leadTimeMinutes) =>
       effectiveDateTime(task).subtract(Duration(minutes: leadTimeMinutes));
 
+  /// Horizonte de recordatorios de las OCURRENCIAS de series recurrentes.
+  ///
+  /// Una serie diaria genera ~365 instancias futuras en BD (la generación es
+  /// parte del producto), pero programar una notificación nativa por cada una
+  /// satura AlarmManager (Android limita ~500 alarmas por app) y, al hacerse
+  /// SECUENCIALMENTE con `zonedSchedule`, convierte el guardado en una
+  /// operación de 8-12 s. Solo se programan las ocurrencias cuyo disparo cae
+  /// dentro de esta ventana; las lejanas entran en la ventana durante el
+  /// re-sync diario ([DailyReminderController] reprograma todos los
+  /// recordatorios al cambiar de día / iniciar la app).
+  static const int recurringReminderHorizonDays = 7;
+
+  /// ¿Es una OCURRENCIA de serie recurrente cuya notificación está FUERA de la
+  /// ventana de recordatorios ([recurringReminderHorizonDays])?
+  ///
+  /// Devuelve `true` solo para ocurrencias reales (`parentTaskId != null` y NO
+  /// subtarea) cuyo disparo efectivo sea posterior a `now + horizonte`. La
+  /// tarea raíz de la serie, las subtareas y las tareas únicas NO se ven
+  /// afectadas: sus recordatorios siguen las reglas normales.
+  static bool isFarFutureRecurringOccurrence(Task task, DateTime now) {
+    if (task.parentTaskId == null || task.isSubtask) return false;
+    final horizon = now.add(const Duration(days: recurringReminderHorizonDays));
+    return effectiveDateTime(task).isAfter(horizon);
+  }
+
   /// Instante del PRÓXIMO reset de día ([dayResetHour]) estrictamente posterior
   /// a [now].
   ///

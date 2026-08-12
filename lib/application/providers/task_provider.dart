@@ -5,10 +5,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../domain/entities/task.dart';
+import '../../domain/entities/user_settings.dart';
 import '../../domain/enums/task_priority.dart';
 import '../../domain/enums/recurrence_type.dart';
 import '../../data/hive/boxes/tasks_box.dart';
 import '../../data/repositories/task_repository_impl.dart';
+import '../services/reminder_manager.dart';
+import '../services/reminder_schedule_calculator.dart';
 import '../services/timezone_service.dart';
 import 'now_provider.dart';
 import 'notification_providers.dart';
@@ -69,6 +72,16 @@ class TasksNotifier extends StateNotifier<List<Task>> {
   final Ref _ref;
   final _uuid = const Uuid();
 
+  /// Ventana de retención de tareas PENDIENTES pasadas para la poda
+  /// automática del task box: solo se podan las tareas NO completadas con
+  /// fecha programada anterior a `hoy − 45 días` (regla de producto).
+  static const int pendingRetentionDays = 45;
+
+  /// Guard de la poda automática: se ejecuta UNA vez por sesión (al arrancar,
+  /// desde `DailyReminderController.start()`), nunca en el constructor ni en
+  /// cada build.
+  bool _pruned = false;
+
   TasksNotifier(this._repository, this._ref) : super(_repository.getAll());
 
   void refresh() {
@@ -113,16 +126,15 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     refresh();
 
     // Conecta el sistema de notificaciones: programa el recordatorio de la
-    // tarea creada (si tiene horario) y el de cada ocurrencia generada de la
-    // serie recurrente (cada una tiene su propio id derivado).
+    // tarea creada (si tiene horario). La sincronización de las OCURRENCIAS de
+    // la serie recurrente se lanza en SEGUNDO PLANO (`unawaited`): con
+    // `ReminderManager` se limita a las próximas
+    // [ReminderScheduleCalculator.recurringReminderHorizonDays] ocurrencias y
+    // NUNCA bloquea el guardado (la UI vuelve a "Hoy" en cuanto la escritura
+    // en BD termina; el retraso histórico de 8-12 s era la espera secuencial
+    // de ~365 `zonedSchedule`).
     await _syncReminderForTask(task);
-    final generated = _repository
-        .getAll()
-        .where((t) => t.parentTaskId == task.id)
-        .toList();
-    for (final occurrence in generated) {
-      await _syncReminderForTask(occurrence);
-    }
+    unawaited(_syncGeneratedReminders(task));
 
     // Slate System: al GUARDAR la tarea (no al disparar ni al programar) se
     // genera en segundo plano la variante temática con IA si el usuario activó
@@ -287,6 +299,15 @@ class TasksNotifier extends StateNotifier<List<Task>> {
   ///
   /// El estado se actualiza de forma SÍNCRONA (optimista) antes de esperar el
   /// borrado en Hive por las mismas razones que [deleteTask].
+  ///
+  /// CANCElación SELECTIVA de recordatorios (optimización RAF): la serie
+  /// genera ~365 instancias en BD, pero tras el fix del horizonte solo se
+  /// programaron notificaciones para la raíz y las ocurrencias dentro de
+  /// [ReminderScheduleCalculator.recurringReminderHorizonDays] días. Cancelar
+  /// las ~358 ocurrencias lejanas (que NUNCA tuvieron notificación) era un
+  /// despilfarro de 2 round trips nativos por cada una. Aquí solo se cancela:
+  /// la RAÍZ (siempre tiene su recordatorio) y las ocurrencias que NO son
+  /// `isFarFutureRecurringOccurrence` (las que entraron en el horizonte).
   Future<void> deleteTaskAndRecurring(String id) async {
     final found = _repository.getById(id);
     if (found == null) return;
@@ -301,18 +322,95 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     }
 
     final rootId = root.id;
-    final idsToDelete = state
+    // Se capturan las tareas de la serie ANTES de tocar `state`: el borrado
+    // optimista posterior las elimina del estado, y `_cancelReminder` necesita
+    // el objeto `Task` para decidir si la ocurrencia tenía notificación.
+    final seriesTasks = state
         .where((t) => t.id == rootId || t.parentTaskId == rootId)
-        .map((t) => t.id)
-        .toSet();
+        .toList();
+    final idsToDelete = seriesTasks.map((t) => t.id).toSet();
 
     // Actualización síncrona del estado antes del borrado asíncrono.
     state = state.where((t) => !idsToDelete.contains(t.id)).toList();
 
-    for (final taskId in idsToDelete) {
-      await _repository.delete(taskId);
-      // Cancela el recordatorio de CADA ocurrencia de la serie.
-      await _cancelReminder(taskId);
+    // `now` en la zona configurada (mismo patrón que [toggleComplete]).
+    final now = _ref.read(nowProvider).value ?? DateTime.now();
+
+    for (final task in seriesTasks) {
+      await _repository.delete(task.id);
+      final isRoot = task.id == rootId;
+      final isFarFuture =
+          ReminderScheduleCalculator.isFarFutureRecurringOccurrence(task, now);
+      if (isRoot || !isFarFuture) {
+        await _cancelReminder(task.id);
+      }
+    }
+  }
+
+  /// Poda automática (UNA vez por sesión) de tareas PENDIENTES antiguas del
+  /// task box.
+  ///
+  /// Cada serie recurrente genera ~365 instancias en BD y, sin poda, la caja
+  /// crece sin límite y el arranque decodifica todo en el UI isolate. Esta
+  /// ventana de retención mantiene la BD ligera sin tocar el historial.
+  ///
+  /// Reglas de producto (NO negociables):
+  /// - SOLO se podan tareas NO completadas (`isCompleted == false`) con
+  ///   fecha programada ANTERIOR a `hoy − [pendingRetentionDays]` días
+  ///   (comparación a nivel de día calendario).
+  /// - NUNCA se podan tareas completadas: la racha, la mejor racha, el
+  ///   historial del calendario y las quest dependen de ellas.
+  /// - NUNCA se podan tareas futuras, de hoy ni de los últimos 45 días: el
+  ///   usuario debe poder consultar sus pendientes recientes.
+  /// - Al podar una principal pendiente, se podan también sus SUBTAREAS
+  ///   pendientes que cumplen el mismo criterio de fecha (evita huérfanas con
+  ///   `parentTaskId` apuntando a un id inexistente).
+  /// - Una subtarea cuyo padre NO se poda (completado, futuro o dentro de la
+  ///   ventana) NO se poda; una subtarea completada tampoco se toca.
+  ///
+  /// Se invoca en SEGUNDO PLANO desde `DailyReminderController.start()`
+  /// (que ya se ejecuta tras la primera frame), nunca en el constructor ni en
+  /// el build, para no bloquear el cold start. El flag [_pruned] la hace
+  /// idempotente por sesión.
+  Future<void> pruneOldPending() async {
+    if (_pruned) return;
+    _pruned = true;
+
+    final now = _ref.read(nowProvider).value ?? DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final cutoff = today.subtract(const Duration(days: pendingRetentionDays));
+
+    // Candidatas: NO completadas con scheduledDate anterior al corte.
+    final candidates = state
+        .where((t) => !t.isCompleted && t.scheduledDate.isBefore(cutoff))
+        .toList();
+    if (candidates.isEmpty) return;
+
+    // Solo las PRINCIPALES pendientes arrastran: una subtarea se poda
+    // únicamente si su principal (que sí se poda) la acompaña.
+    final idsToDelete = <String>{};
+    for (final task in candidates) {
+      if (task.isSubtask) continue;
+      idsToDelete.add(task.id);
+      for (final sub in candidates.where(
+        (c) => c.isSubtask && c.parentTaskId == task.id,
+      )) {
+        idsToDelete.add(sub.id);
+      }
+    }
+    if (idsToDelete.isEmpty) return;
+
+    // Actualización síncrona del estado (mismo patrón que [deleteTask]) para
+    // que la UI no renderice tareas ya borradas.
+    state = state.where((t) => !idsToDelete.contains(t.id)).toList();
+
+    for (final id in idsToDelete) {
+      await _repository.delete(id);
+      // Seguridad: cancela el recordatorio si existiera un disparo residual
+      // para esta tarea (las pendientes antiguas lo tienen en el pasado;
+      // cancelar es el lado seguro). Son pocas tareas y solo una vez por
+      // sesión, así que el coste es despreciable.
+      await _cancelReminder(id);
     }
   }
 
@@ -421,8 +519,23 @@ class TasksNotifier extends StateNotifier<List<Task>> {
   }
 
   Future<void> _syncReminderForTask(Task task) async {
-    final manager = _ref.read(reminderManagerProvider);
-    final settings = _ref.read(settingsProvider);
+    try {
+      final manager = _ref.read(reminderManagerProvider);
+      final settings = _ref.read(settingsProvider);
+      await _syncReminderWith(task, manager, settings);
+    } catch (e) {
+      debugPrint('TasksNotifier: error sincronizando recordatorio: $e');
+    }
+  }
+
+  /// Sincroniza UN recordatorio con el gestor ya resuelto, con try/catch
+  /// propio: un error de plugin en UNA tarea no aborta la sincronización del
+  /// resto (mismo patrón que [ReminderManager.syncAllTaskReminders]).
+  Future<void> _syncReminderWith(
+    Task task,
+    ReminderManager manager,
+    UserSettings settings,
+  ) async {
     try {
       // `now` en la zona horaria configurada: evita que un disparo ya pasado
       // llegue al plugin (que lanza ArgumentError). Cancelar es el lado seguro.
@@ -433,6 +546,38 @@ class TasksNotifier extends StateNotifier<List<Task>> {
       );
     } catch (e) {
       debugPrint('TasksNotifier: error sincronizando recordatorio: $e');
+    }
+  }
+
+  /// Sincroniza en SEGUNDO PLANO los recordatorios de las ocurrencias de la
+  /// serie recurrente [task]. No bloquea el guardado de la tarea.
+  ///
+  /// Los providers se resuelven UNA vez al inicio (no dentro del bucle): si el
+  /// contenedor se destruye mientras la cadena está en vuelo (p. ej. al
+  /// terminar un test), la sincronización termina con los valores capturados
+  /// sin lanzar "provider already disposed".
+  ///
+  /// [ReminderManager.syncTaskReminder] aplica el horizonte de recordatorios
+  /// ([ReminderScheduleCalculator.recurringReminderHorizonDays]): a lo sumo se
+  /// programan las próximas ocurrencias de la ventana; las lejanas entrarán en
+  /// ella durante el re-sync diario del `DailyReminderController`.
+  Future<void> _syncGeneratedReminders(Task task) async {
+    final ReminderManager manager;
+    final UserSettings settings;
+    try {
+      manager = _ref.read(reminderManagerProvider);
+      settings = _ref.read(settingsProvider);
+    } catch (e) {
+      debugPrint('TasksNotifier: recordatorios de serie omitidos: $e');
+      return;
+    }
+
+    final generated = _repository
+        .getAll()
+        .where((t) => t.parentTaskId == task.id)
+        .toList();
+    for (final occurrence in generated) {
+      await _syncReminderWith(occurrence, manager, settings);
     }
   }
 

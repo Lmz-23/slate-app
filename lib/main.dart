@@ -46,34 +46,37 @@ void main() async {
   Hive.registerAdapter(CompanionStateAdapter());
 
   final tasksBox = TasksBox();
-  await tasksBox.init();
-
   final categoriesBox = CategoriesBox();
-  await categoriesBox.init();
-
   final badgesBox = BadgesBox();
-  await badgesBox.init();
-
   final streaksBox = StreaksBox();
-  await streaksBox.init();
-
   final settingsBox = SettingsBox();
-  await settingsBox.init();
 
   // Perfil de Jugador (F2): caja `player_progress` con XP/nivel. Se abre antes
   // de runApp para que `playerProvider` pueda leerlo desde el primer frame.
   final playerProgressBox = PlayerProgressBox();
-  await playerProgressBox.init();
 
   // Estado del Sistema (F3): caja `companion_state` con la quest diaria. Se
   // abre antes de runApp para que `questProvider` pueda leerlo al instante.
   final companionStateBox = CompanionStateBox();
-  await companionStateBox.init();
 
   // Caché local de variantes temáticas (Slate System) generadas con IA. Se
   // abre antes de runApp para que el resolver pueda leerla al programar.
   final thematicTextCache = ThematicTextCache();
-  await thematicTextCache.init();
+
+  // Las 8 cajas se abren EN PARALELO: cada `openBox` decodifica sus objetos en
+  // el UI isolate y la apertura secuencial sumaba su latencia al cold start.
+  // Hive soporta apertura concurrente de boxes DISTINTOS (cada uno es un
+  // archivo independiente); los adapters ya están registrados arriba.
+  await Future.wait([
+    tasksBox.init(),
+    categoriesBox.init(),
+    badgesBox.init(),
+    streaksBox.init(),
+    settingsBox.init(),
+    playerProgressBox.init(),
+    companionStateBox.init(),
+    thematicTextCache.init(),
+  ]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // Sistema de notificaciones (P1/P2/P3/P5)

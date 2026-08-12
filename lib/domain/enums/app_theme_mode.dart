@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 
 enum AppThemeMode {
   dark,
-  light,
-  system;
+  light;
 
   ThemeMode get themeMode {
     switch (this) {
@@ -11,8 +10,6 @@ enum AppThemeMode {
         return ThemeMode.dark;
       case AppThemeMode.light:
         return ThemeMode.light;
-      case AppThemeMode.system:
-        return ThemeMode.system;
     }
   }
 
@@ -22,8 +19,6 @@ enum AppThemeMode {
         return 'Oscuro';
       case AppThemeMode.light:
         return 'Claro';
-      case AppThemeMode.system:
-        return 'Sistema';
     }
   }
 }

@@ -81,7 +81,7 @@ void main() {
         PlayerCard(profile: _profile(totalXp: 250, level: 2)),
       );
 
-      expect(find.text('◆ Jugador'), findsOneWidget);
+      expect(find.text('◆ JUGADOR'), findsOneWidget);
       expect(find.text('Nivel 2'), findsOneWidget);
       expect(find.text('Rango E'), findsOneWidget,
           reason: 'nivel 1-9 → rango E');

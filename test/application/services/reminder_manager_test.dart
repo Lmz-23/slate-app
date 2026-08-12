@@ -64,6 +64,8 @@ Task _task(
   DateTime? scheduledTime,
   bool isCompleted = false,
   DateTime? completedAt,
+  bool isSubtask = false,
+  String? parentTaskId,
 }) {
   return Task(
     id: id,
@@ -73,6 +75,8 @@ Task _task(
     isCompleted: isCompleted,
     completedAt: completedAt,
     createdAt: scheduledDate,
+    isSubtask: isSubtask,
+    parentTaskId: parentTaskId,
   );
 }
 
@@ -197,6 +201,44 @@ void main() {
 
       expect(scheduler.scheduled, isEmpty);
       expect(scheduler.cancelled, contains(reminderIdForTask('t')));
+    });
+
+    test('OCURRENCIA lejana de serie recurrente -> NO se programa ni se '
+        'cancela (horizonte de recordatorios)', () async {
+      // Ocurrencia +30 días: fuera del horizonte. Pre-fix se habría
+      // programado una notificación nativa por cada una de las ~365
+      // instancias de una serie diaria (8-12 s en el guardado).
+      final farOccurrence = _task(
+        'far-child',
+        DateTime(2026, 2, 14),
+        scheduledTime: DateTime(2026, 1, 1, 8, 0),
+        parentTaskId: 'root',
+      );
+      await manager.syncTaskReminder(
+          farOccurrence, _settings(), now: _earlyMorning);
+
+      expect(scheduler.scheduled, isEmpty,
+          reason: 'la ocurrencia fuera del horizonte no agenda nada');
+      expect(scheduler.cancelled, isEmpty,
+          reason: 'tampoco cancela: no hay nada que limpiar');
+    });
+
+    test('OCURRENCIA PRÓXIMA de serie recurrente -> SÍ se programa '
+        '(día de la ocurrencia, no del padre)', () async {
+      // Ocurrencia +2 días: dentro del horizonte → recordatorio normal.
+      final nearOccurrence = _task(
+        'near-child',
+        DateTime(2026, 1, 17),
+        scheduledTime: DateTime(2026, 1, 1, 8, 0),
+        parentTaskId: 'root',
+      );
+      await manager.syncTaskReminder(
+          nearOccurrence, _settings(), now: _earlyMorning);
+
+      expect(
+        scheduler.scheduled[reminderIdForTask('near-child')]!.fireTime,
+        DateTime(2026, 1, 17, 8, 0),
+      );
     });
   });
 

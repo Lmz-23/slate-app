@@ -159,7 +159,7 @@ void main() {
         expect(ThematicTextsCatalog.slateBadgeIconName(type), isNotEmpty);
       }
       expect(ThematicTextsCatalog.slateBadgeFlavor(BadgeType.streak3),
-          'Cazador Novato');
+          'El Despertar');
       expect(
           ThematicTextsCatalog.slateBadgeFlavor(BadgeType.streak365), 'Leyenda');
     });

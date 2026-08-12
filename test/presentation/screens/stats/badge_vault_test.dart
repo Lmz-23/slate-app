@@ -85,7 +85,7 @@ void main() {
       expect(find.text('???'), findsNWidgets(BadgeType.values.length - 1));
 
       // El apodo y el umbral de la insignia desbloqueada se siguen mostrando.
-      expect(find.text('Cazador Novato · 3 días'), findsOneWidget);
+      expect(find.text('El Despertar · 3 días'), findsOneWidget);
     });
 
     testWidgets('varias insignias desbloqueadas se muestran todas', (tester) async {
@@ -113,7 +113,7 @@ void main() {
       );
 
       expect(find.text('Rango D · Nivel I'), findsOneWidget);
-      expect(find.text('Aprendiz · 14 días'), findsOneWidget);
+      expect(find.text('Guía del acero · 14 días'), findsOneWidget);
       expect(find.text('Quincena'), findsNothing,
           reason: 'el nombre canónico ya no existe en la identidad única');
     });

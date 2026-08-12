@@ -587,7 +587,7 @@ class SettingsScreen extends ConsumerWidget {
       ),
       builder: (context) {
         return SizedBox(
-          height: 250,
+          height: 200,
           child: Column(
             children: [
               const Padding(
@@ -607,9 +607,7 @@ class SettingsScreen extends ConsumerWidget {
                   leading: Icon(
                     mode == AppThemeMode.dark
                         ? Icons.dark_mode
-                        : mode == AppThemeMode.light
-                            ? Icons.light_mode
-                            : Icons.brightness_auto,
+                        : Icons.light_mode,
                     color: isSelected ? AppColors.primary : AppColors.textSecondary,
                   ),
                   title: Text(

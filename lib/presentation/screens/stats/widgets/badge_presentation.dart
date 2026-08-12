@@ -62,6 +62,8 @@ class BadgePresentation {
       'hourglass': Icons.hourglass_empty,
       'eye': Icons.remove_red_eye,
       'military_tech': Icons.military_tech,
+      'emoji_events': Icons.emoji_events,
+      'workspace_premium': Icons.workspace_premium,
       'skull': Icons.face,
     };
     return iconMap[iconName] ?? Icons.star;

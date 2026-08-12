@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
 import 'package:slate_app/application/providers/notification_providers.dart';
+import 'package:slate_app/application/providers/now_provider.dart';
 import 'package:slate_app/application/providers/player_provider.dart';
 import 'package:slate_app/application/providers/settings_provider.dart';
 import 'package:slate_app/application/providers/streak_provider.dart';
@@ -173,9 +174,10 @@ void main() {
             now),
       );
 
-      // El cierre arranca OFF (default): al construir el controlador se hace la
-      // primera pasada (tasks → resúmenes → cierre) con la tarea pasada presente.
-      container.read(dailyReminderControllerProvider);
+      // El cierre arranca OFF (default): al arrancar el controlador (`start()`,
+      // como hace SlateApp tras la primera frame) se hace la primera pasada
+      // (tasks → resúmenes → cierre) con la tarea pasada presente.
+      container.read(dailyReminderControllerProvider).start();
       await settle();
 
       // Con el toggle OFF el cierre queda cancelado (idempotente).
@@ -194,6 +196,36 @@ void main() {
         isTrue,
         reason: 'una tarea con hora pasada no debe abortar el cierre de jornada',
       );
+    });
+
+    test('la programación inicial NO ocurre al construir el controlador; '
+        'ocurre tras start()', () async {
+      // P0 arranque: construir el controlador (como hace SlateApp en el build)
+      // NO debe disparar el prefijo síncrono (`tasksProvider.getAll()`) ni la
+      // ráfaga de `zonedSchedule` durante las primeras frames.
+      container.read(dailyReminderControllerProvider);
+      await settle();
+      expect(scheduler.scheduled, isEmpty,
+          reason: 'el constructor no debe programar nada (cold start)');
+      expect(scheduler.cancelled, isEmpty,
+          reason: 'el constructor no debe iniciar el re-sync');
+
+      // SlateApp llama a `start()` tras la primera frame (addPostFrameCallback).
+      container.read(dailyReminderControllerProvider).start();
+      await settle();
+
+      // Con 0 tareas y ajustes por defecto, la primera pasada cancela los
+      // resúmenes diarios (no hay tareas pendientes) y el cierre (toggle OFF).
+      // No se aserta `scheduled` vacío: el resumen quincenal (0x60000005)
+      // depende del día real y podría programarse el 1/16 antes de las 20:00.
+      expect(scheduler.cancelled, contains(morningDailyReminderId));
+      expect(scheduler.cancelled, contains(eveningDailyReminderId));
+
+      // `start()` es idempotente: un segundo arranque no reprograma.
+      final scheduledCount = scheduler.scheduled.length;
+      container.read(dailyReminderControllerProvider).start();
+      await settle();
+      expect(scheduler.scheduled.length, scheduledCount);
     });
   });
 
@@ -241,9 +273,22 @@ void main() {
           reminderManagerProvider.overrideWithValue(
             ReminderManager(scheduler: scheduler),
           ),
+          // Reloj fijo alineado con [fixedNow]: `pruneOldPending()` (lanza
+          // desde `start()`) lee `nowProvider`; sin este override usaría el
+          // reloj REAL de la máquina y `t1` (2026-08-10) quedaría fuera de la
+          // ventana de 45 días tras ~24-sep-2026, podándose el test (flaky).
+          nowProvider.overrideWith(
+            (ref) => Stream<DateTime>.value(fixedNow),
+          ),
         ],
       );
       addTearDown(container.dispose);
+
+      // Garantiza que `nowProvider` ya emitió [fixedNow] antes de que los tests
+      // llamen a `start()`: `pruneOldPending()` usa
+      // `_ref.read(nowProvider).value ?? DateTime.now()` y, sin esperar la
+      // primera emisión del stream, caería al reloj real (flaky latente).
+      await container.read(nowProvider.future);
     });
 
     tearDown(() async {
@@ -286,7 +331,7 @@ void main() {
     test('con racha < 3 la alerta NUNCA se programa (aunque no haya '
         'completados hoy)', () async {
       await seedActiveStreak(2);
-      container.read(dailyReminderControllerProvider);
+      container.read(dailyReminderControllerProvider).start();
       await settle();
 
       expect(
@@ -299,7 +344,7 @@ void main() {
 
     test('al completar la primera tarea del día la alerta se CANCELA', () async {
       await seedActiveStreak(3);
-      container.read(dailyReminderControllerProvider);
+      container.read(dailyReminderControllerProvider).start();
       await settle();
 
       // Completar la única tarea del día activa la cancelación vía el cambio

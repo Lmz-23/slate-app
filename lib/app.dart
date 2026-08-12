@@ -15,7 +15,17 @@ class SlateApp extends ConsumerWidget {
     // Mantiene vivo el controlador del recordatorio diario (10:00/19:00):
     // programa el del día al arrancar y reacciona a cambios de tareas,
     // ajustes y cambio de día sin necesidad de que una pantalla lo use.
-    ref.watch(dailyReminderControllerProvider);
+    final dailyReminderController = ref.watch(dailyReminderControllerProvider);
+
+    // La programación inicial se difiere hasta DESPUÉS de la primera frame:
+    // `_scheduleEverything` lee `tasksProvider` (→ `getAll()` síncrono) y
+    // lanza una ráfaga de `zonedSchedule` (cada uno = 2 round trips nativos en
+    // el hilo de plataforma Android, el mismo del Choreographer). Ejecutarla
+    // en el build causaba el jank de arranque (Skipped 39/81/252/31 frames).
+    // `start()` es idempotente: los rebuilds posteriores de SlateApp son no-op.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      dailyReminderController.start();
+    });
 
     return MaterialApp.router(
       title: 'Slate',

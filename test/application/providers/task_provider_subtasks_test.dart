@@ -331,6 +331,10 @@ void main() {
       await seed(mainId: 'main', subtaskIds: ['s1', 's2']);
       final container = createContainer();
       addTearDown(container.dispose);
+      // El stream de `nowProvider` emite en un microtask: se espera su primer
+      // valor para que `selectedDateProvider` derive del reloj inyectado
+      // (2026-08-10) en lugar de caer al fallback `DateTime.now()`.
+      await container.read(nowProvider.future);
 
       final dayTasks = container.read(tasksBySelectedDateProvider);
 
@@ -349,6 +353,7 @@ void main() {
       await seed(mainId: 'main', subtaskIds: ['s1', 's2']);
       final container = createContainer();
       addTearDown(container.dispose);
+      await container.read(nowProvider.future);
 
       final unscheduled = container.read(unscheduledTasksProvider);
       expect(unscheduled.map((t) => t.id), ['main'],

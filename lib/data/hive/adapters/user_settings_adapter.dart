@@ -2,6 +2,20 @@ import 'package:hive/hive.dart';
 import '../../../domain/enums/app_theme_mode.dart';
 import '../../../domain/entities/user_settings.dart';
 
+/// Migración segura del ordinal guardado de [AppThemeMode].
+///
+/// Los registros antiguos pueden contener el ordinal 2 (antiguo
+/// `AppThemeMode.system`). Ese valor ya no existe en el enum: se interpreta
+/// como `dark`, que es la identidad de Slate. También se protege contra
+/// cualquier índice fuera de rango para que un dato corrupto nunca lance un
+/// crash al leer los ajustes.
+AppThemeMode _themeModeFromStoredIndex(int? index) {
+  if (index == null || index < 0 || index >= AppThemeMode.values.length) {
+    return AppThemeMode.dark;
+  }
+  return AppThemeMode.values[index];
+}
+
 class UserSettingsAdapter extends TypeAdapter<UserSettings> {
   @override
   final int typeId = 6;
@@ -21,7 +35,7 @@ class UserSettingsAdapter extends TypeAdapter<UserSettings> {
       userName: fields[1] as String? ?? 'Usuario',
       dayResetHour: fields[2] as int? ?? 4,
       notificationsEnabled: fields[3] as bool? ?? true,
-      themeMode: AppThemeMode.values[fields[4] as int? ?? 0],
+      themeMode: _themeModeFromStoredIndex(fields[4] as int?),
       unlockedThemeIds: (fields[5] as List?)?.cast<String>() ?? [],
       timezone: fields[6] as String? ?? 'America/Bogota',
       autoDetectTimezone: fields[7] as bool? ?? false,

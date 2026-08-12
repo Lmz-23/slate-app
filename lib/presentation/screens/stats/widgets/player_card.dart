@@ -9,8 +9,8 @@ import '../../../../application/services/player_xp_calculator.dart';
 /// (progreso al siguiente nivel) + rango E→S por tramos.
 ///
 /// Mantiene la identidad única Slate System: glifo ◆, textos del Sistema,
-/// rango E→S. Se muestra JUNTO al [StreakDisplay] (complementa a la racha; no
-/// la sustituye).
+/// rango E→S. Se muestra BAJO el [StreakDisplay] a ancho completo (layout
+/// vertical que evita el overflow horizontal del antiguo Row con Expanded).
 class PlayerCard extends StatelessWidget {
   final PlayerProfile profile;
 
@@ -29,6 +29,7 @@ class PlayerCard extends StatelessWidget {
     );
 
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -41,22 +42,45 @@ class PlayerCard extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
         border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.2),
+          color: AppColors.primary.withValues(alpha: 0.35),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            '◆ Jugador',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
+          // Encabezado del Sistema: etiqueta acentuada con glifo ◆.
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm + 2,
+              vertical: AppSpacing.xs,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.3),
+              ),
+            ),
+            child: const Text(
+              '◆ JUGADOR',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.2,
+                color: AppColors.primaryLight,
+              ),
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.md),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,

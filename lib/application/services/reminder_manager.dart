@@ -69,6 +69,18 @@ class ReminderManager {
       await _scheduler.cancel(reminderIdForTask(task.id));
       return;
     }
+
+    // CUELLO DE BOTELLO RAF (guardado de tareas recurrentes ~8-12 s): no se
+    // programa una notificación por CADA instancia futura de una serie (una
+    // serie diaria → ~365 `zonedSchedule` nativos secuenciales). Las
+    // ocurrencias fuera de la ventana se dejan SIN programar (ni cancelar: no
+    // hay nada que limpiar); el re-sync diario del `DailyReminderController`
+    // las programa cuando entren en la ventana. La generación de instancias
+    // en BD no cambia.
+    if (ReminderScheduleCalculator.isFarFutureRecurringOccurrence(task, now)) {
+      return;
+    }
+
     final themed = _resolver?.resolveTaskReminder(task);
     await _scheduler.schedule(
       id: reminderIdForTask(task.id),

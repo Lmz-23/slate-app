@@ -131,8 +131,10 @@ class _LegacyBytesReader implements BinaryReader {
 }
 
 /// Emula byte a byte lo que escribía el adapter V1 (16 campos) siguiendo el
-/// mismo formato binario de Hive.
-Uint8List legacy16FieldBytes() {
+/// mismo formato binario de Hive. `themeModeIndex` permite simular registros
+/// con distintos valores guardados de tema (p.ej. el ordinal 2 del antiguo
+/// `AppThemeMode.system`).
+Uint8List legacy16FieldBytes({int themeModeIndex = 1}) {
   final builder = BytesBuilder();
 
   void byte(int v) => builder.addByte(v);
@@ -194,7 +196,7 @@ Uint8List legacy16FieldBytes() {
   field(1, 'Ada');
   field(2, 6);
   field(3, false);
-  field(4, 1); // AppThemeMode.light
+  field(4, themeModeIndex); // AppThemeMode.light por defecto (1)
   field(5, <String>['dark']);
   field(6, 'Europe/Madrid');
   field(7, true);
@@ -327,6 +329,25 @@ void main() {
       // cierre de jornada toman sus defaults.
       expect(legacy.useAIThematicTexts, isFalse);
       expect(legacy.enableDayClosure, isFalse);
+    });
+
+    test(
+        'migración: el ordinal 2 (antiguo AppThemeMode.system) se lee como dark sin crash',
+        () {
+      final adapter = UserSettingsAdapter();
+      final legacy =
+          adapter.read(_LegacyBytesReader(legacy16FieldBytes(themeModeIndex: 2)));
+
+      expect(legacy.themeMode, AppThemeMode.dark);
+    });
+
+    test('migración: un índice fuera de rango se lee como dark sin crash',
+        () {
+      final adapter = UserSettingsAdapter();
+      final legacy =
+          adapter.read(_LegacyBytesReader(legacy16FieldBytes(themeModeIndex: 99)));
+
+      expect(legacy.themeMode, AppThemeMode.dark);
     });
   });
 }

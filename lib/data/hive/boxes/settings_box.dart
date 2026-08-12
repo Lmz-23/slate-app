@@ -1,5 +1,4 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import '../adapters/user_settings_adapter.dart';
 import '../../../domain/entities/user_settings.dart';
 
 class SettingsBox {
