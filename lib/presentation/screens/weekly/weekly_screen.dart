@@ -44,6 +44,11 @@ class WeeklyScreen extends ConsumerWidget {
     );
   }
 
+  // Progreso semanal (barra superior): fracción de tareas COMPLETADAS sobre
+  // el total de las programadas en la semana EN CURSO. La ventana va del
+  // inicio de la semana (`now.weekday % 7`, domingo como día 0) hasta HOY:
+  // los días futuros de la semana se excluyen a propósito porque aún no
+  // tienen resultado (la barra muestra el avance real de lo transcurrido).
   double _calculateWeeklyProgress(List<dynamic> tasks, DateTime now) {
     if (tasks.isEmpty) return 0.0;
     final weekStart = now.subtract(Duration(days: now.weekday % 7));
@@ -257,7 +262,7 @@ class WeeklyScreen extends ConsumerWidget {
         child: Column(
           children: [
             Text(
-              ['L', 'M', 'X', 'J', 'V', 'S', 'D'][date.weekday % 7],
+              const ['L', 'M', 'X', 'J', 'V', 'S', 'D'][date.weekday - 1],
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -298,6 +303,8 @@ class WeeklyScreen extends ConsumerWidget {
         strokeWidth: 3,
         backgroundColor: AppColors.surfaceLight,
         valueColor: AlwaysStoppedAnimation(
+          // Verde cuando el día quedó al 100 % (decisión de producto: de un
+          // vistazo se ven los días cerrados completos); primario en parcial.
           progress >= 1.0 ? AppColors.success : AppColors.primary,
         ),
       ),

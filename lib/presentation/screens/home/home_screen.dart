@@ -163,7 +163,7 @@ class HomeScreen extends ConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          ['L', 'M', 'X', 'J', 'V', 'S', 'D'][date.weekday % 7],
+                          const ['L', 'M', 'X', 'J', 'V', 'S', 'D'][date.weekday - 1],
                           style: TextStyle(
                             fontSize: 12,
                             color: isSelected

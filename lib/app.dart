@@ -32,6 +32,9 @@ class SlateApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
+      // Sin modo 'system' (decisión de producto): la identidad de Slate es
+      // oscura y el modo claro es una elección explícita del usuario. Ver
+      // AppThemeMode y la migración defensiva en UserSettingsAdapter.
       themeMode: settings.themeMode.themeMode,
       routerConfig: appRouter,
     );

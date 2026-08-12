@@ -80,6 +80,11 @@ class ReminderScheduleCalculator {
   /// dentro de esta ventana; las lejanas entran en la ventana durante el
   /// re-sync diario ([DailyReminderController] reprograma todos los
   /// recordatorios al cambiar de día / iniciar la app).
+  ///
+  /// La ventana de 7 días es una decisión de PRODUCTO (una semana de
+  /// visibilidad) y no es configurable: cubre el corto plazo con holgura sin
+  /// acercarse al límite de ~500 alarmas de Android ni al coste de la
+  /// programación secuencial con `zonedSchedule`.
   static const int recurringReminderHorizonDays = 7;
 
   /// ¿Es una OCURRENCIA de serie recurrente cuya notificación está FUERA de la

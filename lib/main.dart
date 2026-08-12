@@ -67,6 +67,11 @@ void main() async {
   // el UI isolate y la apertura secuencial sumaba su latencia al cold start.
   // Hive soporta apertura concurrente de boxes DISTINTOS (cada uno es un
   // archivo independiente); los adapters ya están registrados arriba.
+  //
+  // Todas se abren ANTES de `runApp`: los providers reciben la caja por
+  // override y el primer build los construye de forma SÍNCRONA (p. ej.
+  // `settingsBox.getSettings()` se lee abajo para `notifications.init`).
+  // Una caja cerrada en la primera frame lanzaría al construir su provider.
   await Future.wait([
     tasksBox.init(),
     categoriesBox.init(),

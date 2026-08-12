@@ -177,6 +177,11 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     final generatedTasks = <Task>[];
     DateTime nextDate = task.scheduledDate.add(const Duration(days: 1));
 
+    // La serie se materializa en BD por UN AÑO completo (365 instancias,
+    // decisión de producto). El horizonte de recordatorios
+    // ([ReminderScheduleCalculator.recurringReminderHorizonDays]) limita
+    // cuántas NOTIFICACIONES se programan, no cuántas tareas existen; la poda
+    // ([TasksNotifier.pruneOldPending]) mantiene la caja ligera con el tiempo.
     for (int i = 0; i < 365; i++) {
       bool shouldGenerate = false;
 
@@ -358,6 +363,8 @@ class TasksNotifier extends StateNotifier<List<Task>> {
   /// - SOLO se podan tareas NO completadas (`isCompleted == false`) con
   ///   fecha programada ANTERIOR a `hoy − [pendingRetentionDays]` días
   ///   (comparación a nivel de día calendario).
+  /// - La comparación es ESTRICTA (`<`): una tarea del propio día del corte
+  ///   (`hoy − 45`) se conserva; solo se eliminan las de días anteriores.
   /// - NUNCA se podan tareas completadas: la racha, la mejor racha, el
   ///   historial del calendario y las quest dependen de ellas.
   /// - NUNCA se podan tareas futuras, de hoy ni de los últimos 45 días: el
