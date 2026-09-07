@@ -5,6 +5,7 @@ import 'package:slate_app/application/services/reminder_manager.dart';
 import 'package:slate_app/application/services/reminder_schedule_calculator.dart';
 import 'package:slate_app/application/services/reminder_scheduler.dart';
 import 'package:slate_app/application/services/thematic_texts_resolver.dart';
+import 'package:slate_app/domain/entities/badge.dart';
 import 'package:slate_app/domain/entities/task.dart';
 import 'package:slate_app/domain/entities/user_settings.dart';
 import 'package:slate_app/domain/enums/badge_type.dart';
@@ -63,6 +64,8 @@ Task _task(
   DateTime? scheduledTime,
   bool isCompleted = false,
   DateTime? completedAt,
+  bool isSubtask = false,
+  String? parentTaskId,
 }) {
   return Task(
     id: id,
@@ -72,6 +75,8 @@ Task _task(
     isCompleted: isCompleted,
     completedAt: completedAt,
     createdAt: scheduledDate,
+    isSubtask: isSubtask,
+    parentTaskId: parentTaskId,
   );
 }
 
@@ -196,6 +201,44 @@ void main() {
 
       expect(scheduler.scheduled, isEmpty);
       expect(scheduler.cancelled, contains(reminderIdForTask('t')));
+    });
+
+    test('OCURRENCIA lejana de serie recurrente -> NO se programa ni se '
+        'cancela (horizonte de recordatorios)', () async {
+      // Ocurrencia +30 días: fuera del horizonte. Pre-fix se habría
+      // programado una notificación nativa por cada una de las ~365
+      // instancias de una serie diaria (8-12 s en el guardado).
+      final farOccurrence = _task(
+        'far-child',
+        DateTime(2026, 2, 14),
+        scheduledTime: DateTime(2026, 1, 1, 8, 0),
+        parentTaskId: 'root',
+      );
+      await manager.syncTaskReminder(
+          farOccurrence, _settings(), now: _earlyMorning);
+
+      expect(scheduler.scheduled, isEmpty,
+          reason: 'la ocurrencia fuera del horizonte no agenda nada');
+      expect(scheduler.cancelled, isEmpty,
+          reason: 'tampoco cancela: no hay nada que limpiar');
+    });
+
+    test('OCURRENCIA PRÓXIMA de serie recurrente -> SÍ se programa '
+        '(día de la ocurrencia, no del padre)', () async {
+      // Ocurrencia +2 días: dentro del horizonte → recordatorio normal.
+      final nearOccurrence = _task(
+        'near-child',
+        DateTime(2026, 1, 17),
+        scheduledTime: DateTime(2026, 1, 1, 8, 0),
+        parentTaskId: 'root',
+      );
+      await manager.syncTaskReminder(
+          nearOccurrence, _settings(), now: _earlyMorning);
+
+      expect(
+        scheduler.scheduled[reminderIdForTask('near-child')]!.fireTime,
+        DateTime(2026, 1, 17, 8, 0),
+      );
     });
   });
 
@@ -463,14 +506,14 @@ void main() {
   });
 
   group('textos temáticos Slate System', () {
-    test('resolver ON: el recordatorio usa los textos del catálogo', () async {
+    test('con resolver: el recordatorio usa los textos del catálogo', () async {
       final themedManager = ReminderManager(
         scheduler: scheduler,
         resolver: const ThematicTextsResolver(),
       );
       final task = _task('t', DateTime(2026, 1, 15), scheduledTime: _atTwo);
       await themedManager.syncTaskReminder(
-          task, const UserSettings(slateSystemTheme: true), now: _earlyMorning);
+          task, _settings(), now: _earlyMorning);
 
       final entry = scheduler.scheduled[reminderIdForTask('t')]!;
       expect(entry.title, contains('Daily Quest'));
@@ -478,15 +521,12 @@ void main() {
       expect(entry.body, contains('14:00'));
     });
 
-    test('resolver ON: el cierre de jornada usa texto temático', () async {
+    test('con resolver: el cierre de jornada usa texto temático', () async {
       final manager = ReminderManager(
         scheduler: scheduler,
         resolver: const ThematicTextsResolver(),
       );
-      const settings = UserSettings(
-        enableDayClosure: true,
-        slateSystemTheme: true,
-      );
+      const settings = UserSettings(enableDayClosure: true);
       await manager.syncDayClosure(
         now: DateTime(2026, 1, 15, 10, 0),
         allTasks: tareasHoy,
@@ -499,16 +539,265 @@ void main() {
       expect(entry.title, contains('System Report'));
       expect(entry.body, contains('Jornada cerrada'));
     });
+  });
 
-    test('resolver sin tema (OFF): conserva el texto canónico exacto', () async {
-      final task = _task('t', DateTime(2026, 1, 15), scheduledTime: _atTwo);
-      await manager.syncTaskReminder(task, _settings(), now: _earlyMorning);
+  group('syncStreakAtRiskReminder (F2, decisión B: alerta de racha)', () {
+    // Día con tareas pendientes pero NINGUNA completada todavía.
+    final sinCompletarHoy = [_task('a', DateTime(2026, 1, 15))];
+    final now = DateTime(2026, 1, 15, 8, 0); // antes de las 12:00
 
-      expect(scheduler.scheduled[reminderIdForTask('t')]!.title, 'Recordatorio');
-      expect(
-        scheduler.scheduled[reminderIdForTask('t')]!.body,
-        ReminderScheduleCalculator.taskReminderBody(task),
+    test('dispara a las 12:00 del mediodía con racha ≥3 y sin completados hoy',
+        () async {
+      await manager.syncStreakAtRiskReminder(
+        now: now,
+        allTasks: sinCompletarHoy,
+        settings: _settings(),
+        currentStreak: 3,
       );
+
+      final entry = scheduler.scheduled[streakAtRiskReminderId];
+      expect(entry, isNotNull);
+      expect(
+        entry!.fireTime,
+        DateTime(2026, 1, 15, 12, 0),
+        reason: 'la alerta se fija a las 12:00 del MEDIODÍA (12 PM), '
+            'nunca a medianoche',
+      );
+      expect(entry.body,
+          'Tu racha de 3 días se perderá si no completas una misión hoy.');
+    });
+
+    test('el id es 0x60000004 (libre; tareas usan 0x10000000-0x4FFFFFFF',
+        () async {
+      await manager.syncStreakAtRiskReminder(
+        now: now,
+        allTasks: sinCompletarHoy,
+        settings: _settings(),
+        currentStreak: 7,
+      );
+      expect(scheduler.scheduled.containsKey(streakAtRiskReminderId), isTrue);
+      expect(streakAtRiskReminderId, 0x60000004);
+    });
+
+    test('no dispara si ya se completó la primera tarea del día', () async {
+      final tasks = [
+        ...sinCompletarHoy,
+        _task('done', DateTime(2026, 1, 15),
+            isCompleted: true, completedAt: DateTime(2026, 1, 15, 9, 0)),
+      ];
+      await manager.syncStreakAtRiskReminder(
+        now: DateTime(2026, 1, 15, 8, 0),
+        allTasks: tasks,
+        settings: _settings(),
+        currentStreak: 5,
+      );
+
+      expect(scheduler.scheduled.containsKey(streakAtRiskReminderId), isFalse);
+      expect(scheduler.cancelled, contains(streakAtRiskReminderId));
+    });
+
+    test('no dispara si la racha es menor que 3', () async {
+      await manager.syncStreakAtRiskReminder(
+        now: now,
+        allTasks: sinCompletarHoy,
+        settings: _settings(),
+        currentStreak: 2,
+      );
+
+      expect(scheduler.scheduled.containsKey(streakAtRiskReminderId), isFalse);
+      expect(scheduler.cancelled, contains(streakAtRiskReminderId));
+    });
+
+    test('cancelación: la hora (12:00) ya pasó → nunca programa al pasado',
+        () async {
+      await manager.syncStreakAtRiskReminder(
+        now: DateTime(2026, 1, 15, 13, 0),
+        allTasks: sinCompletarHoy,
+        settings: _settings(),
+        currentStreak: 10,
+      );
+
+      expect(scheduler.scheduled.containsKey(streakAtRiskReminderId), isFalse);
+      expect(scheduler.cancelled, contains(streakAtRiskReminderId));
+    });
+
+    test('cancelación: notificaciones desactivadas', () async {
+      await manager.syncStreakAtRiskReminder(
+        now: now,
+        allTasks: sinCompletarHoy,
+        settings: _settings(notificationsEnabled: false),
+        currentStreak: 6,
+      );
+
+      expect(scheduler.scheduled.containsKey(streakAtRiskReminderId), isFalse);
+      expect(scheduler.cancelled, contains(streakAtRiskReminderId));
+    });
+
+    test('con resolver: usa el texto temático "⚠ Racha en peligro"', () async {
+      final themedManager = ReminderManager(
+        scheduler: scheduler,
+        resolver: const ThematicTextsResolver(),
+      );
+      await themedManager.syncStreakAtRiskReminder(
+        now: now,
+        allTasks: sinCompletarHoy,
+        settings: _settings(),
+        currentStreak: 7,
+      );
+
+      final entry = scheduler.scheduled[streakAtRiskReminderId]!;
+      expect(entry.title, contains('⚠'));
+      expect(entry.title, contains('Racha en peligro'));
+      expect(entry.body, contains('Tu racha de 7 días'));
+    });
+  });
+
+  group('syncFortnightSummary (F3, decisión D: resumen quincenal)', () {
+    const hour = fortnightSummaryReminderHour;
+
+    Badge badge(String id, DateTime unlockedAt) => Badge(
+          id: id,
+          type: BadgeType.streak3,
+          name: 'n',
+          iconName: 'i',
+          unlockedAt: unlockedAt,
+        );
+
+    test('día 5 → programa el día 16 a las 20:00 (reporta 1..15 del mes)',
+        () async {
+      final now = DateTime(2026, 8, 5, 8, 0);
+      final tasks = [
+        _task('a', DateTime(2026, 8, 2),
+            isCompleted: true, completedAt: DateTime(2026, 8, 2, 9, 0)),
+        _task('b', DateTime(2026, 8, 14),
+            isCompleted: true, completedAt: DateTime(2026, 8, 14, 10, 0)),
+        // Fuera del periodo reportado (quincena-1): se completa el 16.
+        _task('c', DateTime(2026, 8, 16),
+            isCompleted: true, completedAt: DateTime(2026, 8, 16, 11, 0)),
+      ];
+      await manager.syncFortnightSummary(
+        now: now,
+        allTasks: tasks,
+        settings: _settings(),
+        currentStreak: 4,
+        level: 2,
+        totalXp: 120,
+        badges: [badge('b1', DateTime(2026, 8, 10))],
+      );
+
+      final entry = scheduler.scheduled[fortnightSummaryReminderId];
+      expect(entry, isNotNull);
+      expect(entry!.fireTime, DateTime(2026, 8, 16, hour, 0));
+      // Reporta la quincena-1: solo "a" y "b" (2), no "c".
+      expect(entry.body, contains('01/08 - 15/08'));
+      expect(entry.body, contains('2 tareas completadas'));
+      expect(entry.body, contains('Racha actual: 4 días'));
+      expect(entry.body, contains('Nivel 2 · 120 XP'));
+      expect(entry.body, contains('Insignias desbloqueadas: 1'));
+    });
+
+    test('día 1 a las 08:00 → programa HOY a las 20:00 reportando la '
+        'quincena-2 del mes ANTERIOR', () async {
+      final now = DateTime(2026, 9, 1, 8, 0);
+      final tasks = [
+        _task('a', DateTime(2026, 9, 1)), // pendiente, no cuenta
+        _task('b', DateTime(2026, 8, 20),
+            isCompleted: true, completedAt: DateTime(2026, 8, 20, 9, 0)),
+        _task('c', DateTime(2026, 8, 30),
+            isCompleted: true, completedAt: DateTime(2026, 8, 30, 10, 0)),
+      ];
+      await manager.syncFortnightSummary(
+        now: now,
+        allTasks: tasks,
+        settings: _settings(),
+        currentStreak: 10,
+        level: 3,
+        totalXp: 400,
+        badges: [],
+      );
+
+      final entry = scheduler.scheduled[fortnightSummaryReminderId];
+      expect(entry, isNotNull);
+      expect(entry!.fireTime, DateTime(2026, 9, 1, hour, 0));
+      // Reporta la quincena-2 de AGOSTO (16..31): "b" y "c" (2).
+      expect(entry.body, contains('16/08 - 31/08'));
+      expect(entry.body, contains('2 tareas completadas'));
+    });
+
+    test('día 16 después de las 20:00 → programa el 1 del mes siguiente',
+        () async {
+      final now = DateTime(2026, 8, 16, 21, 0);
+      await manager.syncFortnightSummary(
+        now: now,
+        allTasks: [],
+        settings: _settings(),
+        currentStreak: 0,
+        level: 1,
+        totalXp: 0,
+        badges: [],
+      );
+
+      final entry = scheduler.scheduled[fortnightSummaryReminderId];
+      expect(entry, isNotNull);
+      expect(entry!.fireTime, DateTime(2026, 9, 1, hour, 0));
+    });
+
+    test('el id es 0x60000005 (libre; tareas usan 0x10000000-0x4FFFFFFF',
+        () async {
+      expect(fortnightSummaryReminderId, 0x60000005);
+      await manager.syncFortnightSummary(
+        now: DateTime(2026, 8, 5, 8, 0),
+        allTasks: [],
+        settings: _settings(),
+        currentStreak: 0,
+        level: 1,
+        totalXp: 0,
+        badges: [],
+      );
+      expect(
+        scheduler.scheduled.containsKey(fortnightSummaryReminderId),
+        isTrue,
+      );
+    });
+
+    test('cancelación: notificaciones desactivadas', () async {
+      await manager.syncFortnightSummary(
+        now: DateTime(2026, 8, 5, 8, 0),
+        allTasks: [_task('a', DateTime(2026, 8, 5))],
+        settings: _settings(notificationsEnabled: false),
+        currentStreak: 3,
+        level: 1,
+        totalXp: 0,
+        badges: [],
+      );
+
+      expect(
+        scheduler.scheduled.containsKey(fortnightSummaryReminderId),
+        isFalse,
+      );
+      expect(scheduler.cancelled, contains(fortnightSummaryReminderId));
+    });
+
+    test('con resolver: usa el texto temático "◇ System Report — Quincena"',
+        () async {
+      final themedManager = ReminderManager(
+        scheduler: scheduler,
+        resolver: const ThematicTextsResolver(),
+      );
+      await themedManager.syncFortnightSummary(
+        now: DateTime(2026, 8, 5, 8, 0),
+        allTasks: [_task('a', DateTime(2026, 8, 2))],
+        settings: _settings(),
+        currentStreak: 2,
+        level: 1,
+        totalXp: 10,
+        badges: [],
+      );
+
+      final entry = scheduler.scheduled[fortnightSummaryReminderId]!;
+      expect(entry.title, contains('◇'));
+      expect(entry.title, contains('System Report — Quincena'));
+      expect(entry.body, contains('Quincena 01/08 - 15/08'));
     });
   });
 }

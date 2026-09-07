@@ -20,7 +20,7 @@ import 'package:slate_app/domain/entities/user_settings.dart';
 
 /// Espía del servicio de IA: "tiene" API key y cuenta cada llamada a Gemini,
 /// devolviendo un resultado controlado. Permite verificar que la IA se invoca
-/// SOLO cuando el opt-in "Textos con IA" está activo.
+/// SOLO cuando el opt-in de contenido "Textos con IA" está activo.
 class SpyAIService extends AIService {
   int generateCalls = 0;
 
@@ -125,10 +125,10 @@ void main() {
     }
   }
 
-  group('Gating del opt-in de IA en el guardado (Hallazgo 1)', () {
-    test('toggle OFF + tema ON + API key: la IA NUNCA se invoca', () async {
+  group('Gating del opt-in de contenido IA en el guardado (Hallazgo 1)', () {
+    test('toggle OFF: la IA NUNCA se invoca', () async {
       await settingsBox
-          .updateSettings(const UserSettings(slateSystemTheme: true));
+          .updateSettings(const UserSettings(useAIThematicTexts: false));
       expect(settingsBox.getSettings().useAIThematicTexts, isFalse);
 
       final container = createContainer();
@@ -136,9 +136,8 @@ void main() {
 
       await createAndSettleTask(container);
 
-      // Regresión del Hallazgo 1: antes, con tema ON + API key + toggle OFF,
-      // la app llamaba a Gemini en el path de programación. Hoy la generación
-      // SOLO ocurre al guardar y está gateada por ambos flags.
+      // Regresión del Hallazgo 1: con useAIThematicTexts=false la IA no debe
+      // invocarse en ningún path (los textos temáticos salen del catálogo).
       expect(spy.generateCalls, 0,
           reason: 'con useAIThematicTexts=false la IA no debe invocarse');
       // Y no queda nada en la caché temática (no hay escritura sin generación).
@@ -147,27 +146,10 @@ void main() {
       expect(cache.get('summary|closure'), isNull);
     });
 
-    test('tema OFF + toggle ON: la IA tampoco se invoca', () async {
-      await settingsBox
-          .updateSettings(const UserSettings(useAIThematicTexts: true));
-      expect(settingsBox.getSettings().slateSystemTheme, isFalse);
-
-      final container = createContainer();
-      addTearDown(container.dispose);
-
-      await createAndSettleTask(container);
-
-      expect(spy.generateCalls, 0,
-          reason: 'sin tema Slate System no hay textos temáticos generados');
-    });
-
-    test('toggle ON + tema ON: al guardar se genera la tarea y las 3 variantes '
+    test('toggle ON: al guardar se genera la tarea y las 3 variantes '
         'globales y quedan en caché', () async {
       await settingsBox.updateSettings(
-        const UserSettings(
-          slateSystemTheme: true,
-          useAIThematicTexts: true,
-        ),
+        const UserSettings(useAIThematicTexts: true),
       );
 
       final container = createContainer();

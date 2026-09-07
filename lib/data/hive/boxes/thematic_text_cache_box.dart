@@ -64,4 +64,18 @@ class ThematicTextCache {
     if (!isOpen) return;
     await _box.clear();
   }
+
+  /// Devuelve TODAS las entradas en bruto (mapas de primitivas), tal y como se
+  /// almacenan. Se usa por el backup/exportación (Fase 0): la caché temática
+  /// forma parte del estado portable del usuario.
+  Map<String, dynamic> getAll() {
+    if (!isOpen) return <String, dynamic>{};
+    return Map<String, dynamic>.from(_box.toMap());
+  }
+
+  /// Escribe una entrada en bruto directamente (usado al restaurar un backup).
+  Future<void> putRaw(String key, Map<String, dynamic> raw) async {
+    if (!isOpen) return;
+    await _box.put(key, raw);
+  }
 }

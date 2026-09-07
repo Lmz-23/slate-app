@@ -1,5 +1,8 @@
 import '../../domain/entities/task.dart';
 import '../../domain/enums/badge_type.dart';
+import 'fortnight_calculator.dart';
+import 'player_xp_calculator.dart';
+import 'quest_calculator.dart';
 import 'reminder_schedule_calculator.dart';
 
 /// Texto temático (título + cuerpo) de una notificación.
@@ -100,6 +103,59 @@ class ThematicTextsCatalog {
     );
   }
 
+  // ── Alerta de racha en peligro (F2, decisión B) ────────────────────────────
+  static ThematicText streakAtRisk(int streakDays) {
+    final dias = streakDays == 1 ? '1 día' : '$streakDays días';
+    return ThematicText(
+      title: '$_warn Racha en peligro',
+      body: '$_warn Tu racha de $dias se perderá si no completas una misión hoy.',
+    );
+  }
+
+  // ── Quest diaria (F3, decisión C) — textos de la tarjeta en Home ──────────
+  static String questCardTitle() => '$_quest Daily Quest';
+
+  static String questCardSubtitle() =>
+      '$_quest Completa ${QuestCalculator.requiredCompletions} misiones hoy '
+      'para obtener +${PlayerXpCalculator.questXp} XP.';
+
+  /// Etiqueta de progreso de la tarjeta (línea de conteo "0 / 3 completadas").
+  /// Es la única etiqueta de la quest que NO lleva glifo: es un contador de
+  /// estado (HUD) cuyo texto EXACTO está cerrado por `quest_card_test`
+  /// (`find.text('0 / 3 completadas')` / `'3 / 3 completadas'`). El resto de
+  /// etiquetas de la tarjeta (título, subtítulo, botón y reclamada) sí
+  /// conservan los glifos temáticos ▶ / ◆.
+  static String questProgressLabel(int completed) =>
+      '$completed / ${QuestCalculator.requiredCompletions} completadas';
+
+  static String questClaimButtonLabel() =>
+      '$_quest Reclamar +${PlayerXpCalculator.questXp} XP';
+
+  static String questClaimedLabel() =>
+      '$_rank Quest completada — +${PlayerXpCalculator.questXp} XP reclamados';
+
+  // ── Resumen quincenal (F3, decisión D) ────────────────────────────────────
+  static ThematicText fortnightSummary(FortnightSummaryStats stats) {
+    final misiones =
+        stats.completedCount == 1 ? '1 misión' : '${stats.completedCount} misiones';
+    var body = '$_info Quincena ${stats.period.label}: $misiones completadas.';
+    if (stats.currentStreak > 0) {
+      body += ' Racha vigente: ${stats.currentStreak} '
+          'día${stats.currentStreak == 1 ? '' : 's'}.';
+    }
+    body += ' Nivel ${stats.level} · ${stats.totalXp} XP. '
+        'Insignias desbloqueadas: ${stats.badgesUnlockedCount}.';
+    return ThematicText(
+      title: '$_info System Report — Quincena',
+      body: body,
+    );
+  }
+
+  // ── Transición "Nivel subió" (SnackBar in-app de la tarjeta Jugador) ──────
+  static String levelUpMessage(int level) {
+    return '$_rank Nivel subió — Ahora eres Nivel $level';
+  }
+
   // ── Subnomenclatura de niveles/rangos de insignias (SL) ───────────────────
   /// Título SL del hito [type] (p. ej. "Rango E · Nivel I").
   static String slateBadgeTitle(BadgeType type) => _slateBadges[type]!.title;
@@ -113,48 +169,48 @@ class ThematicTextsCatalog {
   static const Map<BadgeType, _SlateBadgeTheme> _slateBadges = {
     BadgeType.streak3: _SlateBadgeTheme(
       title: 'Rango E · Nivel I',
-      flavor: 'Cazador Novato',
-      icon: 'star',
+      flavor: 'El Despertar',
+      icon: 'eye',
     ),
     BadgeType.streak7: _SlateBadgeTheme(
       title: 'Rango E · Nivel II',
-      flavor: 'Semana Perfecta',
-      icon: 'moon',
+      flavor: 'Primera Llamada',
+      icon: 'flame',
     ),
     BadgeType.streak14: _SlateBadgeTheme(
       title: 'Rango D · Nivel I',
-      flavor: 'Aprendiz',
+      flavor: 'Guía del acero',
       icon: 'sword',
     ),
     BadgeType.streak21: _SlateBadgeTheme(
       title: 'Rango D · Nivel II',
-      flavor: 'Hábito Formado',
+      flavor: 'Sangrado de ojos',
       icon: 'shield',
     ),
     BadgeType.streak30: _SlateBadgeTheme(
       title: 'Rango C · Nivel I',
-      flavor: 'Asedio Prolongado',
-      icon: 'award',
+      flavor: 'Fortaleza inquebrantable',
+      icon: 'military_tech',
     ),
     BadgeType.streak60: _SlateBadgeTheme(
       title: 'Rango B · Nivel I',
-      flavor: 'Doble Asedio',
-      icon: 'medal',
+      flavor: 'Guerrero del tiempo',
+      icon: 'emoji_events',
     ),
     BadgeType.streak90: _SlateBadgeTheme(
       title: 'Rango A · Nivel I',
       flavor: 'Élite Nacional',
-      icon: 'crown',
+      icon: 'workspace_premium',
     ),
     BadgeType.streak180: _SlateBadgeTheme(
       title: 'Rango S · Nivel I',
-      flavor: 'Sobresaliente S',
+      flavor: 'Honor Absoluto',
       icon: 'diamond',
     ),
     BadgeType.streak365: _SlateBadgeTheme(
       title: 'Nivel Nacional',
       flavor: 'Leyenda',
-      icon: 'rocket',
+      icon: 'skull',
     ),
   };
 }

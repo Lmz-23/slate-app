@@ -39,6 +39,23 @@ class NotificationService implements ReminderScheduler {
   ReminderChannelSettings _channelSettings =
       ReminderChannelSettingsCalculator.fromSettings(const UserSettings());
 
+  /// Resultado cacheado de `canScheduleExactNotifications()` (una consulta
+  /// nativa por sesión, no una por `schedule()`). Durante el arranque con N
+  /// tareas cada programación hacía un round trip redundante al hilo de
+  /// plataforma; con la caché la primera llamada decide y el resto reutiliza.
+  ///
+  /// Solo se cachea cuando el plugin Android está inicializado: si se llamara
+  /// antes de `init()`, el `false` provisional sería incorrecto para el resto
+  /// de la sesión.
+  ///
+  /// Si el usuario revoca el permiso de alarmas exactas desde Ajustes del
+  /// sistema mientras la app corre, `schedule()` seguiría usando
+  /// `exactAllowWhileIdle` según el valor cacheado (caso raro; el fallback
+  /// `inexactAllowWhileIdle` solo aplica cuando el valor es `false`). No hay
+  /// hook de lifecycle en la app para re-comprobar; el servicio se reinicia
+  /// con la app.
+  bool? _canScheduleExact;
+
   bool get isInitialized => _initialized;
 
   /// Configuración efectiva del canal (lectura para observabilidad/tests).
@@ -59,14 +76,15 @@ class NotificationService implements ReminderScheduler {
     UserSettings? settings,
   }) async {
     _timezone = timezone;
-    _channelSettings =
-        ReminderChannelSettingsCalculator.fromSettings(settings ?? const UserSettings());
+    _channelSettings = ReminderChannelSettingsCalculator.fromSettings(
+        settings ?? const UserSettings());
     if (_initialized) return;
 
     tz_data.initializeTimeZones();
     _setLocalTimezone(timezone);
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -79,8 +97,8 @@ class NotificationService implements ReminderScheduler {
     );
 
     await _notifications.initialize(initSettings);
-    _androidPlugin = _notifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    _androidPlugin = _notifications.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
     _initialized = true;
 
     // En Android 8+ sonido/vibración/badge se fijan EN EL CANAL al crearlo,
@@ -99,8 +117,7 @@ class NotificationService implements ReminderScheduler {
   /// nueva config) al cambiar los toggles, y conviene también re-agendar los
   /// recordatorios con los nuevos detalles (lo hace [scheduler] al regenerar).
   Future<void> updateChannelForSettings(UserSettings settings) async {
-    _channelSettings =
-        ReminderChannelSettingsCalculator.fromSettings(settings);
+    _channelSettings = ReminderChannelSettingsCalculator.fromSettings(settings);
     await _createAndroidChannel();
   }
 
@@ -155,10 +172,14 @@ class NotificationService implements ReminderScheduler {
 
   @override
   Future<bool> canScheduleExactNotifications() async {
+    final cached = _canScheduleExact;
+    if (cached != null) return cached;
     final plugin = _androidPlugin;
     if (plugin == null) return false;
     final result = await plugin.canScheduleExactNotifications();
-    return result ?? false;
+    final value = result ?? false;
+    _canScheduleExact = value;
+    return value;
   }
 
   @override
@@ -216,7 +237,8 @@ class NotificationService implements ReminderScheduler {
       presentBadge: channel.presentBadge,
       presentSound: channel.presentSound,
     );
-    final details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+    final details =
+        NotificationDetails(android: androidDetails, iOS: iosDetails);
 
     await _notifications.zonedSchedule(
       id,

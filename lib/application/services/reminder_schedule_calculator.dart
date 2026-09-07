@@ -70,6 +70,36 @@ class ReminderScheduleCalculator {
   static DateTime taskReminderFireTime(Task task, int leadTimeMinutes) =>
       effectiveDateTime(task).subtract(Duration(minutes: leadTimeMinutes));
 
+  /// Horizonte de recordatorios de las OCURRENCIAS de series recurrentes.
+  ///
+  /// Una serie diaria genera ~365 instancias futuras en BD (la generación es
+  /// parte del producto), pero programar una notificación nativa por cada una
+  /// satura AlarmManager (Android limita ~500 alarmas por app) y, al hacerse
+  /// SECUENCIALMENTE con `zonedSchedule`, convierte el guardado en una
+  /// operación de 8-12 s. Solo se programan las ocurrencias cuyo disparo cae
+  /// dentro de esta ventana; las lejanas entran en la ventana durante el
+  /// re-sync diario ([DailyReminderController] reprograma todos los
+  /// recordatorios al cambiar de día / iniciar la app).
+  ///
+  /// La ventana de 7 días es una decisión de PRODUCTO (una semana de
+  /// visibilidad) y no es configurable: cubre el corto plazo con holgura sin
+  /// acercarse al límite de ~500 alarmas de Android ni al coste de la
+  /// programación secuencial con `zonedSchedule`.
+  static const int recurringReminderHorizonDays = 7;
+
+  /// ¿Es una OCURRENCIA de serie recurrente cuya notificación está FUERA de la
+  /// ventana de recordatorios ([recurringReminderHorizonDays])?
+  ///
+  /// Devuelve `true` solo para ocurrencias reales (`parentTaskId != null` y NO
+  /// subtarea) cuyo disparo efectivo sea posterior a `now + horizonte`. La
+  /// tarea raíz de la serie, las subtareas y las tareas únicas NO se ven
+  /// afectadas: sus recordatorios siguen las reglas normales.
+  static bool isFarFutureRecurringOccurrence(Task task, DateTime now) {
+    if (task.parentTaskId == null || task.isSubtask) return false;
+    final horizon = now.add(const Duration(days: recurringReminderHorizonDays));
+    return effectiveDateTime(task).isAfter(horizon);
+  }
+
   /// Instante del PRÓXIMO reset de día ([dayResetHour]) estrictamente posterior
   /// a [now].
   ///
@@ -133,8 +163,14 @@ class ReminderScheduleCalculator {
   /// Se basa en `Task.completedAt` (instante real en el que se marcó como
   /// completada), no en la fecha programada: una tarea de ayer marcada hoy
   /// cuenta como "completada hoy".
+  ///
+  /// F4-fix H2 (regla de producto, coherencia con la racha): las SUBTAREAS NO
+  /// cuentan como "tarea completada" para la alerta de racha en peligro. Esta
+  /// es la misma base que usa [QuestCalculator.completedCountOn], así que
+  /// quest y alerta cuentan "completadas hoy" de forma coherente.
   static bool noTasksCompletedOn(List<Task> allTasks, DateTime day) =>
       !allTasks.any((t) =>
+          !t.isSubtask &&
           t.isCompleted &&
           t.completedAt != null &&
           _sameDay(t.completedAt!, day));
@@ -154,6 +190,20 @@ class ReminderScheduleCalculator {
     required DateTime day,
   }) =>
       hasPendingTasksOn(allTasks, day) && noTasksCompletedOn(allTasks, day);
+
+  /// Racha mínima para que la alerta de racha en peligro tenga sentido
+  /// (decisión B): con menos de 3 días la pérdida aún no merece una alerta.
+  static const int streakAtRiskMinStreak = 3;
+
+  /// Condición de la alerta de racha en peligro (F2, decisión B):
+  /// racha activa ≥ 3 días Y no se ha completado ninguna misión hoy.
+  static bool shouldFireStreakAtRiskReminder({
+    required List<Task> allTasks,
+    required DateTime day,
+    required int currentStreak,
+  }) =>
+      currentStreak >= streakAtRiskMinStreak &&
+      noTasksCompletedOn(allTasks, day);
 
   /// Cuerpo del recordatorio de tarea, p. ej.:
   /// `Recordatorio: "Comprar leche" a las 14:00`.
@@ -192,4 +242,8 @@ class ReminderScheduleCalculator {
     }
     return body;
   }
+
+  /// Cuerpo CANÓNICO (tema OFF) de la alerta de racha en peligro.
+  static String streakAtRiskBody(int streakDays) =>
+      'Tu racha de $streakDays días se perderá si no completas una misión hoy.';
 }

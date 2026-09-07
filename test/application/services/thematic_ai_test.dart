@@ -4,13 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
 import 'package:slate_app/application/services/ai_service.dart';
-import 'package:slate_app/application/services/reminder_schedule_calculator.dart';
 import 'package:slate_app/application/services/thematic_texts_catalog.dart';
 import 'package:slate_app/application/services/thematic_texts_generator.dart';
 import 'package:slate_app/application/services/thematic_texts_resolver.dart';
 import 'package:slate_app/data/hive/boxes/thematic_text_cache_box.dart';
 import 'package:slate_app/domain/entities/task.dart';
-import 'package:slate_app/domain/entities/user_settings.dart';
 
 /// Fake de AIService: "tiene" API key y devuelve un resultado controlado.
 class FakeAIService extends AIService {
@@ -115,49 +113,18 @@ void main() {
   });
 
   group('ThematicTextsResolver', () {
-    test('tema OFF -> null (el llamador usa los textos canónicos)', () {
+    test('sin caché -> catálogo local (fuente única)', () {
       const resolver = ThematicTextsResolver();
       final task = _task('a', 'Mi tarea');
 
-      expect(
-        resolver.resolveTaskReminder(task, const UserSettings()),
-        isNull,
-      );
-      expect(
-        resolver.resolveMorningSummary(2, const UserSettings()),
-        isNull,
-      );
-      expect(
-        resolver.resolveEveningSummary(1, const UserSettings()),
-        isNull,
-      );
-      expect(
-        resolver.resolveDayClosure(
-          DayClosureStats(
-            jornada: DateTime(2026, 1, 14),
-            total: 3,
-            completed: 1,
-          ),
-          const UserSettings(),
-        ),
-        isNull,
-      );
+      final reminder = resolver.resolveTaskReminder(task);
+      expect(reminder.title, contains('Daily Quest'));
+
+      final morning = resolver.resolveMorningSummary(2);
+      expect(morning.body, contains('2 misiones'));
     });
 
-    test('tema ON sin caché -> catálogo local', () {
-      const resolver = ThematicTextsResolver();
-      const settings = UserSettings(slateSystemTheme: true);
-      final task = _task('a', 'Mi tarea');
-
-      final reminder = resolver.resolveTaskReminder(task, settings);
-      expect(reminder, isNotNull);
-      expect(reminder!.title, contains('Daily Quest'));
-
-      final morning = resolver.resolveMorningSummary(2, settings);
-      expect(morning!.body, contains('2 misiones'));
-    });
-
-    test('tema ON con caché -> texto generado con IA', () async {
+    test('con caché -> el texto generado con IA tiene prioridad', () async {
       final fake = FakeAIService(
         result: ThematicTextAIResult(
           title: 'Quest IA',
@@ -169,17 +136,13 @@ void main() {
       await generator.ensureTaskVariant(task);
 
       final resolver = ThematicTextsResolver(cache: cache);
-      final text = resolver.resolveTaskReminder(
-        task,
-        const UserSettings(slateSystemTheme: true),
-      );
-      expect(text, isNotNull);
-      expect(text!.title, 'Quest IA');
+      final text = resolver.resolveTaskReminder(task);
+      expect(text.title, 'Quest IA');
       expect(text.body, 'Texto IA');
     });
 
-    test('tema ON + toggle OFF: la CACHÉ local se sigue usando (decisión '
-        'Hallazgo 6)', () async {
+    test('la CACHÉ local se usa aunque el opt-in de generación esté '
+        'desactivado (decisión Hallazgo 6)', () async {
       final fake = FakeAIService(
         result: ThematicTextAIResult(
           title: 'Título IA',
@@ -190,20 +153,13 @@ void main() {
       final task = _task('c', 'Mi tarea');
       await generator.ensureTaskVariant(task);
 
-      // DECISIÓN documentada: tras desactivar "Textos con IA", las variantes
-      // cacheadas (locales, ya generadas con el opt-in activo) se siguen
-      // usando. El toggle solo detiene el ENVÍO de títulos a la IA; nunca se
-      // reenvía nada al resolver.
+      // DECISIÓN documentada: el resolver es de solo lectura y NO recibe
+      // settings; las variantes cacheadas (locales, ya generadas con el
+      // opt-in activo) se siguen usando. El toggle "Textos con IA" solo
+      // detiene el ENVÍO de nuevos títulos a la IA; nunca se reenvía nada.
       final resolver = ThematicTextsResolver(cache: cache);
-      final text = resolver.resolveTaskReminder(
-        task,
-        const UserSettings(
-          slateSystemTheme: true,
-          useAIThematicTexts: false,
-        ),
-      );
-      expect(text, isNotNull);
-      expect(text!.title, 'Título IA');
+      final text = resolver.resolveTaskReminder(task);
+      expect(text.title, 'Título IA');
       expect(text.body, 'Cuerpo IA');
     });
 
@@ -216,15 +172,8 @@ void main() {
       final resolver = ThematicTextsResolver(cache: cache);
       final task = _task('d', 'Mi tarea');
 
-      final text = resolver.resolveTaskReminder(
-        task,
-        const UserSettings(
-          slateSystemTheme: true,
-          useAIThematicTexts: true,
-        ),
-      );
-      expect(text, isNotNull);
-      expect(text!.title, contains('Daily Quest'));
+      final text = resolver.resolveTaskReminder(task);
+      expect(text.title, contains('Daily Quest'));
       expect(
         cache.get(ThematicTextsCatalog.taskCacheKey(task)),
         isNull,

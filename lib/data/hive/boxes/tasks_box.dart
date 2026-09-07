@@ -1,5 +1,4 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import '../adapters/task_adapter.dart';
 import '../../../domain/entities/task.dart';
 
 class TasksBox {

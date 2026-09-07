@@ -2,6 +2,20 @@ import 'package:hive/hive.dart';
 import '../../../domain/enums/app_theme_mode.dart';
 import '../../../domain/entities/user_settings.dart';
 
+/// Migración segura del ordinal guardado de [AppThemeMode].
+///
+/// Los registros antiguos pueden contener el ordinal 2 (antiguo
+/// `AppThemeMode.system`). Ese valor ya no existe en el enum: se interpreta
+/// como `dark`, que es la identidad de Slate. También se protege contra
+/// cualquier índice fuera de rango para que un dato corrupto nunca lance un
+/// crash al leer los ajustes.
+AppThemeMode _themeModeFromStoredIndex(int? index) {
+  if (index == null || index < 0 || index >= AppThemeMode.values.length) {
+    return AppThemeMode.dark;
+  }
+  return AppThemeMode.values[index];
+}
+
 class UserSettingsAdapter extends TypeAdapter<UserSettings> {
   @override
   final int typeId = 6;
@@ -16,22 +30,12 @@ class UserSettingsAdapter extends TypeAdapter<UserSettings> {
       fields[key] = value;
     }
 
-    final customBadgeConfigsList = fields[15] as List?;
-    final customBadgeConfigs = customBadgeConfigsList
-        ?.map((e) => CustomBadgeConfig(
-              badgeType: e['badgeType'] ?? '',
-              customName: e['customName'] ?? '',
-              iconName: e['iconName'] ?? '',
-              daysRequired: e['daysRequired'] ?? 0,
-            ))
-        .toList();
-
     return UserSettings(
       id: fields[0] as String? ?? 'singleton',
       userName: fields[1] as String? ?? 'Usuario',
       dayResetHour: fields[2] as int? ?? 4,
       notificationsEnabled: fields[3] as bool? ?? true,
-      themeMode: AppThemeMode.values[fields[4] as int? ?? 0],
+      themeMode: _themeModeFromStoredIndex(fields[4] as int?),
       unlockedThemeIds: (fields[5] as List?)?.cast<String>() ?? [],
       timezone: fields[6] as String? ?? 'America/Bogota',
       autoDetectTimezone: fields[7] as bool? ?? false,
@@ -42,16 +46,12 @@ class UserSettingsAdapter extends TypeAdapter<UserSettings> {
       notificationBadge: fields[12] as bool? ?? true,
       notificationImagePaths: (fields[13] as List?)?.cast<String>() ?? [],
       notificationTextContext: fields[14] as String?,
-      customBadgeConfigs: customBadgeConfigs ?? [],
       // Campos añadidos en esta versión (migración hacia delante segura: los
       // registros antiguos no los escriben y aquí se aplica el default).
       notificationLeadTimeMinutes: fields[16] as int? ?? 0,
       dailyReminderEnabled: fields[17] as bool? ?? true,
       dailyReminderHour1: fields[18] as int? ?? 10,
       dailyReminderHour2: fields[19] as int? ?? 19,
-      // Slate System (personalización temática): default OFF para no alterar el
-      // comportamiento de ningún registro existente.
-      slateSystemTheme: fields[20] as bool? ?? false,
       useAIThematicTexts: fields[21] as bool? ?? false,
       enableDayClosure: fields[22] as bool? ?? false,
     );
@@ -60,7 +60,7 @@ class UserSettingsAdapter extends TypeAdapter<UserSettings> {
   @override
   void write(BinaryWriter writer, UserSettings obj) {
     writer
-      ..writeByte(23)
+      ..writeByte(21)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -91,15 +91,6 @@ class UserSettingsAdapter extends TypeAdapter<UserSettings> {
       ..write(obj.notificationImagePaths)
       ..writeByte(14)
       ..write(obj.notificationTextContext)
-      ..writeByte(15)
-      ..write(obj.customBadgeConfigs
-          .map((e) => {
-                'badgeType': e.badgeType,
-                'customName': e.customName,
-                'iconName': e.iconName,
-                'daysRequired': e.daysRequired,
-              })
-          .toList())
       ..writeByte(16)
       ..write(obj.notificationLeadTimeMinutes)
       ..writeByte(17)
@@ -108,8 +99,6 @@ class UserSettingsAdapter extends TypeAdapter<UserSettings> {
       ..write(obj.dailyReminderHour1)
       ..writeByte(19)
       ..write(obj.dailyReminderHour2)
-      ..writeByte(20)
-      ..write(obj.slateSystemTheme)
       ..writeByte(21)
       ..write(obj.useAIThematicTexts)
       ..writeByte(22)

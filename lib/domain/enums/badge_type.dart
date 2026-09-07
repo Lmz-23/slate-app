@@ -58,23 +58,23 @@ enum BadgeType {
   String get iconName {
     switch (this) {
       case BadgeType.streak3:
-        return 'star';
+        return 'eye';
       case BadgeType.streak7:
-        return 'fire';
+        return 'flame';
       case BadgeType.streak14:
-        return 'lightning';
+        return 'sword';
       case BadgeType.streak21:
-        return 'flower';
-      case BadgeType.streak30:
         return 'shield';
+      case BadgeType.streak30:
+        return 'military_tech';
       case BadgeType.streak60:
-        return 'trophy';
+        return 'emoji_events';
       case BadgeType.streak90:
-        return 'crown';
+        return 'workspace_premium';
       case BadgeType.streak180:
         return 'diamond';
       case BadgeType.streak365:
-        return 'rocket';
+        return 'skull';
     }
   }
 

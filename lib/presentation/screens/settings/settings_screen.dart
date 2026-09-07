@@ -8,8 +8,6 @@ import '../../../core/constants/app_spacing.dart';
 import '../../../domain/enums/app_theme_mode.dart';
 import '../../../application/providers/settings_provider.dart';
 import '../../../application/services/timezone_service.dart';
-import 'ai_notification_settings_screen.dart';
-import 'badge_customization_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -114,22 +112,6 @@ class SettingsScreen extends ConsumerWidget {
                       }
                     },
                   ),
-                  const Divider(height: 1, color: AppColors.surfaceLight),
-                  _buildListTile(
-                    icon: Icons.smart_toy_outlined,
-                    title: 'Estilo de notificaciones',
-                    subtitle: settings.useAINotifications
-                        ? 'Configurado con IA'
-                        : 'Standard',
-                    onTap: () => _showNotificationStylePicker(context, ref, settings),
-                  ),
-                  const Divider(height: 1, color: AppColors.surfaceLight),
-                  _buildListTile(
-                    icon: Icons.emoji_events_outlined,
-                    title: 'Personalizar insignias',
-                    subtitle: '${settings.customBadgeConfigs.length} insignias configuradas',
-                    onTap: () => context.push('/badge-customization'),
-                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -206,16 +188,6 @@ class SettingsScreen extends ConsumerWidget {
                     title: 'Tema',
                     subtitle: settings.themeMode.displayName,
                     onTap: () => _showThemePicker(context, ref, settings.themeMode),
-                  ),
-                  const Divider(height: 1, color: AppColors.surfaceLight),
-                  _buildSwitchTile(
-                    icon: Icons.auto_awesome_outlined,
-                    title: 'Slate System',
-                    subtitle: 'Textos temáticos y rangos de nivel en notificaciones e insignias',
-                    value: settings.slateSystemTheme,
-                    onChanged: (value) {
-                      ref.read(settingsProvider.notifier).updateSlateSystemTheme(value);
-                    },
                   ),
                   const Divider(height: 1, color: AppColors.surfaceLight),
                   _buildSwitchTile(
@@ -322,7 +294,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
             decoration: const InputDecoration(
               isDense: true,
-              contentPadding: EdgeInsets.zero,
+              contentPadding: EdgeInsets.symmetric(vertical: 12),
               border: InputBorder.none,
             ),
           ),
@@ -615,7 +587,7 @@ class SettingsScreen extends ConsumerWidget {
       ),
       builder: (context) {
         return SizedBox(
-          height: 250,
+          height: 200,
           child: Column(
             children: [
               const Padding(
@@ -635,9 +607,7 @@ class SettingsScreen extends ConsumerWidget {
                   leading: Icon(
                     mode == AppThemeMode.dark
                         ? Icons.dark_mode
-                        : mode == AppThemeMode.light
-                            ? Icons.light_mode
-                            : Icons.brightness_auto,
+                        : Icons.light_mode,
                     color: isSelected ? AppColors.primary : AppColors.textSecondary,
                   ),
                   title: Text(
@@ -660,176 +630,6 @@ class SettingsScreen extends ConsumerWidget {
           ),
         );
       },
-    );
-  }
-
-  void _showNotificationStylePicker(BuildContext context, WidgetRef ref, dynamic settings) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Estilo de notificaciones',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              _buildNotificationOption(
-                context: context,
-                ref: ref,
-                title: 'Standard',
-                subtitle: 'Sonido, vibración y badge',
-                icon: Icons.notifications_active,
-                isSelected: !settings.useAINotifications,
-                onTap: () {
-                  ref.read(settingsProvider.notifier).updateUseAINotifications(false);
-                  ref.read(settingsProvider.notifier).applyAINotificationSettings(
-                    sound: true,
-                    vibration: true,
-                    badge: true,
-                  );
-                  Navigator.pop(context);
-                },
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _buildNotificationOption(
-                context: context,
-                ref: ref,
-                title: 'Configurar con IA',
-                subtitle: 'Sube imágenes y texto para personalizar',
-                icon: Icons.smart_toy,
-                isSelected: settings.useAINotifications,
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AINotificationSettingsScreen(),
-                    ),
-                  );
-                },
-              ),
-              if (settings.useAINotifications) ...[
-                const SizedBox(height: AppSpacing.lg),
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceLight,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        settings.notificationSound
-                            ? Icons.volume_up
-                            : Icons.volume_off,
-                        size: 16,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(
-                        settings.notificationVibration
-                            ? Icons.vibration
-                            : Icons.phonelink_erase,
-                        size: 16,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(
-                        settings.notificationBadge
-                            ? Icons.notifications
-                            : Icons.notifications_off,
-                        size: 16,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Configuración actual',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              const SizedBox(height: AppSpacing.lg),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildNotificationOption({
-    required BuildContext context,
-    required WidgetRef ref,
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.1)
-              : AppColors.surfaceLight,
-          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-          border: isSelected
-              ? Border.all(color: AppColors.primary, width: 1)
-              : null,
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? AppColors.primary : AppColors.textSecondary,
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (isSelected)
-              const Icon(Icons.check, color: AppColors.primary),
-          ],
-        ),
-      ),
     );
   }
 

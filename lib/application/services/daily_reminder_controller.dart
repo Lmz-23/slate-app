@@ -7,6 +7,7 @@ import '../../domain/entities/task.dart';
 import '../../domain/entities/user_settings.dart';
 import '../../domain/enums/badge_type.dart';
 import '../providers/now_provider.dart';
+import '../providers/player_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/streak_provider.dart';
 import '../providers/task_provider.dart';
@@ -30,6 +31,10 @@ import 'timezone_service.dart';
 /// - Cuando cambia el DÍA (el `nowProvider` refresca cada 30 s): reprograma
 ///   los resúmenes del nuevo día.
 ///
+/// F2/F3: el controlador también coordina la alerta de racha en peligro
+/// (`0x60000004`, 12:00) y el resumen quincenal del Sistema (`0x60000005`,
+/// día 1 y 16 a las 20:00), ambos con secciones try/catch propias (Fix A+B).
+///
 /// La programación con `zonedSchedule` es de disparo único para HOY, por lo que
 /// no hay un "periodic" nativo que cubra la 19:00 condicional; el controlador
 /// garantiza que cada día se (re)decida y reprograme. Limitación documentada:
@@ -39,16 +44,48 @@ class DailyReminderController {
   DailyReminderController(this._ref, this._manager, this._service) {
     _ref.listen(nowProvider, (previous, next) => _onNowChanged());
     _ref.listen(tasksProvider, (previous, next) => _onTasksChanged());
+    _ref.listen(streakProvider, (previous, next) => _onStreakChanged());
     _ref.listen(
       settingsProvider,
       (previous, next) => _onSettingsChanged(previous, next),
     );
-    _scheduleEverything();
+    // La programación inicial NO ocurre aquí: `_scheduleEverything` lee
+    // `tasksProvider` (→ `getAll()` síncrono) y dispara una ráfaga de
+    // `zonedSchedule` (2 round trips nativos cada uno) que satura el hilo de
+    // plataforma Android durante las primeras frames del cold start. El
+    // arranque llama a `start()` tras la primera frame (ver SlateApp).
   }
 
   final Ref _ref;
   final ReminderManager _manager;
   final NotificationService _service;
+
+  bool _started = false;
+
+  /// Inicia la programación inicial (recordatorios de tareas + resúmenes del
+  /// día + cierre + alertas del Sistema). Se invoca UNA vez desde un
+  /// `addPostFrameCallback` en `SlateApp` para no ejecutar el prefijo síncrono
+  /// (`tasksProvider.getAll()`) ni la ráfaga de `zonedSchedule` dentro del
+  /// primer build (cold start). Idempotente: las llamadas posteriores (p. ej.
+  /// rebuilds de `SlateApp`) son no-op.
+  ///
+  /// El re-sync diario NO depende de este método: al cambiar de día
+  /// (`nowProvider`), al cambiar tareas/racha o al cambiar ajustes se sigue
+  /// reprogramando por los listeners del constructor.
+  void start() {
+    if (_started) return;
+    _started = true;
+    // Poda del task box (una vez por sesión): elimina en segundo plano las
+    // tareas pendientes anteriores a la ventana de retención (45 días) sin
+    // bloquear la primera frame (`start()` ya se ejecuta post-frame desde
+    // SlateApp). El guard interno del notifier garantiza la idempotencia.
+    try {
+      unawaited(_ref.read(tasksProvider.notifier).pruneOldPending());
+    } catch (e) {
+      debugPrint('DailyReminderController: poda del task box omitida: $e');
+    }
+    _scheduleEverything();
+  }
 
   DateTime? _lastScheduledDay;
   String _lastNotificationSignature = '';
@@ -60,16 +97,16 @@ class DailyReminderController {
   /// se vuelve a agendar TODO para que los nuevos detalles del canal queden
   /// aplicados también a las programaciones pendientes.
   ///
-  /// Incluye el tema Slate System y sus textos con IA: al cambiarlos se
-  /// re-agenda para que los títulos/cuerpos temáticos (o canónicos) queden
-  /// aplicados en las programaciones pendientes. Incluye el cierre de jornada.
+  /// Incluye el opt-in de textos con IA y el cierre de jornada: al cambiarlos
+  /// se re-agenda para que los títulos/cuerpos temáticos queden aplicados en
+  /// las programaciones pendientes.
   String _notificationSignature(UserSettings s) =>
       '${s.notificationsEnabled}|${s.notificationLeadTimeMinutes}|'
       '${s.dailyReminderEnabled}|${s.dailyReminderHour1}|'
       '${s.dailyReminderHour2}|${s.timezone}|'
       '${s.notificationSound}|${s.notificationVibration}|'
       '${s.notificationBadge}|${s.enableDayClosure}|'
-      '${s.slateSystemTheme}|${s.useAIThematicTexts}';
+      '${s.useAIThematicTexts}';
 
   DateTime _now() {
     final settings = _ref.read(settingsProvider);
@@ -88,6 +125,15 @@ class DailyReminderController {
   void _onTasksChanged() {
     // Al cambiar tareas solo se redeciden los resúmenes del día (2 ids).
     // Los recordatorios individuales YA se sincronizan en TasksNotifier.
+    _syncDailyRemindersOnly();
+  }
+
+  void _onStreakChanged() {
+    // La racha se recalcula DESPUÉS de los cambios de tareas (TaskSection
+    // llama a recalculate tras toggleComplete). Al escuchar el cambio se
+    // vuelve a decidir con la racha NUEVA: si cayó bajo 3, la alerta de racha
+    // en peligro (0x60000004) queda cancelada aunque el evento de tareas la
+    // hubiera procesado con la racha anterior.
     _syncDailyRemindersOnly();
   }
 
@@ -145,8 +191,19 @@ class DailyReminderController {
     try {
       await _syncDayClosureIfEnabled(now, tasks, settings);
     } catch (e) {
-      debugPrint(
-          'DailyReminderController: error en cierre de jornada: $e');
+      debugPrint('DailyReminderController: error en cierre de jornada: $e');
+    }
+    try {
+      // F2 (decisión B): alerta de racha en peligro a las 12:00 si procede.
+      await _syncStreakAtRisk(now, tasks, settings);
+    } catch (e) {
+      debugPrint('DailyReminderController: error en alerta de racha: $e');
+    }
+    try {
+      // F3 (decisión D): resumen quincenal del Sistema (1/16 a las 20:00).
+      await _syncFortnightSummary(now, tasks, settings);
+    } catch (e) {
+      debugPrint('DailyReminderController: error en resumen quincenal: $e');
     }
 
     _lastScheduledDay = now;
@@ -185,6 +242,26 @@ class DailyReminderController {
     return all.isEmpty ? null : all.last;
   }
 
+  /// Decide la alerta de racha en peligro (0x60000004) con la racha actual.
+  ///
+  /// El controlador ya lee `streakProvider` (para el cierre de jornada); aquí
+  /// se lo reutiliza y se delega la programación/cancelación al manager, que
+  /// aplica la condición (racha ≥ 3 y sin completados hoy) y la defensa de no
+  /// programar al pasado.
+  Future<void> _syncStreakAtRisk(
+    DateTime now,
+    List<Task> tasks,
+    UserSettings settings,
+  ) async {
+    final streak = _ref.read(streakProvider);
+    await _manager.syncStreakAtRiskReminder(
+      now: now,
+      allTasks: tasks,
+      settings: settings,
+      currentStreak: streak.currentStreak,
+    );
+  }
+
   /// Solo re-decide los resúmenes diarios (10:00/19:00). Barato y se llama en
   /// cada cambio de tareas.
   void _syncDailyRemindersOnly() {
@@ -207,10 +284,42 @@ class DailyReminderController {
     try {
       await _syncDayClosureIfEnabled(now, tasks, settings);
     } catch (e) {
-      debugPrint(
-          'DailyReminderController: error en cierre de jornada: $e');
+      debugPrint('DailyReminderController: error en cierre de jornada: $e');
+    }
+    try {
+      await _syncStreakAtRisk(now, tasks, settings);
+    } catch (e) {
+      debugPrint('DailyReminderController: error en alerta de racha: $e');
+    }
+    try {
+      await _syncFortnightSummary(now, tasks, settings);
+    } catch (e) {
+      debugPrint('DailyReminderController: error en resumen quincenal: $e');
     }
     _lastScheduledDay = now;
+  }
+
+  /// Decide el resumen quincenal (0x60000005) con los datos actuales: racha,
+  /// Jugador (nivel/XP) e insignias desbloqueadas. La programación/cancelación
+  /// se delega al manager, que aplica la cadencia fija (día 1 y 16, 20:00) y
+  /// la defensa de no programar al pasado (patrón Fix A).
+  Future<void> _syncFortnightSummary(
+    DateTime now,
+    List<Task> tasks,
+    UserSettings settings,
+  ) async {
+    final streak = _ref.read(streakProvider);
+    final player = _ref.read(playerProvider);
+    final badges = _ref.read(badgesProvider);
+    await _manager.syncFortnightSummary(
+      now: now,
+      allTasks: tasks,
+      settings: settings,
+      currentStreak: streak.currentStreak,
+      level: player.level,
+      totalXp: player.totalXp,
+      badges: badges,
+    );
   }
 
   void dispose() {}

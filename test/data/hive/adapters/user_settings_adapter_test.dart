@@ -13,7 +13,8 @@ import 'package:slate_app/domain/enums/app_theme_mode.dart';
 /// adapter de UserSettings y a los formatos EXISTENTES en la versión 1 del
 /// adapter (16 campos). Su propósito es verificar la MIGRACIÓN segura: un
 /// registro antiguo (escrito con 16 campos) debe poder leerse con el adapter
-/// actual, que aplica los defaults de los campos nuevos (16..19).
+/// actual. Los campos eliminados (key 15) se leen como basura inerte y los
+/// campos nuevos (16..22) aplican sus defaults.
 class _LegacyBytesReader implements BinaryReader {
   _LegacyBytesReader(this._bytes);
 
@@ -130,8 +131,10 @@ class _LegacyBytesReader implements BinaryReader {
 }
 
 /// Emula byte a byte lo que escribía el adapter V1 (16 campos) siguiendo el
-/// mismo formato binario de Hive.
-Uint8List legacy16FieldBytes() {
+/// mismo formato binario de Hive. `themeModeIndex` permite simular registros
+/// con distintos valores guardados de tema (p.ej. el ordinal 2 del antiguo
+/// `AppThemeMode.system`).
+Uint8List legacy16FieldBytes({int themeModeIndex = 1}) {
   final builder = BytesBuilder();
 
   void byte(int v) => builder.addByte(v);
@@ -193,7 +196,7 @@ Uint8List legacy16FieldBytes() {
   field(1, 'Ada');
   field(2, 6);
   field(3, false);
-  field(4, 1); // AppThemeMode.light
+  field(4, themeModeIndex); // AppThemeMode.light por defecto (1)
   field(5, <String>['dark']);
   field(6, 'Europe/Madrid');
   field(7, true);
@@ -204,7 +207,9 @@ Uint8List legacy16FieldBytes() {
   field(12, true);
   field(13, <String>[]);
   field(14, null);
-  // customBadgeConfigs vacío: lista generica
+  // Campo eliminado (customBadgeConfigs, key 15): el adapter actual ya no lo
+  // consulta; lo dejamos para verificar la "lectura tolerante" de basura
+  // inerte de registros antiguos.
   byte(15);
   byte(10);
   u32(0);
@@ -254,25 +259,10 @@ void main() {
         notificationBadge: false,
         notificationImagePaths: ['/img/a.png', '/img/b.png'],
         notificationTextContext: 'contexto de prueba',
-        customBadgeConfigs: [
-          CustomBadgeConfig(
-            badgeType: 'streak30',
-            customName: 'Racha 30',
-            iconName: 'fire',
-            daysRequired: 30,
-          ),
-          CustomBadgeConfig(
-            badgeType: 'custom90',
-            customName: 'Noventa',
-            iconName: 'star',
-            daysRequired: 90,
-          ),
-        ],
         notificationLeadTimeMinutes: 20,
         dailyReminderEnabled: false,
         dailyReminderHour1: 8,
         dailyReminderHour2: 21,
-        slateSystemTheme: true,
         useAIThematicTexts: true,
         enableDayClosure: true,
       );
@@ -282,13 +272,10 @@ void main() {
 
       expect(restored, isNotNull);
       expect(restored, equals(original));
-      expect(restored!.customBadgeConfigs, hasLength(2));
-      expect(restored.customBadgeConfigs[1].daysRequired, 90);
-      expect(restored.notificationLeadTimeMinutes, 20);
+      expect(restored!.notificationLeadTimeMinutes, 20);
       expect(restored.dailyReminderEnabled, isFalse);
       expect(restored.dailyReminderHour1, 8);
       expect(restored.dailyReminderHour2, 21);
-      expect(restored.slateSystemTheme, isTrue);
       expect(restored.useAIThematicTexts, isTrue);
       expect(restored.enableDayClosure, isTrue);
     });
@@ -301,12 +288,10 @@ void main() {
 
       expect(restored, isNotNull);
       expect(restored, equals(original));
-      expect(restored!.customBadgeConfigs, isEmpty);
-      expect(restored.notificationLeadTimeMinutes, 0);
+      expect(restored!.notificationLeadTimeMinutes, 0);
       expect(restored.dailyReminderEnabled, isTrue);
       expect(restored.dailyReminderHour1, 10);
       expect(restored.dailyReminderHour2, 19);
-      expect(restored.slateSystemTheme, isFalse);
       expect(restored.useAIThematicTexts, isFalse);
       expect(restored.enableDayClosure, isFalse);
     });
@@ -331,7 +316,6 @@ void main() {
       expect(legacy.notificationSound, isFalse);
       expect(legacy.notificationVibration, isFalse);
       expect(legacy.notificationBadge, isTrue);
-      expect(legacy.customBadgeConfigs, isEmpty);
 
       // Los campos NUEVOS (añadidos después) toman sus defaults.
       expect(legacy.notificationLeadTimeMinutes, 0);
@@ -339,10 +323,31 @@ void main() {
       expect(legacy.dailyReminderHour1, 10);
       expect(legacy.dailyReminderHour2, 19);
 
-      // Slate System (decisión: default OFF, nunca alterar registros previos).
-      expect(legacy.slateSystemTheme, isFalse);
+      // Los campos ELIMINADOS (key 15 = customBadgeConfigs, key 20 =
+      // slateSystemTheme) ya no existen en el modelo; la lectura tolerante
+      // simplemente los ignora (basura inerte). El opt-in de contenido y el
+      // cierre de jornada toman sus defaults.
       expect(legacy.useAIThematicTexts, isFalse);
       expect(legacy.enableDayClosure, isFalse);
+    });
+
+    test(
+        'migración: el ordinal 2 (antiguo AppThemeMode.system) se lee como dark sin crash',
+        () {
+      final adapter = UserSettingsAdapter();
+      final legacy =
+          adapter.read(_LegacyBytesReader(legacy16FieldBytes(themeModeIndex: 2)));
+
+      expect(legacy.themeMode, AppThemeMode.dark);
+    });
+
+    test('migración: un índice fuera de rango se lee como dark sin crash',
+        () {
+      final adapter = UserSettingsAdapter();
+      final legacy =
+          adapter.read(_LegacyBytesReader(legacy16FieldBytes(themeModeIndex: 99)));
+
+      expect(legacy.themeMode, AppThemeMode.dark);
     });
   });
 }

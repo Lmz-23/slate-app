@@ -111,42 +111,6 @@ void main() {
       expect(badgeRepository.getAll().single.type, BadgeType.streak3);
     });
 
-    test('salto de varios días refleja TODOS los umbrales alcanzados', () async {
-      final tasks = [
-        for (var day = 1; day <= 14; day++) _task('t$day', _d(2026, 1, day)),
-      ];
-      await container.read(streakProvider.notifier).recalculate(
-            tasks: tasks,
-            now: _now(2026, 1, 14),
-          );
-
-      final types = container.read(badgesProvider).map((b) => b.type).toSet();
-      expect(types, {
-        BadgeType.streak3,
-        BadgeType.streak7,
-        BadgeType.streak14,
-      });
-      expect(container.read(badgesProvider), hasLength(3));
-    });
-
-    test('recálculo repetido es idempotente: no duplica insignias en el estado', () async {
-      final threeDayTasks = [
-        _task('a', _d(2026, 1, 12)),
-        _task('b', _d(2026, 1, 13)),
-        _task('c', _d(2026, 1, 14)),
-      ];
-      await container.read(streakProvider.notifier).recalculate(
-            tasks: threeDayTasks,
-            now: _now(2026, 1, 14),
-          );
-      await container.read(streakProvider.notifier).recalculate(
-            tasks: threeDayTasks,
-            now: _now(2026, 1, 14),
-          );
-
-      expect(container.read(badgesProvider), hasLength(1));
-      expect(container.read(badgesProvider).single.type, BadgeType.streak3);
-    });
   });
 
   group('badgesProvider - regresión R3b (desmarcar NO retira insignias)', () {

@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 
+import '../../domain/entities/badge.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/entities/user_settings.dart';
 import '../../domain/enums/badge_type.dart';
+import 'fortnight_calculator.dart';
 import 'notification_ids.dart';
 import 'reminder_schedule_calculator.dart';
 import 'reminder_scheduler.dart';
@@ -20,10 +22,15 @@ import 'thematic_texts_resolver.dart';
 /// - Resumen diario (10:00 y 19:00) según las decisiones P3/P5.
 /// - Cierre de jornada (`0x60000003`) según la decisión C: reporta el día al
 ///   siguiente reset.
+/// - Alerta de racha en peligro (`0x60000004`) según la decisión B (F2): se
+///   programa HOY a las 12:00 del mediodía cuando la racha está activa (≥3) y
+///   aún no se completó ninguna misión; se cancela al completar la primera del
+///   día, si la racha cae bajo 3, si las notificaciones están OFF o si la hora
+///   ya pasó (patrón Fix A: nunca programar al pasado).
 ///
 /// Si se inyecta un [resolver] de textos temáticos (Slate System), los títulos
-/// y cuerpos se toman de él cuando el tema está ON; si el tema está OFF (o no
-/// hay resolver) se usan exactamente los textos canónicos actuales, de modo
+/// y cuerpos se toman de él SIEMPRE (el resolver es la fuente única; nunca
+/// devuelve `null`). Si no hay resolver se usan los textos por defecto, de modo
 /// que ningún test ni comportamiento existente cambia.
 class ReminderManager {
   const ReminderManager({
@@ -62,7 +69,19 @@ class ReminderManager {
       await _scheduler.cancel(reminderIdForTask(task.id));
       return;
     }
-    final themed = _resolver?.resolveTaskReminder(task, settings);
+
+    // CUELLO DE BOTELLO RAF (guardado de tareas recurrentes ~8-12 s): no se
+    // programa una notificación por CADA instancia futura de una serie (una
+    // serie diaria → ~365 `zonedSchedule` nativos secuenciales). Las
+    // ocurrencias fuera de la ventana se dejan SIN programar (ni cancelar: no
+    // hay nada que limpiar); el re-sync diario del `DailyReminderController`
+    // las programa cuando entren en la ventana. La generación de instancias
+    // en BD no cambia.
+    if (ReminderScheduleCalculator.isFarFutureRecurringOccurrence(task, now)) {
+      return;
+    }
+
+    final themed = _resolver?.resolveTaskReminder(task);
     await _scheduler.schedule(
       id: reminderIdForTask(task.id),
       title: themed?.title ?? 'Recordatorio',
@@ -135,7 +154,6 @@ class ReminderManager {
     if (fireMorning) {
       final themed = _resolver?.resolveMorningSummary(
         ReminderScheduleCalculator.pendingCountOn(allTasks, today),
-        settings,
       );
       await _scheduler.schedule(
         id: morningDailyReminderId,
@@ -168,7 +186,6 @@ class ReminderManager {
     if (fireEvening) {
       final themed = _resolver?.resolveEveningSummary(
         ReminderScheduleCalculator.pendingCountOn(allTasks, today),
-        settings,
       );
       await _scheduler.schedule(
         id: eveningDailyReminderId,
@@ -240,7 +257,7 @@ class ReminderManager {
       currentStreak: currentStreak,
       milestone: milestone,
     );
-    final themed = _resolver?.resolveDayClosure(stats, settings);
+    final themed = _resolver?.resolveDayClosure(stats);
     await _scheduler.schedule(
       id: dayClosureReminderId,
       title: themed?.title ?? 'Cierre de jornada',
@@ -251,4 +268,114 @@ class ReminderManager {
 
   /// Cancela directamente el cierre de jornada.
   Future<void> cancelDayClosure() => _scheduler.cancel(dayClosureReminderId);
+
+  /// Decide y programa/cancela la alerta de racha en peligro (`0x60000004`)
+  /// para HOY a las 12:00 del MEDIODÍA (decisión B, F2).
+  ///
+  /// Reglas:
+  /// - Se programa SOLO si: notificaciones activas, racha activa ≥ 3 días
+  ///   ([ReminderScheduleCalculator.streakAtRiskMinStreak]) y NO se ha
+  ///   completado ninguna misión hoy (usa la lógica existente de conteo de
+  ///   completados del día).
+  /// - Se CANCELA si: toggles desactivados, racha < 3, ya se completó la
+  ///   primera tarea del día, o la hora de disparo ya pasó (patrón Fix A:
+  ///   nunca programar al pasado).
+  ///
+  /// [currentStreak] lo aporta el controlador leyendo `streakProvider`.
+  Future<void> syncStreakAtRiskReminder({
+    required DateTime now,
+    required List<Task> allTasks,
+    required UserSettings settings,
+    required int currentStreak,
+  }) async {
+    final today = DateTime(now.year, now.month, now.day);
+    final fireTime = DateTime(
+      today.year,
+      today.month,
+      today.day,
+      streakAtRiskReminderHour,
+      0,
+    );
+
+    final shouldSchedule = settings.notificationsEnabled &&
+        ReminderScheduleCalculator.shouldFireStreakAtRiskReminder(
+          allTasks: allTasks,
+          day: today,
+          currentStreak: currentStreak,
+        ) &&
+        fireTime.isAfter(now);
+
+    if (shouldSchedule) {
+      final themed = _resolver?.resolveStreakAtRisk(currentStreak);
+      await _scheduler.schedule(
+        id: streakAtRiskReminderId,
+        title: themed?.title ?? 'Racha en peligro',
+        body: themed?.body ??
+            ReminderScheduleCalculator.streakAtRiskBody(currentStreak),
+        fireTime: fireTime,
+      );
+    } else {
+      await _scheduler.cancel(streakAtRiskReminderId);
+    }
+  }
+
+  /// Cancela directamente la alerta de racha en peligro.
+  Future<void> cancelStreakAtRiskReminder() =>
+      _scheduler.cancel(streakAtRiskReminderId);
+
+  /// Decide y programa/cancela el resumen quincenal del Sistema
+  /// (`0x60000005`, F3 decisión D).
+  ///
+  /// Cadencia QUINCENAL (días fijos 1 y 16 a las 20:00). El resumen dispara
+  /// tras `fireTime` y reporta la quincena recién terminada:
+  /// - el disparo del día 16 reporta la quincena-1 (1..15 de ese mes);
+  /// - el disparo del día 1 reporta la quincena-2 del mes ANTERIOR
+  ///   (16..último día del mes).
+  ///
+  /// Patrón igual al cierre de jornada: programar, disparar tras `fireTime` y
+  /// re-programar el siguiente periodo (al volver a decidir,
+  /// [FortnightCalculator.nextFireTime] devuelve el siguiente disparo futuro).
+  /// Defensa Fix A: si la hora ya pasó, cancela en lugar de programar al
+  /// pasado. Se CANCELA solo cuando las notificaciones están desactivadas.
+  Future<void> syncFortnightSummary({
+    required DateTime now,
+    required List<Task> allTasks,
+    required UserSettings settings,
+    required int currentStreak,
+    required int level,
+    required int totalXp,
+    required List<Badge> badges,
+  }) async {
+    final fireTime = FortnightCalculator.nextFireTime(
+      now,
+      hour: fortnightSummaryReminderHour,
+    );
+
+    if (!settings.notificationsEnabled || !fireTime.isAfter(now)) {
+      await _scheduler.cancel(fortnightSummaryReminderId);
+      return;
+    }
+
+    final period = FortnightCalculator.periodForFireTime(fireTime);
+    final stats = FortnightSummaryStats(
+      period: period,
+      completedCount: FortnightCalculator.completedCountIn(allTasks, period),
+      currentStreak: currentStreak,
+      level: level,
+      totalXp: totalXp,
+      badgesUnlockedCount:
+          FortnightCalculator.badgesUnlockedIn(badges, period),
+    );
+    final themed = _resolver?.resolveFortnightSummary(stats);
+    await _scheduler.schedule(
+      id: fortnightSummaryReminderId,
+      title: themed?.title ?? 'Resumen quincenal',
+      body: themed?.body ?? FortnightCalculator.fortnightBody(stats),
+      fireTime: fireTime,
+    );
+  }
+
+  /// Cancela directamente el resumen quincenal.
+  Future<void> cancelFortnightSummary() =>
+      _scheduler.cancel(fortnightSummaryReminderId);
 }

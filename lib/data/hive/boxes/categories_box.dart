@@ -1,5 +1,4 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import '../adapters/category_adapter.dart';
 import '../../../domain/entities/category.dart';
 
 class CategoriesBox {

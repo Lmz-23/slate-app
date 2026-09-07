@@ -5,14 +5,26 @@ class AppColors {
   static const Color primaryLight = Color(0xFF818CF8);
   static const Color primaryDark = Color(0xFF4F46E5);
 
+  // Dark theme colors (default)
   static const Color background = Color(0xFF0F0F0F);
   static const Color surface = Color(0xFF1A1A1A);
   static const Color surfaceLight = Color(0xFF262626);
   static const Color card = Color(0xFF1E1E1E);
 
+  // Light theme colors
+  static const Color backgroundLight = Color(0xFFF4F4F5);
+  static const Color surfaceLightTheme = Color(0xFFFFFFFF);
+  static const Color cardLight = Color(0xFFFFFFFF);
+  static const Color dividerLight = Color(0xFFE4E4E7);
+
   static const Color textPrimary = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFFA1A1AA);
   static const Color textTertiary = Color(0xFF71717A);
+
+  // Light theme text colors (dark text on light background)
+  static const Color textPrimaryLight = Color(0xFF18181B);
+  static const Color textSecondaryLight = Color(0xFF52525B);
+  static const Color textTertiaryLight = Color(0xFFA1A1AA);
 
   static const Color success = Color(0xFF22C55E);
   static const Color warning = Color(0xFFF59E0B);

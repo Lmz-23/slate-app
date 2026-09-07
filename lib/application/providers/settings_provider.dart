@@ -96,13 +96,7 @@ class SettingsNotifier extends StateNotifier<UserSettings> {
     state = updated;
   }
 
-  // Slate System (personalización temática)
-  Future<void> updateSlateSystemTheme(bool enabled) async {
-    final updated = state.copyWith(slateSystemTheme: enabled);
-    await _repository.updateSettings(updated);
-    state = updated;
-  }
-
+  // Slate System — textos temáticos
   Future<void> updateUseAIThematicTexts(bool enabled) async {
     final updated = state.copyWith(useAIThematicTexts: enabled);
     await _repository.updateSettings(updated);
@@ -167,34 +161,6 @@ class SettingsNotifier extends StateNotifier<UserSettings> {
       notificationSound: sound,
       notificationVibration: vibration,
       notificationBadge: badge,
-    );
-    await _repository.updateSettings(updated);
-    state = updated;
-  }
-
-  // Badge Customization
-  Future<void> updateCustomBadgeConfig(CustomBadgeConfig config) async {
-    final existing = state.customBadgeConfigs
-        .where((c) => c.badgeType == config.badgeType)
-        .toList();
-
-    List<CustomBadgeConfig> newConfigs;
-    if (existing.isNotEmpty) {
-      newConfigs = state.customBadgeConfigs.map((c) {
-        return c.badgeType == config.badgeType ? config : c;
-      }).toList();
-    } else {
-      newConfigs = [...state.customBadgeConfigs, config];
-    }
-
-    final updated = state.copyWith(customBadgeConfigs: newConfigs);
-    await _repository.updateSettings(updated);
-    state = updated;
-  }
-
-  Future<void> addCustomBadge(CustomBadgeConfig config) async {
-    final updated = state.copyWith(
-      customBadgeConfigs: [...state.customBadgeConfigs, config],
     );
     await _repository.updateSettings(updated);
     state = updated;

@@ -10,6 +10,8 @@ Task _task(
   DateTime? scheduledTime,
   bool isCompleted = false,
   DateTime? completedAt,
+  bool isSubtask = false,
+  String? parentTaskId,
 }) {
   return Task(
     id: id,
@@ -19,6 +21,8 @@ Task _task(
     isCompleted: isCompleted,
     completedAt: completedAt,
     createdAt: scheduledDate,
+    isSubtask: isSubtask,
+    parentTaskId: parentTaskId,
   );
 }
 
@@ -83,6 +87,74 @@ void main() {
       expect(
         ReminderScheduleCalculator.taskReminderFireTime(task, 60),
         DateTime(2026, 1, 15, 13, 0),
+      );
+    });
+  });
+
+  group('isFarFutureRecurringOccurrence (horizonte de recordatorios)', () {
+    final now = DateTime(2026, 1, 15, 8, 0);
+
+    test('ocurrencia DENTRO de la ventana: NO es lejana', () {
+      // Día +3: dentro del horizonte de 7 días.
+      final occurrence = _task(
+        'child',
+        DateTime(2026, 1, 18),
+        scheduledTime: DateTime(2026, 1, 1, 9, 0),
+        parentTaskId: 'root',
+      );
+      expect(
+        ReminderScheduleCalculator.isFarFutureRecurringOccurrence(occurrence, now),
+        isFalse,
+      );
+    });
+
+    test('ocurrencia FUERA de la ventana (día +30): es lejana', () {
+      final occurrence = _task(
+        'child',
+        DateTime(2026, 2, 14),
+        scheduledTime: DateTime(2026, 1, 1, 9, 0),
+        parentTaskId: 'root',
+      );
+      expect(
+        ReminderScheduleCalculator.isFarFutureRecurringOccurrence(occurrence, now),
+        isTrue,
+      );
+    });
+
+    test('la tarea RAÍZ (sin parentTaskId) nunca es lejana', () {
+      final root = _task(
+        'root',
+        DateTime(2026, 2, 14),
+        scheduledTime: DateTime(2026, 2, 14, 9, 0),
+      );
+      expect(
+        ReminderScheduleCalculator.isFarFutureRecurringOccurrence(root, now),
+        isFalse,
+      );
+    });
+
+    test('una SUBTAREA con parentTaskId nunca es lejana', () {
+      final subtask = _task(
+        'sub',
+        DateTime(2026, 2, 14),
+        isSubtask: true,
+        parentTaskId: 'root',
+      );
+      expect(
+        ReminderScheduleCalculator.isFarFutureRecurringOccurrence(subtask, now),
+        isFalse,
+      );
+    });
+
+    test('tarea única (sin parentTaskId) nunca es lejana', () {
+      final oneOff = _task(
+        'one-off',
+        DateTime(2026, 3, 1),
+        scheduledTime: DateTime(2026, 3, 1, 10, 0),
+      );
+      expect(
+        ReminderScheduleCalculator.isFarFutureRecurringOccurrence(oneOff, now),
+        isFalse,
       );
     });
   });
@@ -192,6 +264,22 @@ void main() {
         ReminderScheduleCalculator.noTasksCompletedOn(
             [completedYesterday], day),
         isTrue,
+      );
+    });
+
+    test('noTasksCompletedOn: una subtarea completada HOY NO cuenta como '
+        '"tarea completada" (H2 regla de producto)', () {
+      final subtaskDoneToday = _task(
+        's1',
+        day,
+        isCompleted: true,
+        completedAt: DateTime(2026, 1, 15, 9, 0),
+        isSubtask: true,
+      );
+      expect(
+        ReminderScheduleCalculator.noTasksCompletedOn([subtaskDoneToday], day),
+        isTrue,
+        reason: 'coherencia con la racha: las subtareas no son "misiones"',
       );
     });
   });

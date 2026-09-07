@@ -1,0 +1,7 @@
+# flutter_launcher_icons configuration
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "icon/slate_icon_v1.png"
+  adaptive_icon_background: "#1A1A2E"
+  adaptive_icon_foreground: "icon/slate_icon_v1.png"

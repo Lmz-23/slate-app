@@ -245,6 +245,118 @@ void main() {
       expect(result.currentStreak, 1);
       expect(result.longestStreak, 1);
     });
+
+    test('una subtarea completada NO activa la racha (H2 regla de producto)',
+        () {
+      // Solo una subtarea completada HOY → no hay ningún día activo.
+      final subOnly = StreakCalculator.calculate(
+        tasks: [
+          Task(
+            id: 's1',
+            title: 'Subtarea',
+            scheduledDate: _d(2026, 1, 14),
+            isCompleted: true,
+            completedAt: _d(2026, 1, 14),
+            createdAt: _d(2026, 1, 14),
+            parentTaskId: 'main',
+            isSubtask: true,
+          ),
+        ],
+        now: _now(2026, 1, 14),
+      );
+
+      expect(subOnly.activeDays, isEmpty);
+      expect(subOnly.currentStreak, 0);
+      expect(subOnly.lastCompletedDate, isNull);
+
+      // La PRINCIPAL completada (con su subtarea arrastrada) SÍ activa el día:
+      // la subtarea no añade ni quita nada respecto a la principal.
+      final withMain = StreakCalculator.calculate(
+        tasks: [
+          _task('main', _d(2026, 1, 14)),
+          Task(
+            id: 's1',
+            title: 'Subtarea',
+            scheduledDate: _d(2026, 1, 14),
+            isCompleted: true,
+            completedAt: _d(2026, 1, 14),
+            createdAt: _d(2026, 1, 14),
+            parentTaskId: 'main',
+            isSubtask: true,
+          ),
+        ],
+        now: _now(2026, 1, 14),
+      );
+
+      expect(withMain.activeDays, {_day(2026, 1, 14)});
+      expect(withMain.currentStreak, 1);
+    });
+
+    test('5 subtareas completadas en 5 días consecutivos NO producen racha',
+        () {
+      // Verifica la regla a ESCALA: ni siquiera 5 subtareas en 5 días seguidos
+      // deben activar la racha (porque las subtareas no son "misiones" del
+      // Slate System, solo sub-bloques de una tarea).
+      final tasks = [
+        for (var day = 10; day <= 14; day++)
+          Task(
+            id: 's$day',
+            title: 'Sub',
+            scheduledDate: _d(2026, 1, day),
+            isCompleted: true,
+            completedAt: _d(2026, 1, day),
+            createdAt: _d(2026, 1, day),
+            parentTaskId: 'main',
+            isSubtask: true,
+          ),
+      ];
+      final result = StreakCalculator.calculate(
+        tasks: tasks,
+        now: _now(2026, 1, 14),
+      );
+
+      expect(result.activeDays, isEmpty,
+          reason: 'ningún día con solo subtareas cuenta como activo');
+      expect(result.currentStreak, 0);
+      expect(result.lastCompletedDate, isNull);
+    });
+
+    test(
+        '1 principal con 3 subtareas por día, 5 días seguidos: racha 5 (la '
+        'sub no aporta, solo la principal)', () {
+      // Caso simétrico: con principale+subs la racha sigue valiendo 5, no
+      // 5×(1+3) = 20. La subtarea arrastrada no añade ni quita.
+      final tasks = <Task>[];
+      for (var day = 10; day <= 14; day++) {
+        tasks.add(_task('main', _d(2026, 1, day)));
+        for (var sub = 1; sub <= 3; sub++) {
+          tasks.add(Task(
+            id: 's${day}_$sub',
+            title: 'Sub',
+            scheduledDate: _d(2026, 1, day),
+            isCompleted: true,
+            completedAt: _d(2026, 1, day),
+            createdAt: _d(2026, 1, day),
+            parentTaskId: 'main',
+            isSubtask: true,
+          ));
+        }
+      }
+      final result = StreakCalculator.calculate(
+        tasks: tasks,
+        now: _now(2026, 1, 14),
+      );
+
+      expect(result.activeDays, {
+        _day(2026, 1, 10),
+        _day(2026, 1, 11),
+        _day(2026, 1, 12),
+        _day(2026, 1, 13),
+        _day(2026, 1, 14),
+      });
+      expect(result.currentStreak, 5);
+      expect(result.longestStreak, 5);
+    });
   });
 
   group('BadgeType.badgesUpTo (desbloqueo multi-umbral)', () {

@@ -1,5 +1,4 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import '../adapters/badge_adapter.dart';
 import '../../../domain/entities/badge.dart';
 
 class BadgesBox {
