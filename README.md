@@ -6,7 +6,20 @@
   <img src="https://img.shields.io/badge/State-Riverpod-green?style=flat-square" alt="Riverpod">
   <img src="https://img.shields.io/badge/Storage-Hive-orange?style=flat-square" alt="Hive">
   <img src="https://img.shields.io/badge/Platform-Android-green?style=flat-square&logo=android" alt="Android">
+  <img src="https://img.shields.io/badge/Tests-312%20passing-brightgreen?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/Analyze-0%20issues-brightgreen?style=flat-square" alt="Analyze">
 </div>
+
+---
+
+## 🎯 Highlights técnicos
+
+- **Clean Architecture por capas** (`core` / `domain` / `data` / `application` / `presentation`) con inversión de dependencias vía interfaces de repositorio y estado gestionado con Riverpod.
+- **Offline-first real**: toda la persistencia vive en Hive; la app funciona al 100% sin conexión y no depende de ningún backend.
+- **Cálculo derivado, no contadores mutables**: rachas, XP y quests se recalculan desde el historial (fuente de verdad) en lugar de mantenerse en campos acumulativos, evitando bugs clásicos de desincronización entre estado y datos.
+- **Rendimiento medido y optimizado**: el borrado de series recurrentes bajó de 8-12 s a **~2 s** gracias a una cancelación selectiva de recordatorios, y el cold start redujo el jank de 403 a 321 frames saltados.
+- **Cobertura de tests significativa**: **312 tests** (`flutter test`) y **0 errores** de análisis estático (`flutter analyze`), incluyendo cobertura de calculadores puros, providers, adaptadores Hive y presentación.
+- **Feature de IA con gating estricto**: la generación de textos con Gemini es opt-in (default OFF); con el toggle apagado, el servicio de IA **nunca se invoca**, ni siquiera en el path de disparo de notificaciones.
 
 ---
 
@@ -16,7 +29,9 @@
 
 La app adopta una estética **System / Hunter / Dungeon** inspirada en "Solo Leveling" (ventanas de sistema, rangos, misiones y niveles), con textos y marca propios, sin copiar arte ni frases literales de la obra. Esta identidad es la **única** del producto: las notificaciones, las insignias y el sistema de progresión usan siempre la nomenclatura del Sistema (con textos generados por IA opcionales).
 
-Versión mostrada en Ajustes: **v1.2.0**.
+Versión mostrada en Ajustes: **v1.2.0** (constante de UI en `settings_screen.dart`, independiente del `version` de `pubspec.yaml`).
+
+<!-- Capturas de pantalla / demo — pendiente de agregar -->
 
 ---
 
@@ -294,33 +309,12 @@ Los tests se organizan en `test/application`, `test/data` y `test/presentation`,
 
 ---
 
-## 📱 Notas para el emulador (desarrollo local)
-
-Entorno de verificación usado por el Pipeline (host Linux, sin Android Studio):
-
-- **AVD**: `slate_avd` (Pixel, Android 15, **API 35**, x86_64), creado con `avdmanager`. Vive en `~/.config/.android/avd`; para listarlo con herramientas externas hace falta:
-  ```bash
-  export ANDROID_AVD_HOME=~/.config/.android/avd
-  export ANDROID_HOME=/opt/android-sdk   # SDK usado en el host
-  ```
-- **Lanzamiento robusto**: para que el shell no mate el proceso al finalizar, ejecutar con `systemd-run --user` y flags de rendimiento:
-  ```bash
-  systemd-run --user --scope emulator -avd slate_avd -gpu host -memory 1536 -cores 2
-  ```
-- **RAM del host limitada (7.6 G)**: antes de verificar/builds, detener los daemons de Gradle (`./gradlew --stop`) para evitar OOM-kills (ya hubo un `JetifyTransform OOM` histórico).
-- **Permisos runtime a conceder**: `POST_NOTIFICATIONS` (y opcionales de localización para la detección automática de zona horaria).
-- **Medición de cold start**: `adb shell am start -W -n com.slate.slate_app/.MainActivity` + `logcat` buscando `Displayed`.
-- **Aviso NDK**: el proyecto usa el NDK por defecto de Flutter (26.3); algunos plugins piden la 27.0. Es solo una advertencia y **no bloquea el build debug**.
-
----
-
 ## 🕘 Estado actual / Historial reciente
 
 - ✅ **Ronda de correcciones y optimización** — Eliminación del input por voz, mejoras de rendimiento (apertura paralela de cajas Hive, poda y recordatorios fuera del primer frame), insignias rediseñadas (identidad única Slate System) y tema corregido (eliminado el modo "Sistema").
 - ✅ **Fijación de bugs** — Overflow de tarjetas en Estadísticas (layout vertical), quests dinámicas (visibilidad/re-cálculo al cambiar tareas), bloqueo de tareas futuras en el calendario y recordatorios nunca en el pasado, arrastre de subtareas y conservación exacta del XP.
 - ✅ **Rendimiento** — Cold start reducido (jank de 403→321 frames saltados), borrado de series recurrentes en ~2 s (antes 8-12 s) y guardado recurrente sin bloqueos.
 - ✅ **Ampliaciones recientes** — Sistema de XP/nivel/rango (F2), quest diaria + resumen quincenal (F3), subtareas + recurrencia mensual (F4), icono adaptativo.
-- 📝 **Pendiente** — Hay cambios en el working tree pendientes de commit (el usuario los revisa antes de integrar).
 
 ---
 
@@ -344,6 +338,13 @@ Entorno de verificación usado por el Pipeline (host Linux, sin Android Studio):
 
 ---
 
+## 🛠️ Notas de desarrollo
+
+- Verificación local sobre emulador Android (API 35, x86_64) con `flutter test` y `flutter analyze` como puertas de calidad antes de integrar.
+- El proyecto usa el NDK por defecto de Flutter (26.3); algunos plugins piden la 27.0 — es solo una advertencia y no bloquea el build debug.
+
+---
+
 ## 📄 Licencia
 
-Este proyecto es privado y para uso personal.
+Este proyecto es de código abierto con fines de **portafolio y demostración técnica**; su uso está pensado como proyecto personal y no está licenciado para redistribución comercial.
