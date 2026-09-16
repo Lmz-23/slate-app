@@ -372,6 +372,9 @@ class BackupCodec {
       // que un backup anterior a F4 se siga importando sin cambios.
       'isSubtask': t.isSubtask,
       'subtaskXpGranted': t.subtaskXpGranted,
+      // Fase 2 (A11): clave opcional, aditiva. Ausencia (backup anterior) =
+      // null al restaurar.
+      'durationMinutes': t.durationMinutes,
     };
   }
 
@@ -393,6 +396,7 @@ class BackupCodec {
       parentTaskId: m['parentTaskId'] as String?,
       isSubtask: m['isSubtask'] as bool? ?? false,
       subtaskXpGranted: m['subtaskXpGranted'] as bool? ?? false,
+      durationMinutes: m['durationMinutes'] as int?,
     );
   }
 

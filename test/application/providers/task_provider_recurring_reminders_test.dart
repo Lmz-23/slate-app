@@ -118,6 +118,7 @@ void main() {
             title: 'Diaria',
             scheduledDate: today,
             scheduledTime: DateTime(today.year, today.month, today.day, 23, 59),
+            durationMinutes: 60,
             recurrenceIndex: RecurrenceType.daily.index,
           );
       // La sincronización de ocurrencias es en segundo plano: se espera.
@@ -152,6 +153,7 @@ void main() {
             title: 'Única',
             scheduledDate: today,
             scheduledTime: DateTime(today.year, today.month, today.day, 23, 59),
+            durationMinutes: 60,
           );
       await settle();
 
@@ -173,6 +175,7 @@ void main() {
             title: 'Diaria a borrar',
             scheduledDate: today,
             scheduledTime: DateTime(today.year, today.month, today.day, 23, 59),
+            durationMinutes: 60,
             recurrenceIndex: RecurrenceType.daily.index,
           );
       await settle();
@@ -214,6 +217,7 @@ void main() {
             title: 'Diaria desde hija',
             scheduledDate: today,
             scheduledTime: DateTime(today.year, today.month, today.day, 23, 59),
+            durationMinutes: 60,
             recurrenceIndex: RecurrenceType.daily.index,
           );
       await settle();

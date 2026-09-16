@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +9,7 @@ import '../../domain/enums/task_priority.dart';
 import '../../domain/enums/recurrence_type.dart';
 import '../../data/hive/boxes/tasks_box.dart';
 import '../../data/repositories/task_repository_impl.dart';
+import '../services/recurrence_calculator.dart';
 import '../services/reminder_manager.dart';
 import '../services/reminder_schedule_calculator.dart';
 import '../services/timezone_service.dart';
@@ -108,7 +108,16 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     int recurrenceIndex = 0,
     List<int>? recurrenceDays,
     String? categoryId,
+    int? durationMinutes,
   }) async {
+    // Invariante I1 (Addendum 2, A11): toda tarea con hora de inicio debe
+    // guardarse con una duración > 0. Se aplica en el PUNTO DE ESCRITURA
+    // (aquí y en el formulario), no como no-nulidad de tipo en la entidad.
+    assert(
+      scheduledTime == null || (durationMinutes != null && durationMinutes > 0),
+      'I1: una tarea con hora de inicio requiere durationMinutes > 0',
+    );
+
     final task = Task(
       id: _uuid.v4(),
       title: title,
@@ -120,6 +129,7 @@ class TasksNotifier extends StateNotifier<List<Task>> {
       recurrenceDays: recurrenceDays,
       categoryId: categoryId,
       createdAt: DateTime.now(),
+      durationMinutes: durationMinutes,
     );
     await _repository.add(task);
     await _generateRecurringTasks(task);
@@ -171,60 +181,35 @@ class TasksNotifier extends StateNotifier<List<Task>> {
     refresh();
   }
 
+  /// La serie se materializa en BD por UN AÑO completo (365 instancias,
+  /// decisión de producto). El horizonte de recordatorios
+  /// ([ReminderScheduleCalculator.recurringReminderHorizonDays]) limita
+  /// cuántas NOTIFICACIONES se programan, no cuántas tareas existen; la poda
+  /// ([TasksNotifier.pruneOldPending]) mantiene la caja ligera con el tiempo.
+  ///
+  /// Addendum 2 (A12): las fechas de las ocurrencias se calculan con
+  /// [RecurrenceCalculator.occurrenceDates], la MISMA regla que usa
+  /// `TaskOverlapDetector` (horizonte 35) para proyectar drafts recurrentes.
+  /// Si divergieran, el detector podría aprobar un guardado que esta función
+  /// terminaría materializando en conflicto (RG20).
   Future<void> _generateRecurringTasks(Task task) async {
     if (task.recurrence == RecurrenceType.none) return;
 
-    final generatedTasks = <Task>[];
-    DateTime nextDate = task.scheduledDate.add(const Duration(days: 1));
+    final dates = RecurrenceCalculator.occurrenceDates(
+      base: task.scheduledDate,
+      recurrence: task.recurrence,
+      recurrenceDays: task.recurrenceDays,
+      days: 365,
+    );
 
-    // La serie se materializa en BD por UN AÑO completo (365 instancias,
-    // decisión de producto). El horizonte de recordatorios
-    // ([ReminderScheduleCalculator.recurringReminderHorizonDays]) limita
-    // cuántas NOTIFICACIONES se programan, no cuántas tareas existen; la poda
-    // ([TasksNotifier.pruneOldPending]) mantiene la caja ligera con el tiempo.
-    for (int i = 0; i < 365; i++) {
-      bool shouldGenerate = false;
-
-      switch (task.recurrence) {
-        case RecurrenceType.daily:
-          shouldGenerate = true;
-          break;
-        case RecurrenceType.weekly:
-          if (nextDate.weekday == task.scheduledDate.weekday) {
-            shouldGenerate = true;
-          }
-          break;
-        case RecurrenceType.specificDays:
-          if (task.recurrenceDays != null && task.recurrenceDays!.contains(nextDate.weekday % 7)) {
-            shouldGenerate = true;
-          }
-          break;
-        case RecurrenceType.monthly:
-          // F4: misma "ancla" de día de mes que la tarea original, recortada al
-          // último día del mes cuando este no la tiene (31→28/29/30; 30→28/29…
-          // y 29-feb → 28 en años no bisiestos).
-          final anchorDay = math.min(
-            task.scheduledDate.day,
-            DateTime(nextDate.year, nextDate.month + 1, 0).day,
-          );
-          if (nextDate.day == anchorDay) {
-            shouldGenerate = true;
-          }
-          break;
-        case RecurrenceType.none:
-          break;
-      }
-
-      if (shouldGenerate) {
-        generatedTasks.add(task.copyWith(
-          id: _uuid.v4(),
-          scheduledDate: nextDate,
-          createdAt: DateTime.now(),
-          parentTaskId: task.id,
-        ));
-      }
-      nextDate = nextDate.add(const Duration(days: 1));
-    }
+    final generatedTasks = dates
+        .map((nextDate) => task.copyWith(
+              id: _uuid.v4(),
+              scheduledDate: nextDate,
+              createdAt: DateTime.now(),
+              parentTaskId: task.id,
+            ))
+        .toList();
 
     // Escritura en paralelo: todas las ocurrencias se guardan simultáneamente
     await Future.wait(generatedTasks.map((t) => _repository.add(t)));

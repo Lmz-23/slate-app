@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/extensions/datetime_extensions.dart';
+import '../../../core/theme/slate_shapes.dart';
+import '../../../core/theme/slate_theme_context.dart';
 import '../../../application/providers/task_provider.dart';
-import '../../../application/providers/streak_provider.dart';
 import '../../../application/providers/now_provider.dart';
-import '../../widgets/streak_badge.dart';
 import '../task_form/task_form_sheet.dart';
-import 'widgets/quest_card.dart';
+import 'widgets/daily_progress_card.dart';
 import 'widgets/task_section.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -17,22 +16,23 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDate = ref.watch(selectedDateProvider);
-    final streak = ref.watch(streakProvider);
     final scheduledTasks = ref.watch(scheduledTasksProvider);
     final unscheduledTasks = ref.watch(unscheduledTasksProvider);
+    final slate = context.slate;
 
     return Scaffold(
+      backgroundColor: slate.background,
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(context, ref, selectedDate, streak),
+            _buildHeader(context, ref, selectedDate),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const QuestCard(),
+                    const DailyProgressCard(),
                     const SizedBox(height: AppSpacing.lg),
                     if (scheduledTasks.isNotEmpty) ...[
                       TaskSection(
@@ -48,7 +48,7 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ],
                     if (scheduledTasks.isEmpty && unscheduledTasks.isEmpty)
-                      _buildEmptyState(),
+                      _buildEmptyState(context),
                     const SizedBox(height: 100),
                   ],
                 ),
@@ -65,40 +65,29 @@ class HomeScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     DateTime date,
-    dynamic streak,
   ) {
     final now = ref.watch(nowProvider).value ?? DateTime.now();
+    final slate = context.slate;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    date.relativeDay(now: now),
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    date.formattedDate,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-              StreakBadge(streakDays: streak.currentStreak),
-            ],
+          Text(
+            date.relativeDay(now: now),
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: slate.textPrimary,
+            ),
+          ),
+          Text(
+            date.formattedDate,
+            style: TextStyle(
+              fontSize: 12.5,
+              color: slate.textSecondary,
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           _buildDateSelector(context, ref, date),
@@ -116,6 +105,7 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildDateSelector(BuildContext context, WidgetRef ref, DateTime selectedDate) {
     final now = ref.watch(nowProvider).value ?? DateTime.now();
+    final slate = context.slate;
 
     // La franja de 7 días se centra en la FECHA SELECCIONADA (selectedDate ± 3),
     // no en el día actual, para que al navegar a una fecha lejana la franja
@@ -129,65 +119,64 @@ class HomeScreen extends ConsumerWidget {
             ref.read(selectedDateProvider.notifier).state =
                 selectedDate.subtract(const Duration(days: 7));
           },
-          icon: const Icon(Icons.chevron_left, color: AppColors.textSecondary),
+          icon: Icon(Icons.chevron_left, color: slate.textSecondary),
           tooltip: 'Semana anterior',
         ),
         Expanded(
-          child: SizedBox(
-            height: 70,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: dates.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final date = dates[index];
-                final isSelected = date.year == selectedDate.year &&
-                    date.month == selectedDate.month &&
-                    date.day == selectedDate.day;
-                final isToday = date.isSameDay(now);
+          child: Row(
+            children: dates.map((date) {
+              final isSelected = date.year == selectedDate.year &&
+                  date.month == selectedDate.month &&
+                  date.day == selectedDate.day;
+              final isToday = date.isSameDay(now);
 
-                return GestureDetector(
-                  onTap: () {
-                    ref.read(selectedDateProvider.notifier).state = date;
-                  },
-                  child: Container(
-                    width: 50,
-                    decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primary : AppColors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: isToday && !isSelected
-                          ? Border.all(color: AppColors.primary, width: 1)
-                          : null,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          const ['L', 'M', 'X', 'J', 'V', 'S', 'D'][date.weekday - 1],
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isSelected
-                                ? Colors.white.withValues(alpha: 0.7)
-                                : AppColors.textSecondary,
-                          ),
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: GestureDetector(
+                    onTap: () {
+                      ref.read(selectedDateProvider.notifier).state = date;
+                    },
+                    child: Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: isSelected ? slate.accent : slate.surface,
+                        borderRadius: BorderRadius.circular(
+                          SlateShapes.radiusSmall,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          date.day.toString(),
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: isSelected
-                                ? Colors.white
-                                : AppColors.textPrimary,
+                        border: isToday && !isSelected
+                            ? Border.all(color: slate.todayAccent, width: 1)
+                            : null,
+                        boxShadow: isSelected ? context.slateShapes.cardShadow : null,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            const ['L', 'M', 'X', 'J', 'V', 'S', 'D'][date.weekday - 1],
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isSelected
+                                  ? slate.onAccent.withValues(alpha: 0.7)
+                                  : slate.textSecondary,
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 4),
+                          Text(
+                            date.day.toString(),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: isSelected ? slate.onAccent : slate.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            }).toList(),
           ),
         ),
         IconButton(
@@ -195,14 +184,15 @@ class HomeScreen extends ConsumerWidget {
             ref.read(selectedDateProvider.notifier).state =
                 selectedDate.add(const Duration(days: 7));
           },
-          icon: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+          icon: Icon(Icons.chevron_right, color: slate.textSecondary),
           tooltip: 'Semana siguiente',
         ),
       ],
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
+    final slate = context.slate;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
@@ -211,23 +201,24 @@ class HomeScreen extends ConsumerWidget {
           children: [
             Icon(
               Icons.check_circle_outline,
-              size: 80,
-              color: AppColors.textTertiary.withValues(alpha: 0.5),
+              size: 40,
+              color: slate.textTertiary,
             ),
             const SizedBox(height: AppSpacing.md),
-            const Text(
+            Text(
               'Sin tareas para hoy',
               style: TextStyle(
-                fontSize: 18,
-                color: AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: slate.textSecondary,
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            const Text(
+            Text(
               'Toca + para agregar una tarea',
               style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textTertiary,
+                fontSize: 12,
+                color: slate.textTertiary,
               ),
             ),
           ],

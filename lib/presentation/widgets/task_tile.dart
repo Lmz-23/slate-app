@@ -5,8 +5,10 @@ import '../../../domain/entities/task.dart';
 import '../../../domain/enums/task_priority.dart';
 import '../../../domain/enums/recurrence_type.dart';
 import '../../../application/providers/task_provider.dart';
-import '../../../application/providers/category_provider.dart';
+import '../../../application/services/task_schedule_calculator.dart';
 import '../../../core/extensions/datetime_extensions.dart';
+import '../../../core/theme/slate_shapes.dart';
+import '../../../core/theme/slate_theme_context.dart';
 import 'common/slate_card.dart';
 
 class TaskTile extends ConsumerStatefulWidget {
@@ -16,8 +18,8 @@ class TaskTile extends ConsumerStatefulWidget {
   /// tarea como completada (toggle).
   final VoidCallback? onTap;
 
-  /// Se invoca al tocar el icono de edición del extremo derecho.
-  /// Este toque NO dispara [onTap].
+  /// Se invoca al mantener pulsada la tarjeta (P3): afordancia de edición,
+  /// reemplaza al icono `more_horiz` retirado del diseño.
   final VoidCallback? onEdit;
 
   /// Se invoca al confirmar la eliminación de SOLO esta ocurrencia.
@@ -146,13 +148,6 @@ class _TaskTileState extends ConsumerState<TaskTile> {
 
   @override
   Widget build(BuildContext context) {
-    // P2-fix: categoriesProvider se lee (no se observa) porque las categorías
-    // casi nunca cambian. Esto evita rebuilds innecesarios en todos los
-    // TaskTiles cuando se modifica una categoría.
-    final categories = ref.read(categoriesProvider);
-    final category = task.categoryId != null
-        ? categories.where((c) => c.id == task.categoryId).firstOrNull
-        : null;
     // F4: subtareas directas de esta tarea (marca explícita isSubtask).
     // P1: se usa ref.read en lugar de ref.watch para evitar que cada TaskTile
     // se rebuild cuando CUALQUIER tarea cambia. Las subtareas se filtran aquí
@@ -178,152 +173,156 @@ class _TaskTileState extends ConsumerState<TaskTile> {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         decoration: BoxDecoration(
-          color: AppColors.error,
-          borderRadius: BorderRadius.circular(12),
+          color: context.slate.danger,
+          borderRadius: BorderRadius.circular(SlateShapes.radiusMedium),
         ),
         child: const Icon(Icons.delete, color: Colors.white),
       ),
-      child: SlateCard(
-        onTap: widget.onTap,
-        child: Row(
-          children: [
-            _buildStatusIndicator(),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      if (category != null) ...[
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.fromHex(category.colorHex),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                      ],
-                      Expanded(
-                        child: Text(
-                          task.title,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            color: task.isCompleted
-                                ? AppColors.textTertiary
-                                : AppColors.textPrimary,
-                            decoration: task.isCompleted
-                                ? TextDecoration.lineThrough
-                                : null,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (task.scheduledTime != null || task.notes != null) ...[
-                    const SizedBox(height: 4),
+      // P3: la edición pasa de un icono `more_horiz` a pulsación larga sobre
+      // toda la tarjeta. El toque corto sigue siendo el toggle de completado
+      // (SlateCard.onTap); ambos gestos conviven en el mismo árbol sin
+      // conflicto (el arbitraje de gestos de Flutter distingue tap de
+      // long-press).
+      child: GestureDetector(
+        onLongPress: widget.onEdit,
+        child: SlateCard(
+          onTap: widget.onTap,
+          child: Row(
+            children: [
+              _buildStatusIndicator(context),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Row(
                       children: [
-                        if (task.scheduledTime != null) ...[
-                          const Icon(
-                            Icons.access_time,
-                            size: 12,
-                            color: AppColors.textTertiary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            task.scheduledTime!.formattedTime,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textTertiary,
+                        if (_priorityDotColor(context) != null) ...[
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _priorityDotColor(context),
                             ),
                           ),
+                          const SizedBox(width: 6),
                         ],
-                        if (task.notes != null && task.notes!.isNotEmpty) ...[
-                          if (task.scheduledTime != null)
-                            const SizedBox(width: 12),
-                          const Icon(
-                            Icons.notes,
-                            size: 12,
-                            color: AppColors.textTertiary,
+                        Expanded(
+                          child: Text(
+                            task.title,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: task.isCompleted
+                                  ? context.slate.textTertiary
+                                  : context.slate.textPrimary,
+                              decoration: task.isCompleted
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
                           ),
-                        ],
+                        ),
                       ],
                     ),
+                    if (task.scheduledTime != null || task.notes != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          if (task.scheduledTime != null) ...[
+                            Icon(
+                              Icons.access_time,
+                              size: 12,
+                              color: context.slate.textTertiary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _timeLabel(),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: context.slate.textTertiary,
+                              ),
+                            ),
+                          ],
+                          if (task.notes != null && task.notes!.isNotEmpty) ...[
+                            if (task.scheduledTime != null)
+                              const SizedBox(width: 12),
+                            Icon(
+                              Icons.notes,
+                              size: 12,
+                              color: context.slate.textTertiary,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                    // F4: subtareas anidadas de la tarea principal. Cada fila se
+                    // toca para marcar/desmarcar SOLO esa subtarea (+2 XP).
+                    if (subtasks.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      ...subtasks.map((s) => _buildSubtaskRow(context, s)),
+                    ],
                   ],
-                  // F4: subtareas anidadas de la tarea principal. Cada fila se
-                  // toca para marcar/desmarcar SOLO esa subtarea (+2 XP).
-                  if (subtasks.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    ...subtasks.map(_buildSubtaskRow),
-                  ],
-                ],
+                ),
               ),
-            ),
-            _buildPriorityIndicator(),
-            const SizedBox(width: 4),
-            IconButton(
-              onPressed: widget.onEdit,
-              icon: const Icon(
-                Icons.more_horiz,
-                color: AppColors.textSecondary,
-              ),
-              tooltip: 'Editar tarea',
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
+  /// Formato del horario del tile (sistema-visual-fase3.md §10): 24h fijo,
+  /// rango con en-dash sin espacios (`14:30–16:00`) cuando hay duración
+  /// conocida; hora simple (`09:00`) si no (tarea legacy sin `durationMinutes`
+  /// o sin fin conocido).
+  String _timeLabel() {
+    final range = TaskScheduleCalculator.effectiveRange(task);
+    if (range != null) {
+      return '${range.start.formattedTime}–${range.end.formattedTime}';
+    }
+    return task.scheduledTime!.formattedTime;
+  }
+
+  /// Regla del punto único de prioridad (sistema-visual-fase3.md §8): un solo
+  /// indicador de 7px que codifica SOLO prioridad, nunca categoría. Prioridad
+  /// normal no lleva punto (ausencia, no color neutro).
+  Color? _priorityDotColor(BuildContext context) {
+    switch (task.priority) {
+      case TaskPriority.high:
+        return context.slate.priorityHigh;
+      case TaskPriority.medium:
+        return context.slate.priorityMedium;
+      case TaskPriority.normal:
+        return null;
+    }
+  }
+
   /// Indicador visual de estado (completada o pendiente). No es táctil:
   /// el toggle se realiza tocando cualquier parte de la tarjeta.
-  Widget _buildStatusIndicator() {
+  Widget _buildStatusIndicator(BuildContext context) {
+    final slate = context.slate;
     return Container(
       width: 24,
       height: 24,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: task.isCompleted ? AppColors.success : Colors.transparent,
+        color: task.isCompleted ? slate.success : Colors.transparent,
         border: Border.all(
-          color: task.isCompleted ? AppColors.success : AppColors.textTertiary,
+          color: task.isCompleted ? slate.success : slate.outline,
           width: 2,
         ),
       ),
       child: task.isCompleted
-          ? const Icon(Icons.check, size: 16, color: Colors.white)
+          ? Icon(Icons.check, size: 16, color: slate.onSuccess)
           : null,
-    );
-  }
-
-  Widget _buildPriorityIndicator() {
-    if (task.priority == TaskPriority.normal) return const SizedBox.shrink();
-
-    final color = switch (task.priority) {
-      TaskPriority.high => AppColors.error,
-      TaskPriority.medium => AppColors.warning,
-      TaskPriority.normal => Colors.transparent,
-    };
-
-    return Container(
-      width: 4,
-      height: 40,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(2),
-      ),
     );
   }
 
   /// F4: fila de subtarea anidada. Tocar la fila marca/desmarca la subtarea
   /// (+2 XP) SIN tocar la tarjeta de la principal.
-  Widget _buildSubtaskRow(Task subtask) {
+  Widget _buildSubtaskRow(BuildContext context, Task subtask) {
+    final slate = context.slate;
     return GestureDetector(
       onTap: () => widget.onToggleSubtask?.call(subtask.id),
       behavior: HitTestBehavior.opaque,
@@ -336,17 +335,14 @@ class _TaskTileState extends ConsumerState<TaskTile> {
               height: 18,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color:
-                    subtask.isCompleted ? AppColors.success : Colors.transparent,
+                color: subtask.isCompleted ? slate.success : Colors.transparent,
                 border: Border.all(
-                  color: subtask.isCompleted
-                      ? AppColors.success
-                      : AppColors.textTertiary,
+                  color: subtask.isCompleted ? slate.success : slate.outline,
                   width: 1.5,
                 ),
               ),
               child: subtask.isCompleted
-                  ? const Icon(Icons.check, size: 12, color: Colors.white)
+                  ? Icon(Icons.check, size: 12, color: slate.onSuccess)
                   : null,
             ),
             const SizedBox(width: 8),
@@ -355,12 +351,8 @@ class _TaskTileState extends ConsumerState<TaskTile> {
                 subtask.title,
                 style: TextStyle(
                   fontSize: 13,
-                  color: subtask.isCompleted
-                      ? AppColors.textTertiary
-                      : AppColors.textSecondary,
-                  decoration: subtask.isCompleted
-                      ? TextDecoration.lineThrough
-                      : null,
+                  color: subtask.isCompleted ? slate.textTertiary : slate.textSecondary,
+                  decoration: subtask.isCompleted ? TextDecoration.lineThrough : null,
                 ),
               ),
             ),

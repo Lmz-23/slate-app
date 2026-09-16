@@ -8,6 +8,8 @@ import '../../../domain/enums/task_priority.dart';
 import '../../../domain/enums/recurrence_type.dart';
 import '../../../application/providers/task_provider.dart';
 import '../../../application/providers/category_provider.dart';
+import '../../../application/providers/task_overlap_provider.dart';
+import '../../../application/services/task_overlap_detector.dart';
 import 'widgets/priority_selector.dart';
 import 'widgets/category_selector.dart';
 import 'widgets/recurrence_selector.dart';
@@ -35,6 +37,13 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
 
   late DateTime _selectedDate;
   TimeOfDay? _selectedTime;
+
+  /// Duración en minutos, obligatoria (>0) cuando `_selectedTime != null`
+  /// (invariante I1, Addendum 2 A11). Se deriva de la hora de fin elegida por
+  /// el usuario; nunca se expone un `TimeOfDay` de fin propio en el estado
+  /// para no arrastrar el mismo problema de "día no autoritativo" que ya tiene
+  /// `scheduledTime`.
+  int? _durationMinutes;
   TaskPriority _priority = TaskPriority.normal;
   RecurrenceType _recurrence = RecurrenceType.none;
   List<int> _recurrenceDays = [];
@@ -64,6 +73,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
             _selectedTime = task.scheduledTime != null
                 ? TimeOfDay.fromDateTime(task.scheduledTime!)
                 : null;
+            _durationMinutes = task.durationMinutes;
             _priority = task.priority;
             _recurrence = task.recurrence;
             _recurrenceDays = task.recurrenceDays ?? [];
@@ -460,74 +470,127 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
   }
 
   Widget _buildDateTimeRow() {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: GestureDetector(
-            onTap: _pickDate,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.md,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceLight,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.calendar_today, size: 20, color: AppColors.textSecondary),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    _selectedDate.formattedDate,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textPrimary,
-                    ),
+        Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: _pickDate,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.md,
                   ),
-                ],
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceLight,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 20, color: AppColors.textSecondary),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        _selectedDate.formattedDate,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: GestureDetector(
-            onTap: _pickTime,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.md,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceLight,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.access_time, size: 20, color: AppColors.textSecondary),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    _selectedTime?.format(context) ?? 'Sin hora',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textPrimary,
-                    ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: GestureDetector(
+                onTap: _pickTime,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.md,
                   ),
-                ],
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceLight,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.access_time, size: 20, color: AppColors.textSecondary),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        _selectedTime?.format(context) ?? 'Sin hora',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
+            if (_selectedTime != null) ...[
+              const SizedBox(width: AppSpacing.sm),
+              IconButton(
+                onPressed: () => setState(() {
+                  // "Sin hora" limpia inicio y duración a la vez (Addendum 2,
+                  // A11): una tarea sin inicio no puede tener fin.
+                  _selectedTime = null;
+                  _durationMinutes = null;
+                }),
+                icon: const Icon(Icons.close, size: 20, color: AppColors.textTertiary),
+              ),
+            ],
+          ],
         ),
+        // Invariante I1: hora de fin obligatoria cuando hay hora de inicio.
         if (_selectedTime != null) ...[
-          const SizedBox(width: AppSpacing.sm),
-          IconButton(
-            onPressed: () => setState(() => _selectedTime = null),
-            icon: const Icon(Icons.close, size: 20, color: AppColors.textTertiary),
+          const SizedBox(height: AppSpacing.sm),
+          GestureDetector(
+            onTap: _pickEndTime,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.update, size: 20, color: AppColors.textSecondary),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    _durationMinutes != null && _durationMinutes! > 0
+                        ? 'Hasta ${_endTimeLabel()}'
+                        : 'Hora de fin (obligatoria)',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ],
     );
+  }
+
+  /// Hora de fin efectiva formateada en 24h (`14:30`), derivada de
+  /// `_selectedTime + _durationMinutes` (sistema-visual-fase3.md §10).
+  String _endTimeLabel() {
+    final start = _selectedTime!;
+    final endMinuteOfDay = (start.hour * 60 + start.minute + _durationMinutes!) % 1440;
+    final hh = (endMinuteOfDay ~/ 60).toString().padLeft(2, '0');
+    final mm = (endMinuteOfDay % 60).toString().padLeft(2, '0');
+    return '$hh:$mm';
   }
 
   Future<void> _pickDate() async {
@@ -574,8 +637,71 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
       },
     );
     if (time != null) {
-      setState(() => _selectedTime = time);
+      setState(() {
+        _selectedTime = time;
+        // Prefijar fin = inicio + 60 min al elegir/cambiar el inicio
+        // (Addendum 2, A11).
+        _durationMinutes = 60;
+      });
     }
+  }
+
+  /// Selector de hora de FIN (Addendum 2, A11): se convierte a minutos de
+  /// duración en el formulario (el estado nunca guarda un `TimeOfDay` de fin
+  /// propio). `end <= start` se interpreta como cruce de medianoche
+  /// (`(fin - inicio) mod 1440`); solo se rechaza duración == 0 (misma hora).
+  Future<void> _pickEndTime() async {
+    if (_selectedTime == null) return;
+
+    final initialEnd = TimeOfDay(
+      hour: (_selectedTime!.hour + 1) % 24,
+      minute: _selectedTime!.minute,
+    );
+
+    final end = await showTimePicker(
+      context: context,
+      initialTime: _durationMinutes != null
+          ? TimeOfDay(
+              hour: ((_selectedTime!.hour * 60 +
+                          _selectedTime!.minute +
+                          _durationMinutes!) %
+                      1440) ~/
+                  60,
+              minute: ((_selectedTime!.hour * 60 +
+                          _selectedTime!.minute +
+                          _durationMinutes!) %
+                      1440) %
+                  60,
+            )
+          : initialEnd,
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.primary,
+              surface: AppColors.surface,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (end == null) return;
+
+    final startMinuteOfDay = _selectedTime!.hour * 60 + _selectedTime!.minute;
+    final endMinuteOfDay = end.hour * 60 + end.minute;
+    final duration = (endMinuteOfDay - startMinuteOfDay) % 1440;
+
+    if (duration <= 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('La hora de fin debe ser distinta a la de inicio')),
+        );
+      }
+      return;
+    }
+
+    setState(() => _durationMinutes = duration);
   }
 
   Future<void> _saveTask() async {
@@ -585,6 +711,46 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
         const SnackBar(content: Text('El título es obligatorio')),
       );
       return;
+    }
+
+    // Invariante I1 (Addendum 2, A11): hora de fin obligatoria si hay inicio.
+    if (_selectedTime != null && (_durationMinutes == null || _durationMinutes! <= 0)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('La hora de fin es obligatoria')),
+      );
+      return;
+    }
+
+    // Addendum 2/3 (A12/A14): detección de solapamiento ANTES de llamar al
+    // notifier. Se re-consulta tras cada "Acortar" (el índice se reconstruye
+    // porque `taskOverlapQueryProvider` observa `tasksProvider`), por si el
+    // borrador conflictúa con más de una tarea.
+    if (_selectedTime != null) {
+      final draft = TaskDraftSchedule(
+        scheduledDate: _selectedDate,
+        startTime: _selectedTime,
+        durationMinutes: _durationMinutes,
+        recurrence: _recurrence,
+        recurrenceDays: _recurrenceDays.isEmpty ? null : _recurrenceDays,
+      );
+
+      while (true) {
+        final query = ref.read(taskOverlapQueryProvider);
+        final conflict = query.findFirstConflict(
+          draft,
+          editingTaskId: _existingTask?.id,
+        );
+        if (conflict == null) break;
+
+        final action = await _showConflictDialog(conflict);
+        if (action == null) return; // Cancelar: vuelve al formulario.
+        if (action == _ConflictAction.truncate) {
+          await _truncateConflict(conflict);
+          if (!mounted) return;
+          continue; // Re-consulta por si hay más conflictos.
+        }
+        break; // Guardar de todos modos.
+      }
     }
 
     DateTime? scheduledTime;
@@ -614,6 +780,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
         recurrence: _recurrence,
         recurrenceDays: _recurrenceDays.isEmpty ? null : _recurrenceDays,
         categoryId: _categoryId,
+        durationMinutes: _durationMinutes,
       );
       await tasksNotifier.updateTask(updated);
       mainTaskId = _existingTask!.id;
@@ -627,6 +794,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
         recurrenceIndex: _recurrence.index,
         recurrenceDays: _recurrenceDays.isEmpty ? null : _recurrenceDays,
         categoryId: _categoryId,
+        durationMinutes: _durationMinutes,
       );
     }
 
@@ -648,4 +816,78 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
       Navigator.pop(context);
     }
   }
+
+  /// Diálogo de conflicto de horario (Addendum 2/3, A12/A14). Tres acciones:
+  /// Acortar (solo si `canTruncate`), Guardar de todos modos, Cancelar.
+  Future<_ConflictAction?> _showConflictDialog(TaskConflict conflict) {
+    final rangeLabel =
+        '${conflict.start.formattedTime}–${conflict.end.formattedTime}';
+    return showDialog<_ConflictAction>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text(
+          'Conflicto de horario',
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
+        content: Text(
+          '"${conflict.title}" se solapa con esta tarea ($rangeLabel).',
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          if (conflict.canTruncate)
+            FilledButton(
+              onPressed: () =>
+                  Navigator.pop(dialogContext, _ConflictAction.truncate),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+              child: Text('Acortar "${conflict.title}"'),
+            ),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(dialogContext, _ConflictAction.saveAnyway),
+            child: const Text('Guardar de todos modos'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Resuelve el conflicto acortando la tarea EXISTENTE en conflicto
+  /// (Addendum 3, A14): relee la tarea por id (nunca aplica `copyWith` sobre
+  /// el snapshot del diálogo), guarda de todos modos si mientras tanto se
+  /// completó (guarda defensiva), y ofrece "Deshacer" (RG20).
+  Future<void> _truncateConflict(TaskConflict conflict) async {
+    final tasksNotifier = ref.read(tasksProvider.notifier);
+    final current =
+        ref.read(tasksProvider).where((t) => t.id == conflict.taskId).firstOrNull;
+    if (current == null || current.isCompleted) return;
+
+    final previousDuration = current.durationMinutes;
+    await tasksNotifier.updateTask(
+      current.copyWith(durationMinutes: conflict.truncatedDurationMinutes),
+    );
+
+    if (mounted && previousDuration != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('"${current.title}" acortada'),
+          action: SnackBarAction(
+            label: 'DESHACER',
+            onPressed: () {
+              ref.read(tasksProvider.notifier).updateTask(
+                    current.copyWith(durationMinutes: previousDuration),
+                  );
+            },
+          ),
+        ),
+      );
+    }
+  }
 }
+
+/// Acción elegida en el diálogo de conflicto de horario.
+enum _ConflictAction { truncate, saveAnyway }

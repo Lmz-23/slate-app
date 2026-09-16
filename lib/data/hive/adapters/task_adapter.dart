@@ -35,13 +35,16 @@ class TaskAdapter extends TypeAdapter<Task> {
       // devuelve los valores por defecto (false).
       isSubtask: fields[13] as bool? ?? false,
       subtaskXpGranted: fields[14] as bool? ?? false,
+      // Fase 2 (A11): clave 15, aditiva y opcional. Un registro escrito antes
+      // de este cambio no tiene la clave 15 y `as int?` devuelve `null`.
+      durationMinutes: fields[15] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Task obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -71,6 +74,8 @@ class TaskAdapter extends TypeAdapter<Task> {
       ..writeByte(13)
       ..write(obj.isSubtask)
       ..writeByte(14)
-      ..write(obj.subtaskXpGranted);
+      ..write(obj.subtaskXpGranted)
+      ..writeByte(15)
+      ..write(obj.durationMinutes);
   }
 }

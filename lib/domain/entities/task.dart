@@ -37,6 +37,16 @@ class Task extends Equatable {
   /// para que la simetría sobreviva a reinicios.
   final bool subtaskXpGranted;
 
+  /// Fase 2 (Decisión A11 de rediseno-identidad-visual.md): duración de la
+  /// tarea en minutos, usada para derivar la hora de FIN
+  /// (`TaskScheduleCalculator.effectiveEnd`). Nullable a propósito: NO es un
+  /// backfill inventado. Invariante I1 (aplicada en el punto de escritura del
+  /// formulario, no en la entidad): toda tarea con `scheduledTime` guardada
+  /// desde el formulario tiene `durationMinutes != null && > 0`. Tareas
+  /// preexistentes sin fin conocido quedan con `null` y se muestran con hora
+  /// simple.
+  final int? durationMinutes;
+
   const Task({
     required this.id,
     required this.title,
@@ -53,6 +63,7 @@ class Task extends Equatable {
     this.parentTaskId,
     this.isSubtask = false,
     this.subtaskXpGranted = false,
+    this.durationMinutes,
   });
 
   Task copyWith({
@@ -71,6 +82,7 @@ class Task extends Equatable {
     String? parentTaskId,
     bool? isSubtask,
     bool? subtaskXpGranted,
+    int? durationMinutes,
   }) {
     return Task(
       id: id ?? this.id,
@@ -88,6 +100,7 @@ class Task extends Equatable {
       parentTaskId: parentTaskId ?? this.parentTaskId,
       isSubtask: isSubtask ?? this.isSubtask,
       subtaskXpGranted: subtaskXpGranted ?? this.subtaskXpGranted,
+      durationMinutes: durationMinutes ?? this.durationMinutes,
     );
   }
 
@@ -108,5 +121,6 @@ class Task extends Equatable {
         parentTaskId,
         isSubtask,
         subtaskXpGranted,
+        durationMinutes,
       ];
 }

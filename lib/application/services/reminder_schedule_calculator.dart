@@ -1,5 +1,6 @@
 import '../../domain/entities/task.dart';
 import '../../domain/enums/badge_type.dart';
+import 'task_schedule_calculator.dart';
 
 /// Resultado agregado de la jornada que reporta la notificación de cierre de
 /// jornada (id `0x60000003`).
@@ -51,17 +52,11 @@ class ReminderScheduleCalculator {
   /// ocurrencias de series recurrentes solo cambia `scheduledDate`; usar
   /// `scheduledTime` directamente dispararía el recordatorio en el día
   /// original de la serie. Por eso siempre se reconstruye día+hora.
-  static DateTime effectiveDateTime(Task task) {
-    final time = task.scheduledTime;
-    if (time == null) return task.scheduledDate;
-    return DateTime(
-      task.scheduledDate.year,
-      task.scheduledDate.month,
-      task.scheduledDate.day,
-      time.hour,
-      time.minute,
-    );
-  }
+  ///
+  /// Delega en [TaskScheduleCalculator.effectiveStart] (mismo cálculo, sin
+  /// cambio de comportamiento): sin horario devuelve `task.scheduledDate`.
+  static DateTime effectiveDateTime(Task task) =>
+      TaskScheduleCalculator.effectiveStart(task) ?? task.scheduledDate;
 
   /// Hora efectiva de disparo del recordatorio de la tarea aplicando el margen
   /// [leadTimeMinutes]: el aviso ocurre `leadTimeMinutes` ANTES de la hora de

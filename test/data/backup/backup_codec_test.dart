@@ -234,4 +234,43 @@ void main() {
       );
     });
   });
+
+  group('BackupCodec - Task.durationMinutes (Fase 2, A11)', () {
+    test('roundtrip preserva durationMinutes cuando está presente', () {
+      final withDuration = sampleTask().copyWith(durationMinutes: 90);
+      final jsonString = BackupCodec.encode(
+        tasks: [withDuration],
+        categories: const [],
+        streaks: const [],
+        badges: const [],
+        userSettings: sampleSettings(),
+        appMeta: const {},
+        thematicTextCache: const {},
+        exportedAt: DateTime(2026, 8, 9, 10, 30),
+      );
+
+      final decoded = BackupCodec.decode(jsonString);
+      expect(decoded.tasks.single.durationMinutes, 90);
+    });
+
+    test('un backup anterior a A11 (sin la clave durationMinutes) se importa con null', () {
+      final jsonString = BackupCodec.encode(
+        tasks: [sampleTask()],
+        categories: const [],
+        streaks: const [],
+        badges: const [],
+        userSettings: sampleSettings(),
+        appMeta: const {},
+        thematicTextCache: const {},
+        exportedAt: DateTime(2026, 8, 9, 10, 30),
+      );
+      final bad = jsonDecode(jsonString) as Map<String, dynamic>;
+      final taskJson =
+          ((bad['data'] as Map<String, dynamic>)['tasks'] as List).single as Map<String, dynamic>;
+      taskJson.remove('durationMinutes');
+
+      final decoded = BackupCodec.decode(jsonEncode(bad));
+      expect(decoded.tasks.single.durationMinutes, isNull);
+    });
+  });
 }
