@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:slate_app/domain/enums/badge_type.dart';
-import 'package:slate_app/presentation/screens/stats/widgets/badge_presentation.dart';
+import 'package:slate_app/presentation/screens/progress/widgets/badge_presentation.dart';
 
 void main() {
   group('BadgePresentation.resolveIconData', () {

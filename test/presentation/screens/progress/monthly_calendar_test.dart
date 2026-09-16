@@ -4,11 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:slate_app/application/providers/now_provider.dart';
 import 'package:slate_app/application/providers/visible_month_provider.dart';
-import 'package:slate_app/core/constants/app_colors.dart';
+import 'package:slate_app/core/theme/slate_colors.dart';
 import 'package:slate_app/domain/entities/task.dart';
 import 'package:slate_app/domain/enums/recurrence_type.dart';
 import 'package:slate_app/domain/enums/task_priority.dart';
-import 'package:slate_app/presentation/screens/stats/widgets/monthly_calendar.dart';
+import 'package:slate_app/presentation/screens/progress/widgets/monthly_calendar.dart';
 
 /// "Hoy" fijo para los tests: 10 de marzo de 2026.
 final _testNow = DateTime(2026, 3, 10, 12, 0);
@@ -53,7 +53,7 @@ Future<void> _pumpCalendar(
       child: MaterialApp(
         home: Scaffold(
           // En producción el calendario vive dentro de un SingleChildScrollView
-          // (StatsScreen); replicarlo evita overflow en la superficie 800x600
+          // (ProgressScreen); replicarlo evita overflow en la superficie 800x600
           // de los tests cuando el mes tiene 5 filas de celdas.
           body: SingleChildScrollView(
             child: MonthlyCalendar(tasks: tasks),
@@ -160,12 +160,12 @@ void main() {
       // Día 10 de marzo de 2026 (hoy): texto en negrita y color primario.
       final todayText = tester.widget<Text>(find.text('10'));
       expect(todayText.style?.fontWeight, FontWeight.bold);
-      expect(todayText.style?.color, AppColors.primary);
+      expect(todayText.style?.color, SlateColors.dark.onAccent);
 
       // Otro día del mismo mes NO está resaltado.
       final otherText = tester.widget<Text>(find.text('11'));
       expect(otherText.style?.fontWeight, isNot(FontWeight.bold));
-      expect(otherText.style?.color, isNot(AppColors.primary));
+      expect(otherText.style?.color, isNot(SlateColors.dark.onAccent));
     });
 
     testWidgets('no resalta ningún día al navegar a otro mes (evita bug latente)',
@@ -175,7 +175,7 @@ void main() {
       final febText = tester.widget<Text>(find.text('10'));
       expect(febText.style?.fontWeight, isNot(FontWeight.bold),
           reason: 'el día 10 de febrero NO es hoy');
-      expect(febText.style?.color, isNot(AppColors.primary));
+      expect(febText.style?.color, isNot(SlateColors.dark.onAccent));
     });
   });
 

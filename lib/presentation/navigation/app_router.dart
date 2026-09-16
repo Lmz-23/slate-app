@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../screens/home/home_screen.dart';
-import '../screens/weekly/weekly_screen.dart';
-import '../screens/stats/stats_screen.dart';
+import '../screens/progress/progress_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/categories/categories_screen.dart';
 import '../widgets/common/navigation_shell.dart';
@@ -10,9 +9,17 @@ import '../widgets/common/navigation_shell.dart';
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
+/// Decisión A10 (Addendum 1): `/weekly` y `/stats` se fusionan en una sola
+/// ruta `/progress`. No hay enlaces profundos ni ruta persistida, pero se
+/// conserva un redirect por seguridad ante cualquier referencia residual.
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/home',
+  redirect: (context, state) {
+    final path = state.uri.path;
+    if (path == '/weekly' || path == '/stats') return '/progress';
+    return null;
+  },
   routes: [
     ShellRoute(
       navigatorKey: _shellNavigatorKey,
@@ -25,15 +32,9 @@ final appRouter = GoRouter(
           ),
         ),
         GoRoute(
-          path: '/weekly',
+          path: '/progress',
           pageBuilder: (context, state) => const NoTransitionPage(
-            child: WeeklyScreen(),
-          ),
-        ),
-        GoRoute(
-          path: '/stats',
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: StatsScreen(),
+            child: ProgressScreen(),
           ),
         ),
         GoRoute(

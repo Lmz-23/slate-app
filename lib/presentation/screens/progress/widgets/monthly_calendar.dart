@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_spacing.dart';
+
+import '../../../../core/theme/slate_theme_context.dart';
 import '../../../../domain/entities/task.dart';
 import '../../../../application/providers/now_provider.dart';
 import '../../../../application/providers/visible_month_provider.dart';
 
-/// Calendario mensual de la pantalla de Estadísticas.
+/// Calendario mensual de `/progress` (sistema-visual-fase3.md §2.5).
 ///
 /// Muestra los días del mes visible (controlado por [visibleMonthProvider]) y
 /// marca los días con tareas según [tasks], filtradas por el mes/año visible.
@@ -20,6 +20,11 @@ import '../../../../application/providers/visible_month_provider.dart';
 /// El resaltado de "hoy" solo se aplica cuando el mes visible es el mes en
 /// curso y compara día + mes + año para no resaltar un día equivocado al
 /// navegar a otro mes.
+///
+/// Restilizado (Parte C, punto 9): día actual con círculo de fondo `accent` y
+/// número en `onAccent`; punto de actividad `success` (todas completadas) o
+/// `priorityMedium` (actividad parcial), sin punto si ninguna tarea del día
+/// está completada.
 class MonthlyCalendar extends ConsumerWidget {
   /// Todas las tareas de la app. El filtrado por mes/año visible ocurre aquí.
   final List<Task> tasks;
@@ -28,6 +33,7 @@ class MonthlyCalendar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final slate = context.slate;
     final visibleMonth = ref.watch(visibleMonthProvider);
     final now = ref.watch(nowProvider).value ?? DateTime.now();
     final canGoToNextMonth =
@@ -46,16 +52,16 @@ class MonthlyCalendar extends ConsumerWidget {
               onPressed: () {
                 ref.read(visibleMonthProvider.notifier).goToPreviousMonth();
               },
-              icon: const Icon(Icons.chevron_left, color: AppColors.textSecondary),
+              icon: Icon(Icons.chevron_left, color: slate.textSecondary),
             ),
             Expanded(
               child: Text(
                 '${_getMonthName(visibleMonth.month)} ${visibleMonth.year}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: slate.textPrimary,
                 ),
               ),
             ),
@@ -66,17 +72,17 @@ class MonthlyCalendar extends ConsumerWidget {
                       ref.read(visibleMonthProvider.notifier).goToNextMonth();
                     }
                   : null,
-              icon: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+              icon: Icon(Icons.chevron_right, color: slate.textSecondary),
             ),
             TextButton(
               onPressed: () {
                 ref.read(visibleMonthProvider.notifier).goToToday();
               },
-              child: const Text('Hoy'),
+              child: Text('Hoy', style: TextStyle(color: slate.accent)),
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: ['D', 'L', 'M', 'X', 'J', 'V', 'S']
@@ -85,16 +91,16 @@ class MonthlyCalendar extends ConsumerWidget {
                     child: Text(
                       d,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
+                        color: slate.textSecondary,
                       ),
                     ),
                   ))
               .toList(),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: 8),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -115,7 +121,7 @@ class MonthlyCalendar extends ConsumerWidget {
                 dayDate.month == now.month &&
                 dayDate.day == now.day;
 
-            return _buildDayCell(day, dayTasks, isToday);
+            return _buildDayCell(context, day, dayTasks, isToday);
           },
         ),
       ],
@@ -138,18 +144,20 @@ class MonthlyCalendar extends ConsumerWidget {
     }).toList();
   }
 
-  Widget _buildDayCell(int day, List<Task> dayTasks, bool isToday) {
-    final hasAllCompleted = dayTasks.isNotEmpty && dayTasks.every((t) => t.isCompleted);
+  Widget _buildDayCell(
+    BuildContext context,
+    int day,
+    List<Task> dayTasks,
+    bool isToday,
+  ) {
+    final slate = context.slate;
+    final completedCount = dayTasks.where((t) => t.isCompleted).length;
+    final hasAllCompleted = dayTasks.isNotEmpty && completedCount == dayTasks.length;
 
     return Container(
       decoration: BoxDecoration(
-        color: isToday
-            ? AppColors.primary.withValues(alpha: 0.2)
-            : hasAllCompleted
-                ? AppColors.success.withValues(alpha: 0.1)
-                : AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: isToday ? Border.all(color: AppColors.primary, width: 1) : null,
+        color: isToday ? slate.accent : Colors.transparent,
+        shape: BoxShape.circle,
       ),
       child: Stack(
         children: [
@@ -157,13 +165,13 @@ class MonthlyCalendar extends ConsumerWidget {
             child: Text(
               day.toString(),
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                color: isToday ? AppColors.primary : AppColors.textPrimary,
+                color: isToday ? slate.onAccent : slate.textPrimary,
               ),
             ),
           ),
-          if (dayTasks.isNotEmpty)
+          if (completedCount > 0)
             Positioned(
               bottom: 4,
               left: 0,
@@ -176,7 +184,7 @@ class MonthlyCalendar extends ConsumerWidget {
                     height: 6,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: hasAllCompleted ? AppColors.success : AppColors.warning,
+                      color: hasAllCompleted ? slate.success : slate.priorityMedium,
                     ),
                   ),
                 ],

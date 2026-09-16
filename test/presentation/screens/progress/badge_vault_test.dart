@@ -13,9 +13,9 @@ import 'package:slate_app/data/hive/boxes/badges_box.dart';
 import 'package:slate_app/domain/entities/badge.dart';
 import 'package:slate_app/domain/entities/task.dart';
 import 'package:slate_app/domain/enums/badge_type.dart';
-import 'package:slate_app/presentation/screens/stats/widgets/badge_vault.dart';
+import 'package:slate_app/presentation/screens/progress/widgets/badge_vault.dart';
 
-/// Réplica de cómo StatsScreen consume el estado: observa `badgesProvider` y
+/// Réplica de cómo ProgressScreen consume el estado: observa `badgesProvider` y
 /// pasa la lista a `BadgeVault`. Permite verificar que el widget se reconstruye
 /// cuando el provider cambia su estado.
 class _BadgeVaultConsumer extends ConsumerWidget {

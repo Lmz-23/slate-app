@@ -8,9 +8,9 @@ import 'package:slate_app/data/hive/boxes/player_progress_box.dart';
 import 'package:slate_app/domain/entities/player_profile.dart';
 import 'package:slate_app/domain/enums/player_rank.dart';
 import 'package:slate_app/domain/enums/task_priority.dart';
-import 'package:slate_app/presentation/screens/stats/widgets/player_card.dart';
+import 'package:slate_app/presentation/screens/progress/widgets/player_card.dart';
 
-/// Réplica de cómo StatsScreen consume el estado: observa `playerProvider` y
+/// Réplica de cómo ProgressScreen consume el estado: observa `playerProvider` y
 /// pasa el perfil a [PlayerCard]. Permite verificar el reflejo al instante.
 class _PlayerCardConsumer extends ConsumerWidget {
   const _PlayerCardConsumer();
@@ -75,34 +75,28 @@ Future<void> _pumpInScrollView(WidgetTester tester, Widget child) async {
 
 void main() {
   group('PlayerCard - render directo', () {
-    testWidgets('muestra nivel, rango y barra de XP', (tester) async {
+    // Fase 3a (Parte C, punto 6): PlayerCard se restiliza SIN rango E→S ni
+    // glifo/etiqueta "◆ JUGADOR" (sistema-visual-fase3.md §1). Las
+    // aserciones sobre esos elementos se retiran porque el elemento mismo
+    // deja de existir en el árbol de widgets; CERO cambios en
+    // PlayerXpCalculator/PlayerRank, cuyo test unitario se conserva intacto
+    // más abajo.
+    testWidgets('muestra nivel y barra de XP', (tester) async {
       await _pumpInScrollView(
         tester,
         PlayerCard(profile: _profile(totalXp: 250, level: 2)),
       );
 
-      expect(find.text('◆ JUGADOR'), findsOneWidget);
       expect(find.text('Nivel 2'), findsOneWidget);
-      expect(find.text('Rango E'), findsOneWidget,
-          reason: 'nivel 1-9 → rango E');
       expect(find.text('150 / 300 XP'), findsOneWidget,
           reason: 'XP dentro del nivel (250-100) / tramo (400-100)');
     });
 
-    testWidgets('rango E→S por tramos: nivel 1 → E', (tester) async {
+    testWidgets('nivel 1 sin XP', (tester) async {
       await _pumpInScrollView(tester, PlayerCard(profile: _profile()));
 
       expect(find.text('Nivel 1'), findsOneWidget);
-      expect(find.text('Rango E'), findsOneWidget);
       expect(find.text('0 / 100 XP'), findsOneWidget);
-    });
-
-    testWidgets('rango S para niveles altos (70+)', (tester) async {
-      await _pumpInScrollView(
-        tester,
-        PlayerCard(profile: _profile(totalXp: 100 * 75 * 75, level: 75)),
-      );
-      expect(find.text('Rango S'), findsOneWidget);
     });
 
     test('progressToNextLevel alimenta la barra (valor esperado)', () {
@@ -143,7 +137,6 @@ void main() {
         ),
       );
       expect(find.text('Nivel 1'), findsOneWidget);
-      expect(find.text('Rango E'), findsOneWidget);
 
       // Flujo real: completar 5 tareas altas (5×20 = 100 XP → nivel 2).
       await tester.runAsync(() async {
@@ -156,8 +149,6 @@ void main() {
       await tester.pump();
 
       expect(find.text('Nivel 2'), findsOneWidget);
-      expect(find.text('Rango E'), findsOneWidget,
-          reason: 'nivel 2 (1-9) → rango E');
     });
 
     testWidgets('desmarcar tareas no baja el nivel en la tarjeta',
@@ -191,9 +182,8 @@ void main() {
       });
       await tester.pump();
 
-      expect(find.text('Nivel 2'), findsOneWidget);
-      expect(find.text('Rango E'), findsOneWidget,
-          reason: 'el nivel se mantiene, rango E para niveles 1-9');
+      expect(find.text('Nivel 2'), findsOneWidget,
+          reason: 'el nivel se mantiene aunque el XP baje a 0');
     });
   });
 }
