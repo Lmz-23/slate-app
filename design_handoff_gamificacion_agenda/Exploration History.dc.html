@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#EDEBE6;font-family:-apple-system,Helvetica Neue,Arial,sans-serif}
+.dv-turn{padding:40px 44px 60px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 22px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 15px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:12px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;flex-direction:column;gap:2px;font:400 12px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.6)}
+.dv-oname{font:700 15px system-ui,sans-serif;color:#1a1a1a}
+.dv-odesc{font:400 12.5px/1.4 system-ui,sans-serif;color:rgba(0,0,0,.55);max-width:520px}
+.dv-row{display:flex;gap:20px;align-items:flex-start}
+.dv-phonewrap{display:flex;flex-direction:column;gap:8px;align-items:center}
+.dv-phonecap{font:600 11px system-ui,sans-serif;color:rgba(0,0,0,.45);text-transform:uppercase;letter-spacing:.04em}
+.dv-next{margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}
+.dv-brief{max-width:900px;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:24px 28px;margin-bottom:8px}
+.dv-brief h1{font:700 18px system-ui,sans-serif;color:#1a1a1a;margin:0 0 10px}
+.dv-brief p{font:400 13.5px/1.6 system-ui,sans-serif;color:rgba(0,0,0,.65);margin:0 0 10px}
+.dv-brief ul{margin:0;padding-left:18px;font:400 13.5px/1.6 system-ui,sans-serif;color:rgba(0,0,0,.65)}
+.dv-copybox{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:16px 20px;margin-top:24px;max-width:900px}
+.dv-copybox h2{font:700 12px system-ui,sans-serif;color:#1a1a1a;margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em}
+.dv-copybox p{font:400 12.5px/1.6 system-ui,sans-serif;color:rgba(0,0,0,.6);margin:4px 0}
+a{color:#4C5A75}
+a:hover{color:#2F4B8F}
+</style>
+</helmet>
+
+<div class="dv-brief">
+<h1>Contexto y enfoque</h1>
+<p>Slate hoy es una app de tareas con gamificación fuerte (rangos, XP, "Daily Quest", insignias de Cazador) sobre fondo negro, acento índigo (#6366F1) y tipografía Inter — una estética muy personal, pensada para un solo usuario.</p>
+<p>Para un público general mantengo la misma estructura y funciones en las tres vistas (agenda del día, detalle/edición de tarea, progreso semanal + calendario mensual) y solo cambio dirección visual y tono de texto. El texto pasa a un registro neutral: sin "XP", "Reclamar" ni jerga de sistema — por ejemplo la tarjeta de meta diaria pasa de "▶ Daily Quest · Reclamar +25 XP" a "Meta diaria · Completar meta".</p>
+<ul>
+<li><b>1a</b> — Actual (referencia, sin cambios)</li>
+<li><b>1b</b> — Minimalista y neutral: blanco cálido, un solo acento discreto, sin sombras ni degradados</li>
+<li><b>1c</b> — Cálida y amigable: crema, tipografía redondeada, tarjetas suaves, acento coral</li>
+<li><b>1d</b> — Profesional y corporativa: gris frío, tipografía técnica, bordes finos, azul marino</li>
+</ul>
+</div>
+
+<section class="dv-turn" id="t3">
+<div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Replantear la gamificación: 3 tonos de "progreso y motivación" (misma funcionalidad, activable/desactivable en Ajustes)</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="3a">
+<div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a><span class="dv-oname">RPG restilizado</span><span class="dv-odesc">Mismo sistema de hoy — nivel, rango, XP, misión diaria con recompensa — pero con la paleta cálida en vez de índigo-sobre-negro. Sigue siendo el más "juego" de los tres.</span></div>
+<div style="width:340px;background:#FFFBF3;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:16px;box-shadow:0 4px 16px rgba(74,51,37,.08);font-family:'Nunito',sans-serif">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div style="display:flex;align-items:center;gap:8px;padding:7px 13px;border-radius:20px;background:linear-gradient(135deg,#E8734F,#F0A868)"><div style="width:11px;height:11px;background:#fff;border-radius:50% 50% 50% 0;transform:rotate(45deg)"></div><span style="font-size:14px;font-weight:800;color:#fff">12 días</span></div>
+<div style="text-align:right"><div style="font-size:10px;color:#C0A98F;text-transform:uppercase;letter-spacing:.04em">Rango C</div><div style="font-size:15px;font-weight:800;color:#4A3325">Nivel 8</div></div>
+</div>
+<div>
+<div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:11px;color:#8C6F58">Progreso al nivel 9</span><span style="font-size:11px;font-weight:700;color:#E8734F">180 / 400 XP</span></div>
+<div style="height:8px;background:#FCF1E4;border-radius:8px;overflow:hidden"><div style="width:45%;height:100%;background:#E8734F;border-radius:8px"></div></div>
+</div>
+<div style="background:#FCF1E4;border-radius:18px;padding:15px;display:flex;flex-direction:column;gap:8px">
+<div style="font-size:13.5px;font-weight:800;color:#4A3325">Misión diaria</div>
+<div style="font-size:12px;color:#8C6F58">Completa 3 tareas hoy</div>
+<div style="display:flex;align-items:center;gap:12px;margin-top:2px">
+<div style="flex:1"><div style="font-size:11px;color:#8C6F58;margin-bottom:5px">2/3 completadas</div><div style="height:6px;background:#F3DEC4;border-radius:4px;overflow:hidden"><div style="width:66%;height:100%;background:#7FAE7A"></div></div></div>
+<div style="background:#E8734F;padding:9px 13px;border-radius:16px;font-size:11px;font-weight:700;color:#fff;white-space:nowrap">Reclamar +25 XP</div>
+</div></div>
+<div>
+<div style="font-size:11px;color:#8C6F58;margin-bottom:8px">Insignias de racha</div>
+<div style="display:flex;gap:8px">
+<div style="width:34px;height:34px;border-radius:50%;background:#E8734F;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px">3</div>
+<div style="width:34px;height:34px;border-radius:50%;background:#E8734F;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px">7</div>
+<div style="width:34px;height:34px;border-radius:50%;background:#F3DEC4;display:flex;align-items:center;justify-content:center;color:#C0A98F;font-size:14px">14</div>
+<div style="width:34px;height:34px;border-radius:50%;background:#F3DEC4;display:flex;align-items:center;justify-content:center;color:#C0A98F;font-size:14px">30</div>
+</div></div>
+</div>
+</div>
+
+<div class="dv-opt" id="3b">
+<div class="dv-olabel"><a class="dv-oid" href="#3b">3b</a><span class="dv-oname">Minimalista tipo hábitos</span><span class="dv-odesc">Sin nivel, sin XP, sin insignias. Solo racha, una barra de progreso simple y una fila de días marcados — el lenguaje de una app de hábitos, no de un juego.</span></div>
+<div style="width:340px;background:#FFFBF3;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:16px;box-shadow:0 4px 16px rgba(74,51,37,.08);font-family:'Nunito',sans-serif">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<span style="font-size:14px;font-weight:700;color:#4A3325">12 días seguidos</span>
+<div style="width:9px;height:9px;background:#E8734F;border-radius:50% 50% 50% 0;transform:rotate(45deg)"></div>
+</div>
+<div>
+<div style="font-size:11px;color:#8C6F58;margin-bottom:6px">2 de 3 tareas completadas hoy</div>
+<div style="height:5px;background:#FCF1E4;border-radius:4px;overflow:hidden"><div style="width:66%;height:100%;background:#7FAE7A"></div></div>
+</div>
+<div>
+<div style="font-size:11px;color:#8C6F58;margin-bottom:8px">Esta semana</div>
+<div style="display:flex;gap:6px">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:9.5px;color:#C0A98F">L</span><div style="width:22px;height:22px;border-radius:50%;background:#7FAE7A;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px">✓</div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:9.5px;color:#C0A98F">M</span><div style="width:22px;height:22px;border-radius:50%;background:#7FAE7A;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px">✓</div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:9.5px;color:#C0A98F">X</span><div style="width:22px;height:22px;border-radius:50%;background:#7FAE7A;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px">✓</div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:9.5px;color:#C0A98F">J</span><div style="width:22px;height:22px;border-radius:50%;border:1.5px solid #E3D5C4"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:9.5px;font-weight:700;color:#E8734F">V</span><div style="width:22px;height:22px;border-radius:50%;background:#7FAE7A;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px">✓</div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:9.5px;color:#C0A98F">S</span><div style="width:22px;height:22px;border-radius:50%;border:1.5px solid #E3D5C4"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:9.5px;color:#C0A98F">D</span><div style="width:22px;height:22px;border-radius:50%;border:1.5px solid #E3D5C4"></div></div>
+</div></div>
+</div>
+</div>
+
+<div class="dv-opt" id="3c">
+<div class="dv-olabel"><a class="dv-oid" href="#3c">3c</a><span class="dv-oname">Refuerzo positivo suave</span><span class="dv-odesc">Sin puntuación de ningún tipo. Un mensaje de ánimo que reacciona al progreso real y un hito narrado en palabras, no en números de juego.</span></div>
+<div style="width:340px;background:#FFFBF3;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:16px;box-shadow:0 4px 16px rgba(74,51,37,.08);font-family:'Nunito',sans-serif">
+<div style="font-size:15px;font-weight:800;color:#4A3325">¡Llevas 12 días seguidos!</div>
+<div style="background:#FCF1E4;border-radius:18px;padding:15px;display:flex;flex-direction:column;gap:8px">
+<div style="font-size:13px;color:#4A3325;line-height:1.4">Vas muy bien esta semana — cada tarea cuenta, sigue así.</div>
+<div style="height:6px;background:#F3DEC4;border-radius:4px;overflow:hidden;margin-top:2px"><div style="width:66%;height:100%;background:#7FAE7A"></div></div>
+<div style="font-size:11px;color:#8C6F58">2 de 3 tareas completadas hoy</div>
+</div>
+<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#FCF1E4;border-radius:16px">
+<div style="width:30px;height:30px;border-radius:50%;background:#E8734F;flex-shrink:0"></div>
+<span style="font-size:12.5px;color:#4A3325">Hito alcanzado: <b>una semana seguida</b> completando tareas</span>
+</div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Las tres mantienen racha + meta diaria + calendario funcionando igual por debajo — solo cambia cómo se lo cuentan al usuario. Dime cuál te convence (3a, 3b o 3c) o pide mezclar piezas (p. ej. "la barra de <a href="#3b">3b</a> con el mensaje de <a href="#3c">3c</a>").</p>
+</section>
+
+<div class="dv-copybox">
+<h2>Activable/desactivable en Ajustes (las 3 opciones)</h2>
+<div style="display:flex;align-items:center;justify-content:space-between;max-width:420px;padding:14px 16px;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:10px;margin-top:6px">
+<div><div style="font:600 13px system-ui,sans-serif;color:#1a1a1a">Gamificación</div><div style="font:400 11.5px system-ui,sans-serif;color:rgba(0,0,0,.5);margin-top:2px">Muestra racha, metas y progreso en la app</div></div>
+<div style="width:40px;height:24px;border-radius:12px;background:#D8D6D0;position:relative;flex-shrink:0"><div style="width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:3px;left:3px;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div></div>
+</div>
+<p style="margin-top:8px">Desactivada por defecto en las tres direcciones — quien la prefiera la activa desde Ajustes; sin ella, la agenda funciona igual pero sin racha ni tarjeta de progreso.</p>
+</div>
+
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Cálida y amigable — vistas completas ampliadas, clara y oscura</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="2a">
+<div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a><span class="dv-oname">Cálida — clara</span><span class="dv-odesc">Misma dirección de <a href="#1c">1c</a>, en tamaño más grande para apreciar el detalle.</span></div>
+<div class="dv-row">
+
+<div class="dv-phonewrap"><span class="dv-phonecap">Agenda</span>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ false }}" width="352" height="760" hint-size="352,760">
+<div style="width:100%;height:100%;background:#FCF1E4;font-family:'Nunito',sans-serif;display:flex;flex-direction:column;position:relative;overflow:hidden">
+<div style="padding:20px 20px 10px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;justify-content:space-between;align-items:flex-start">
+<div><div style="font-size:25px;font-weight:800;color:#4A3325">Hoy</div><div style="font-size:13px;color:#8C6F58;margin-top:2px">14 de septiembre</div></div>
+<div style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;background:linear-gradient(135deg,#E8734F,#F0A868);box-shadow:0 3px 10px rgba(232,115,79,.3)">
+<div style="width:12px;height:12px;background:#fff;border-radius:50% 50% 50% 0;transform:rotate(45deg)"></div><span style="font-size:15px;font-weight:800;color:#fff">12</span></div>
+</div>
+<div style="display:flex;align-items:center;gap:2px">
+<span style="font-size:18px;color:#C0A98F">‹</span>
+<div style="display:flex;gap:6px;flex:1;justify-content:space-between">
+<div style="width:38px;border-radius:14px;background:#FFFBF3;display:flex;flex-direction:column;align-items:center;padding:7px 0"><span style="font-size:10.5px;color:#C0A98F">V</span><span style="font-size:14.5px;font-weight:700;color:#4A3325;margin-top:2px">11</span></div>
+<div style="width:38px;border-radius:14px;background:#FFFBF3;display:flex;flex-direction:column;align-items:center;padding:7px 0"><span style="font-size:10.5px;color:#C0A98F">S</span><span style="font-size:14.5px;font-weight:700;color:#4A3325;margin-top:2px">12</span></div>
+<div style="width:38px;border-radius:14px;background:#FFFBF3;display:flex;flex-direction:column;align-items:center;padding:7px 0"><span style="font-size:10.5px;color:#C0A98F">D</span><span style="font-size:14.5px;font-weight:700;color:#4A3325;margin-top:2px">13</span></div>
+<div style="width:38px;border-radius:14px;background:#E8734F;display:flex;flex-direction:column;align-items:center;padding:7px 0;box-shadow:0 3px 8px rgba(232,115,79,.35)"><span style="font-size:10.5px;color:rgba(255,255,255,.75)">L</span><span style="font-size:14.5px;font-weight:800;color:#fff;margin-top:2px">14</span></div>
+<div style="width:38px;border-radius:14px;background:#FFFBF3;display:flex;flex-direction:column;align-items:center;padding:7px 0"><span style="font-size:10.5px;color:#C0A98F">M</span><span style="font-size:14.5px;font-weight:700;color:#4A3325;margin-top:2px">15</span></div>
+<div style="width:38px;border-radius:14px;background:#FFFBF3;display:flex;flex-direction:column;align-items:center;padding:7px 0"><span style="font-size:10.5px;color:#C0A98F">X</span><span style="font-size:14.5px;font-weight:700;color:#4A3325;margin-top:2px">16</span></div>
+<div style="width:38px;border-radius:14px;background:#FFFBF3;display:flex;flex-direction:column;align-items:center;padding:7px 0"><span style="font-size:10.5px;color:#C0A98F">J</span><span style="font-size:14.5px;font-weight:700;color:#4A3325;margin-top:2px">17</span></div>
+</div>
+<span style="font-size:18px;color:#C0A98F">›</span>
+</div>
+</div>
+<div style="flex:1;overflow:auto;padding:0 20px 76px;display:flex;flex-direction:column;gap:20px">
+<div style="background:#FFFBF3;border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:9px;box-shadow:0 4px 14px rgba(74,51,37,.07)">
+<div style="font-size:15px;font-weight:800;color:#4A3325">Meta del día</div>
+<div style="font-size:13px;color:#8C6F58">Completa 3 tareas y cierra el día</div>
+<div style="margin-top:2px"><div style="font-size:12px;color:#8C6F58;margin-bottom:6px">2 de 3 tareas completadas</div><div style="height:9px;background:#FCF1E4;border-radius:8px;overflow:hidden"><div style="width:66%;height:100%;background:#7FAE7A;border-radius:8px"></div></div></div>
+</div>
+<div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:14px;font-weight:700;color:#8C6F58">Con horario</span><span style="font-size:12px;color:#8C6F58;background:#F3DEC4;padding:2px 10px;border-radius:10px">3</span></div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="background:#FFFBF3;border-radius:20px;padding:15px;display:flex;align-items:center;gap:12px;box-shadow:0 3px 10px rgba(74,51,37,.05)">
+<div style="width:26px;height:26px;border-radius:50%;background:#7FAE7A;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;flex-shrink:0">✓</div>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;color:#C0A98F;text-decoration:line-through">Enviar reporte semanal</div><div style="font-size:12px;color:#C0A98F;margin-top:2px">09:00</div></div>
+</div>
+<div style="background:#FFFBF3;border-radius:20px;padding:15px;display:flex;align-items:center;gap:12px;box-shadow:0 3px 10px rgba(74,51,37,.05)">
+<div style="width:26px;height:26px;border-radius:50%;border:2px solid #E3D5C4;flex-shrink:0"></div>
+<div style="flex:1;min-width:0">
+<div style="display:flex;align-items:center;gap:6px"><div style="width:8px;height:8px;border-radius:50%;background:#C15A4E;flex-shrink:0"></div><span style="font-size:15px;font-weight:700;color:#4A3325">Preparar presentación cliente</span></div>
+<div style="font-size:12px;color:#C0A98F;margin-top:2px">14:30</div>
+<div style="margin-top:7px;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;align-items:center;gap:7px"><div style="width:15px;height:15px;border-radius:50%;background:#7FAE7A;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px">✓</div><span style="font-size:13px;color:#C0A98F;text-decoration:line-through">Revisar diapositivas</span></div>
+<div style="display:flex;align-items:center;gap:7px"><div style="width:15px;height:15px;border-radius:50%;border:1.5px solid #E3D5C4"></div><span style="font-size:13px;color:#8C6F58">Enviar borrador al equipo</span></div>
+</div></div>
+</div>
+<div style="background:#FFFBF3;border-radius:20px;padding:15px;display:flex;align-items:center;gap:12px;box-shadow:0 3px 10px rgba(74,51,37,.05)">
+<div style="width:26px;height:26px;border-radius:50%;border:2px solid #E3D5C4;flex-shrink:0"></div>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;color:#4A3325">Llamar al proveedor</div><div style="font-size:12px;color:#C0A98F;margin-top:2px">16:00</div></div>
+</div>
+</div></div>
+<div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:14px;font-weight:700;color:#8C6F58">Sin horario</span><span style="font-size:12px;color:#8C6F58;background:#F3DEC4;padding:2px 10px;border-radius:10px">2</span></div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="background:#FFFBF3;border-radius:20px;padding:15px;display:flex;align-items:center;gap:12px;box-shadow:0 3px 10px rgba(74,51,37,.05)"><div style="width:26px;height:26px;border-radius:50%;border:2px solid #E3D5C4;flex-shrink:0"></div><span style="font-size:15px;font-weight:700;color:#4A3325">Comprar materiales de oficina</span></div>
+<div style="background:#FFFBF3;border-radius:20px;padding:15px;display:flex;align-items:center;gap:12px;box-shadow:0 3px 10px rgba(74,51,37,.05)"><div style="width:26px;height:26px;border-radius:50%;border:2px solid #E3D5C4;flex-shrink:0"></div><span style="font-size:15px;font-weight:700;color:#4A3325">Actualizar hoja de cálculo</span></div>
+</div></div>
+</div>
+<div style="position:absolute;bottom:22px;right:22px;width:58px;height:58px;border-radius:50%;background:#E8734F;box-shadow:0 6px 16px rgba(232,115,79,.4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px">+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-phonewrap"><span class="dv-phonecap">Detalle</span>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ false }}" width="352" height="760" hint-size="352,760">
+<div style="width:100%;height:100%;background:#FCF1E4;font-family:'Nunito',sans-serif;position:relative;overflow:hidden">
+<div style="position:absolute;inset:0;background:rgba(74,51,37,.4)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;height:93%;background:#FFFBF3;border-radius:28px 28px 0 0;padding:20px;display:flex;flex-direction:column;gap:15px;overflow:auto">
+<div style="width:40px;height:5px;border-radius:3px;background:#E3D5C4;align-self:center"></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:20px;font-weight:800;color:#4A3325">Editar tarea</span><span style="font-size:13px;font-weight:700;color:#C15A4E">Eliminar</span></div>
+<div style="background:#FCF1E4;border-radius:16px;padding:14px 16px;font-size:16px;font-weight:600;color:#4A3325">Preparar presentación cliente</div>
+<div style="display:flex;gap:10px">
+<div style="flex:1;background:#FCF1E4;border-radius:16px;padding:13px 16px"><span style="font-size:14px;font-weight:600;color:#4A3325">14 sept 2026</span></div>
+<div style="flex:1;background:#FCF1E4;border-radius:16px;padding:13px 16px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:14px;font-weight:600;color:#4A3325">14:30</span><span style="font-size:13px;color:#C0A98F">✕</span></div>
+</div>
+<div style="background:#F3DEC4;border-radius:14px;padding:12px 14px;font-size:12px;color:#8C6F58;line-height:1.4">Te avisaremos justo a la hora de la tarea. Puedes ajustarlo en Ajustes › Recordatorios.</div>
+<div><div style="font-size:11.5px;font-weight:700;color:#8C6F58;margin-bottom:8px">Prioridad</div>
+<div style="display:flex;gap:8px">
+<div style="flex:1;background:#FCF1E4;border-radius:16px;padding:11px 0;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#E8734F"></div><span style="font-size:11.5px;color:#8C6F58">Normal</span></div>
+<div style="flex:1;background:#E3D5C4;border-radius:16px;padding:11px 0;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#E3A94A"></div><span style="font-size:11.5px;font-weight:700;color:#4A3325">Media</span></div>
+<div style="flex:1;background:#FCF1E4;border-radius:16px;padding:11px 0;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#C15A4E"></div><span style="font-size:11.5px;color:#8C6F58">Alta</span></div>
+</div></div>
+<div><div style="font-size:11.5px;font-weight:700;color:#8C6F58;margin-bottom:8px">Categoría</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<div style="padding:9px 15px;border-radius:20px;background:#E3D5C4;display:flex;align-items:center;gap:6px"><div style="width:8px;height:8px;border-radius:50%;background:#C15A4E"></div><span style="font-size:12.5px;font-weight:700;color:#4A3325">Trabajo</span></div>
+<div style="padding:9px 15px;border-radius:20px;background:#FCF1E4;display:flex;align-items:center;gap:6px"><div style="width:8px;height:8px;border-radius:50%;background:#5C87C4"></div><span style="font-size:12.5px;color:#8C6F58">Personal</span></div>
+<div style="padding:9px 15px;border-radius:20px;background:#FCF1E4;display:flex;align-items:center;gap:6px"><div style="width:8px;height:8px;border-radius:50%;background:#7FAE7A"></div><span style="font-size:12.5px;color:#8C6F58">Salud</span></div>
+</div></div>
+<div><div style="font-size:11.5px;font-weight:700;color:#8C6F58;margin-bottom:8px">Repetir</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px"><div style="padding:8px 15px;border-radius:20px;background:#E3D5C4;font-size:12.5px;font-weight:700;color:#4A3325">No repetir</div><div style="padding:8px 15px;border-radius:20px;background:#FCF1E4;font-size:12.5px;color:#8C6F58">Diario</div><div style="padding:8px 15px;border-radius:20px;background:#FCF1E4;font-size:12.5px;color:#8C6F58">Semanal</div></div></div>
+<div style="background:#FCF1E4;border-radius:16px;padding:14px 16px;font-size:14px;color:#4A3325;min-height:48px">Incluir métricas del último trimestre</div>
+<div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:11.5px;font-weight:700;color:#8C6F58">Subtareas</span><span style="font-size:12.5px;font-weight:700;color:#E8734F">+ Añadir</span></div>
+<div style="background:#FCF1E4;border-radius:14px;padding:11px 14px;font-size:14px;color:#4A3325">Revisar aprobación final</div></div>
+<div style="background:#E8734F;border-radius:20px;padding:15px 0;text-align:center;font-size:16px;font-weight:800;color:#fff;margin-top:4px;box-shadow:0 4px 12px rgba(232,115,79,.35)">Guardar</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-phonewrap"><span class="dv-phonecap">Calendario</span>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ false }}" width="352" height="760" hint-size="352,760">
+<div style="width:100%;height:100%;background:#FCF1E4;font-family:'Nunito',sans-serif;padding:20px;display:flex;flex-direction:column;gap:18px;overflow:auto">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:21px;font-weight:800;color:#4A3325">Mi progreso</span><div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;background:#E8734F;border-radius:50% 50% 50% 0;transform:rotate(45deg)"></div><span style="font-size:13px;font-weight:700;color:#8C6F58">12 días</span></div></div>
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:16px;color:#C0A98F">‹</span><span style="font-size:13px;font-weight:600;color:#8C6F58">8 sept – 14 sept</span><span style="font-size:16px;color:#C0A98F">›</span></div>
+<div style="background:#FFFBF3;border-radius:20px;padding:16px;box-shadow:0 4px 12px rgba(74,51,37,.06)"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><span style="font-size:15px;font-weight:700;color:#4A3325">Progreso semanal</span><span style="font-size:15px;font-weight:800;color:#E8734F">65%</span></div><div style="height:10px;background:#FCF1E4;border-radius:8px;overflow:hidden"><div style="width:65%;height:100%;background:#E8734F;border-radius:8px"></div></div></div>
+<div>
+<div style="display:flex;align-items:center;margin-bottom:10px"><span style="font-size:16px;color:#C0A98F">‹</span><span style="flex:1;text-align:center;font-size:15.5px;font-weight:700;color:#4A3325">Septiembre 2026</span><span style="font-size:16px;color:#C0A98F">›</span><span style="font-size:12.5px;font-weight:700;color:#E8734F;margin-left:6px">Hoy</span></div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:7px">
+<span style="font-size:10.5px;font-weight:700;color:#C0A98F;text-align:center">D</span><span style="font-size:10.5px;font-weight:700;color:#C0A98F;text-align:center">L</span><span style="font-size:10.5px;font-weight:700;color:#C0A98F;text-align:center">M</span><span style="font-size:10.5px;font-weight:700;color:#C0A98F;text-align:center">X</span><span style="font-size:10.5px;font-weight:700;color:#C0A98F;text-align:center">J</span><span style="font-size:10.5px;font-weight:700;color:#C0A98F;text-align:center">V</span><span style="font-size:10.5px;font-weight:700;color:#C0A98F;text-align:center">S</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px">
+<div></div><div></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#FFFBF3;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#4A3325">1</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:rgba(127,174,122,.18);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#4A3325">2</span><div style="position:absolute;bottom:4px;width:5px;height:5px;border-radius:50%;background:#7FAE7A"></div></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#FFFBF3;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#4A3325">3</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:rgba(227,169,74,.2);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#4A3325">4</span><div style="position:absolute;bottom:4px;width:5px;height:5px;border-radius:50%;background:#E3A94A"></div></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#FFFBF3;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#4A3325">5</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:rgba(127,174,122,.18);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#4A3325">6</span><div style="position:absolute;bottom:4px;width:5px;height:5px;border-radius:50%;background:#7FAE7A"></div></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#FFFBF3;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#4A3325">7</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#FFFBF3;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#4A3325">8</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:rgba(127,174,122,.18);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#4A3325">9</span><div style="position:absolute;bottom:4px;width:5px;height:5px;border-radius:50%;background:#7FAE7A"></div></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#FFFBF3;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#4A3325">10</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#FFFBF3;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#4A3325">11</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:rgba(227,169,74,.2);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#4A3325">12</span><div style="position:absolute;bottom:4px;width:5px;height:5px;border-radius:50%;background:#E3A94A"></div></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#FFFBF3;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#4A3325">13</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#E8734F;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(232,115,79,.35)"><span style="font-size:13px;font-weight:800;color:#fff">14</span></div>
+</div>
+</div>
+<div style="font-size:15px;font-weight:800;color:#4A3325">Resumen diario</div>
+<div style="display:flex;gap:6px">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:10.5px;font-weight:700;color:#C0A98F">L</span><span style="font-size:14px;font-weight:700;color:#4A3325">8</span><div style="width:32px;height:32px;border-radius:50%;background:conic-gradient(#7FAE7A 100%,#F3DEC4 0)"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:10.5px;font-weight:700;color:#C0A98F">M</span><span style="font-size:14px;font-weight:700;color:#4A3325">9</span><div style="width:32px;height:32px;border-radius:50%;background:conic-gradient(#E8734F 60%,#F3DEC4 0)"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:10.5px;font-weight:700;color:#C0A98F">X</span><span style="font-size:14px;font-weight:700;color:#4A3325">10</span><div style="width:32px;height:32px;border-radius:50%;background:conic-gradient(#E8734F 40%,#F3DEC4 0)"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:10.5px;font-weight:700;color:#C0A98F">J</span><span style="font-size:14px;font-weight:700;color:#4A3325">11</span><div style="width:32px;height:32px;border-radius:50%;background:#F3DEC4"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;background:#FFFBF3;border-radius:14px;padding:5px 0"><span style="font-size:10.5px;font-weight:800;color:#E8734F">V</span><span style="font-size:14px;font-weight:800;color:#E8734F">12</span><div style="width:32px;height:32px;border-radius:50%;background:conic-gradient(#E8734F 80%,#F3DEC4 0)"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:10.5px;font-weight:700;color:#C0A98F">S</span><span style="font-size:14px;font-weight:700;color:#4A3325">13</span><div style="width:32px;height:32px;border-radius:50%;background:conic-gradient(#7FAE7A 100%,#F3DEC4 0)"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:10.5px;font-weight:800;color:#4A3325">D</span><span style="font-size:14px;font-weight:800;color:#4A3325">14</span><div style="width:32px;height:32px;border-radius:50%;background:conic-gradient(#E8734F 66%,#F3DEC4 0)"></div></div>
+</div>
+</div>
+</x-import>
+</div>
+
+</div>
+</div>
+
+<div class="dv-opt" id="2b">
+<div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a><span class="dv-oname">Cálida — oscura</span><span class="dv-odesc">La misma personalidad (coral, tipografía redondeada, tarjetas suaves) sobre un fondo espresso oscuro, para quien prefiere modo oscuro.</span></div>
+<div class="dv-row">
+
+<div class="dv-phonewrap"><span class="dv-phonecap">Agenda</span>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ true }}" width="352" height="760" hint-size="352,760">
+<div style="width:100%;height:100%;background:#241812;font-family:'Nunito',sans-serif;display:flex;flex-direction:column;position:relative;overflow:hidden">
+<div style="padding:20px 20px 10px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;justify-content:space-between;align-items:flex-start">
+<div><div style="font-size:25px;font-weight:800;color:#FBEEE0">Hoy</div><div style="font-size:13px;color:#C9A88D;margin-top:2px">14 de septiembre</div></div>
+<div style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;background:linear-gradient(135deg,#E8734F,#F0A868);box-shadow:0 3px 10px rgba(0,0,0,.35)">
+<div style="width:12px;height:12px;background:#fff;border-radius:50% 50% 50% 0;transform:rotate(45deg)"></div><span style="font-size:15px;font-weight:800;color:#fff">12</span></div>
+</div>
+<div style="display:flex;align-items:center;gap:2px">
+<span style="font-size:18px;color:#8F7460">‹</span>
+<div style="display:flex;gap:6px;flex:1;justify-content:space-between">
+<div style="width:38px;border-radius:14px;background:#34241B;display:flex;flex-direction:column;align-items:center;padding:7px 0"><span style="font-size:10.5px;color:#8F7460">V</span><span style="font-size:14.5px;font-weight:700;color:#FBEEE0;margin-top:2px">11</span></div>
+<div style="width:38px;border-radius:14px;background:#34241B;display:flex;flex-direction:column;align-items:center;padding:7px 0"><span style="font-size:10.5px;color:#8F7460">S</span><span style="font-size:14.5px;font-weight:700;color:#FBEEE0;margin-top:2px">12</span></div>
+<div style="width:38px;border-radius:14px;background:#34241B;display:flex;flex-direction:column;align-items:center;padding:7px 0"><span style="font-size:10.5px;color:#8F7460">D</span><span style="font-size:14.5px;font-weight:700;color:#FBEEE0;margin-top:2px">13</span></div>
+<div style="width:38px;border-radius:14px;background:#E8734F;display:flex;flex-direction:column;align-items:center;padding:7px 0;box-shadow:0 3px 8px rgba(0,0,0,.4)"><span style="font-size:10.5px;color:rgba(255,255,255,.75)">L</span><span style="font-size:14.5px;font-weight:800;color:#fff;margin-top:2px">14</span></div>
+<div style="width:38px;border-radius:14px;background:#34241B;display:flex;flex-direction:column;align-items:center;padding:7px 0"><span style="font-size:10.5px;color:#8F7460">M</span><span style="font-size:14.5px;font-weight:700;color:#FBEEE0;margin-top:2px">15</span></div>
+<div style="width:38px;border-radius:14px;background:#34241B;display:flex;flex-direction:column;align-items:center;padding:7px 0"><span style="font-size:10.5px;color:#8F7460">X</span><span style="font-size:14.5px;font-weight:700;color:#FBEEE0;margin-top:2px">16</span></div>
+<div style="width:38px;border-radius:14px;background:#34241B;display:flex;flex-direction:column;align-items:center;padding:7px 0"><span style="font-size:10.5px;color:#8F7460">J</span><span style="font-size:14.5px;font-weight:700;color:#FBEEE0;margin-top:2px">17</span></div>
+</div>
+<span style="font-size:18px;color:#8F7460">›</span>
+</div>
+</div>
+<div style="flex:1;overflow:auto;padding:0 20px 76px;display:flex;flex-direction:column;gap:20px">
+<div style="background:#34241B;border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:9px">
+<div style="font-size:15px;font-weight:800;color:#F0A868">Meta del día</div>
+<div style="font-size:13px;color:#C9A88D">Completa 3 tareas y cierra el día</div>
+<div style="margin-top:2px"><div style="font-size:12px;color:#C9A88D;margin-bottom:6px">2 de 3 tareas completadas</div><div style="height:9px;background:#402C21;border-radius:8px;overflow:hidden"><div style="width:66%;height:100%;background:#8FC088;border-radius:8px"></div></div></div>
+</div>
+<div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:14px;font-weight:700;color:#C9A88D">Con horario</span><span style="font-size:12px;color:#C9A88D;background:#402C21;padding:2px 10px;border-radius:10px">3</span></div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="background:#34241B;border-radius:20px;padding:15px;display:flex;align-items:center;gap:12px">
+<div style="width:26px;height:26px;border-radius:50%;background:#8FC088;display:flex;align-items:center;justify-content:center;color:#241812;font-size:14px;flex-shrink:0">✓</div>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;color:#8F7460;text-decoration:line-through">Enviar reporte semanal</div><div style="font-size:12px;color:#8F7460;margin-top:2px">09:00</div></div>
+</div>
+<div style="background:#34241B;border-radius:20px;padding:15px;display:flex;align-items:center;gap:12px">
+<div style="width:26px;height:26px;border-radius:50%;border:2px solid #8F7460;flex-shrink:0"></div>
+<div style="flex:1;min-width:0">
+<div style="display:flex;align-items:center;gap:6px"><div style="width:8px;height:8px;border-radius:50%;background:#E07362;flex-shrink:0"></div><span style="font-size:15px;font-weight:700;color:#FBEEE0">Preparar presentación cliente</span></div>
+<div style="font-size:12px;color:#8F7460;margin-top:2px">14:30</div>
+<div style="margin-top:7px;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;align-items:center;gap:7px"><div style="width:15px;height:15px;border-radius:50%;background:#8FC088;display:flex;align-items:center;justify-content:center;color:#241812;font-size:9px">✓</div><span style="font-size:13px;color:#8F7460;text-decoration:line-through">Revisar diapositivas</span></div>
+<div style="display:flex;align-items:center;gap:7px"><div style="width:15px;height:15px;border-radius:50%;border:1.5px solid #8F7460"></div><span style="font-size:13px;color:#C9A88D">Enviar borrador al equipo</span></div>
+</div></div>
+</div>
+<div style="background:#34241B;border-radius:20px;padding:15px;display:flex;align-items:center;gap:12px">
+<div style="width:26px;height:26px;border-radius:50%;border:2px solid #8F7460;flex-shrink:0"></div>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;color:#FBEEE0">Llamar al proveedor</div><div style="font-size:12px;color:#8F7460;margin-top:2px">16:00</div></div>
+</div>
+</div></div>
+<div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:14px;font-weight:700;color:#C9A88D">Sin horario</span><span style="font-size:12px;color:#C9A88D;background:#402C21;padding:2px 10px;border-radius:10px">2</span></div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="background:#34241B;border-radius:20px;padding:15px;display:flex;align-items:center;gap:12px"><div style="width:26px;height:26px;border-radius:50%;border:2px solid #8F7460;flex-shrink:0"></div><span style="font-size:15px;font-weight:700;color:#FBEEE0">Comprar materiales de oficina</span></div>
+<div style="background:#34241B;border-radius:20px;padding:15px;display:flex;align-items:center;gap:12px"><div style="width:26px;height:26px;border-radius:50%;border:2px solid #8F7460;flex-shrink:0"></div><span style="font-size:15px;font-weight:700;color:#FBEEE0">Actualizar hoja de cálculo</span></div>
+</div></div>
+</div>
+<div style="position:absolute;bottom:22px;right:22px;width:58px;height:58px;border-radius:50%;background:#E8734F;box-shadow:0 6px 16px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px">+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-phonewrap"><span class="dv-phonecap">Detalle</span>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ true }}" width="352" height="760" hint-size="352,760">
+<div style="width:100%;height:100%;background:#241812;font-family:'Nunito',sans-serif;position:relative;overflow:hidden">
+<div style="position:absolute;inset:0;background:rgba(0,0,0,.6)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;height:93%;background:#34241B;border-radius:28px 28px 0 0;padding:20px;display:flex;flex-direction:column;gap:15px;overflow:auto">
+<div style="width:40px;height:5px;border-radius:3px;background:#8F7460;align-self:center"></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:20px;font-weight:800;color:#FBEEE0">Editar tarea</span><span style="font-size:13px;font-weight:700;color:#E07362">Eliminar</span></div>
+<div style="background:#402C21;border-radius:16px;padding:14px 16px;font-size:16px;font-weight:600;color:#FBEEE0">Preparar presentación cliente</div>
+<div style="display:flex;gap:10px">
+<div style="flex:1;background:#402C21;border-radius:16px;padding:13px 16px"><span style="font-size:14px;font-weight:600;color:#FBEEE0">14 sept 2026</span></div>
+<div style="flex:1;background:#402C21;border-radius:16px;padding:13px 16px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:14px;font-weight:600;color:#FBEEE0">14:30</span><span style="font-size:13px;color:#8F7460">✕</span></div>
+</div>
+<div style="background:#402C21;border-radius:14px;padding:12px 14px;font-size:12px;color:#C9A88D;line-height:1.4">Te avisaremos justo a la hora de la tarea. Puedes ajustarlo en Ajustes › Recordatorios.</div>
+<div><div style="font-size:11.5px;font-weight:700;color:#C9A88D;margin-bottom:8px">Prioridad</div>
+<div style="display:flex;gap:8px">
+<div style="flex:1;background:#402C21;border-radius:16px;padding:11px 0;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#E8734F"></div><span style="font-size:11.5px;color:#C9A88D">Normal</span></div>
+<div style="flex:1;background:#4E3626;border-radius:16px;padding:11px 0;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#EFC066"></div><span style="font-size:11.5px;font-weight:700;color:#FBEEE0">Media</span></div>
+<div style="flex:1;background:#402C21;border-radius:16px;padding:11px 0;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#E07362"></div><span style="font-size:11.5px;color:#C9A88D">Alta</span></div>
+</div></div>
+<div><div style="font-size:11.5px;font-weight:700;color:#C9A88D;margin-bottom:8px">Categoría</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<div style="padding:9px 15px;border-radius:20px;background:#4E3626;display:flex;align-items:center;gap:6px"><div style="width:8px;height:8px;border-radius:50%;background:#E07362"></div><span style="font-size:12.5px;font-weight:700;color:#FBEEE0">Trabajo</span></div>
+<div style="padding:9px 15px;border-radius:20px;background:#402C21;display:flex;align-items:center;gap:6px"><div style="width:8px;height:8px;border-radius:50%;background:#7CA0DE"></div><span style="font-size:12.5px;color:#C9A88D">Personal</span></div>
+<div style="padding:9px 15px;border-radius:20px;background:#402C21;display:flex;align-items:center;gap:6px"><div style="width:8px;height:8px;border-radius:50%;background:#8FC088"></div><span style="font-size:12.5px;color:#C9A88D">Salud</span></div>
+</div></div>
+<div><div style="font-size:11.5px;font-weight:700;color:#C9A88D;margin-bottom:8px">Repetir</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px"><div style="padding:8px 15px;border-radius:20px;background:#4E3626;font-size:12.5px;font-weight:700;color:#FBEEE0">No repetir</div><div style="padding:8px 15px;border-radius:20px;background:#402C21;font-size:12.5px;color:#C9A88D">Diario</div><div style="padding:8px 15px;border-radius:20px;background:#402C21;font-size:12.5px;color:#C9A88D">Semanal</div></div></div>
+<div style="background:#402C21;border-radius:16px;padding:14px 16px;font-size:14px;color:#FBEEE0;min-height:48px">Incluir métricas del último trimestre</div>
+<div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:11.5px;font-weight:700;color:#C9A88D">Subtareas</span><span style="font-size:12.5px;font-weight:700;color:#F0A868">+ Añadir</span></div>
+<div style="background:#402C21;border-radius:14px;padding:11px 14px;font-size:14px;color:#FBEEE0">Revisar aprobación final</div></div>
+<div style="background:#E8734F;border-radius:20px;padding:15px 0;text-align:center;font-size:16px;font-weight:800;color:#fff;margin-top:4px">Guardar</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-phonewrap"><span class="dv-phonecap">Calendario</span>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ true }}" width="352" height="760" hint-size="352,760">
+<div style="width:100%;height:100%;background:#241812;font-family:'Nunito',sans-serif;padding:20px;display:flex;flex-direction:column;gap:18px;overflow:auto">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:21px;font-weight:800;color:#FBEEE0">Mi progreso</span><div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;background:#E8734F;border-radius:50% 50% 50% 0;transform:rotate(45deg)"></div><span style="font-size:13px;font-weight:700;color:#C9A88D">12 días</span></div></div>
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:16px;color:#8F7460">‹</span><span style="font-size:13px;font-weight:600;color:#C9A88D">8 sept – 14 sept</span><span style="font-size:16px;color:#8F7460">›</span></div>
+<div style="background:#34241B;border-radius:20px;padding:16px"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><span style="font-size:15px;font-weight:700;color:#FBEEE0">Progreso semanal</span><span style="font-size:15px;font-weight:800;color:#F0A868">65%</span></div><div style="height:10px;background:#402C21;border-radius:8px;overflow:hidden"><div style="width:65%;height:100%;background:#E8734F;border-radius:8px"></div></div></div>
+<div>
+<div style="display:flex;align-items:center;margin-bottom:10px"><span style="font-size:16px;color:#8F7460">‹</span><span style="flex:1;text-align:center;font-size:15.5px;font-weight:700;color:#FBEEE0">Septiembre 2026</span><span style="font-size:16px;color:#8F7460">›</span><span style="font-size:12.5px;font-weight:700;color:#F0A868;margin-left:6px">Hoy</span></div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:7px">
+<span style="font-size:10.5px;font-weight:700;color:#8F7460;text-align:center">D</span><span style="font-size:10.5px;font-weight:700;color:#8F7460;text-align:center">L</span><span style="font-size:10.5px;font-weight:700;color:#8F7460;text-align:center">M</span><span style="font-size:10.5px;font-weight:700;color:#8F7460;text-align:center">X</span><span style="font-size:10.5px;font-weight:700;color:#8F7460;text-align:center">J</span><span style="font-size:10.5px;font-weight:700;color:#8F7460;text-align:center">V</span><span style="font-size:10.5px;font-weight:700;color:#8F7460;text-align:center">S</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px">
+<div></div><div></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#34241B;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#FBEEE0">1</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:rgba(143,192,136,.15);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#FBEEE0">2</span><div style="position:absolute;bottom:4px;width:5px;height:5px;border-radius:50%;background:#8FC088"></div></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#34241B;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#FBEEE0">3</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:rgba(239,192,102,.15);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#FBEEE0">4</span><div style="position:absolute;bottom:4px;width:5px;height:5px;border-radius:50%;background:#EFC066"></div></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#34241B;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#FBEEE0">5</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:rgba(143,192,136,.15);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#FBEEE0">6</span><div style="position:absolute;bottom:4px;width:5px;height:5px;border-radius:50%;background:#8FC088"></div></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#34241B;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#FBEEE0">7</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#34241B;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#FBEEE0">8</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:rgba(143,192,136,.15);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#FBEEE0">9</span><div style="position:absolute;bottom:4px;width:5px;height:5px;border-radius:50%;background:#8FC088"></div></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#34241B;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#FBEEE0">10</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#34241B;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#FBEEE0">11</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:rgba(239,192,102,.15);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#FBEEE0">12</span><div style="position:absolute;bottom:4px;width:5px;height:5px;border-radius:50%;background:#EFC066"></div></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#34241B;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:600;color:#FBEEE0">13</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#E8734F;display:flex;align-items:center;justify-content:center"><span style="font-size:13px;font-weight:800;color:#fff">14</span></div>
+</div>
+</div>
+<div style="font-size:15px;font-weight:800;color:#FBEEE0">Resumen diario</div>
+<div style="display:flex;gap:6px">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:10.5px;font-weight:700;color:#8F7460">L</span><span style="font-size:14px;font-weight:700;color:#FBEEE0">8</span><div style="width:32px;height:32px;border-radius:50%;background:conic-gradient(#8FC088 100%,#402C21 0)"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:10.5px;font-weight:700;color:#8F7460">M</span><span style="font-size:14px;font-weight:700;color:#FBEEE0">9</span><div style="width:32px;height:32px;border-radius:50%;background:conic-gradient(#E8734F 60%,#402C21 0)"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:10.5px;font-weight:700;color:#8F7460">X</span><span style="font-size:14px;font-weight:700;color:#FBEEE0">10</span><div style="width:32px;height:32px;border-radius:50%;background:conic-gradient(#E8734F 40%,#402C21 0)"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:10.5px;font-weight:700;color:#8F7460">J</span><span style="font-size:14px;font-weight:700;color:#FBEEE0">11</span><div style="width:32px;height:32px;border-radius:50%;background:#402C21"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;background:#34241B;border-radius:14px;padding:5px 0"><span style="font-size:10.5px;font-weight:800;color:#F0A868">V</span><span style="font-size:14px;font-weight:800;color:#F0A868">12</span><div style="width:32px;height:32px;border-radius:50%;background:conic-gradient(#E8734F 80%,#402C21 0)"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:10.5px;font-weight:700;color:#8F7460">S</span><span style="font-size:14px;font-weight:700;color:#FBEEE0">13</span><div style="width:32px;height:32px;border-radius:50%;background:conic-gradient(#8FC088 100%,#402C21 0)"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px"><span style="font-size:10.5px;font-weight:800;color:#FBEEE0">D</span><span style="font-size:14px;font-weight:800;color:#FBEEE0">14</span><div style="width:32px;height:32px;border-radius:50%;background:conic-gradient(#E8734F 66%,#402C21 0)"></div></div>
+</div>
+</div>
+</x-import>
+</div>
+
+</div>
+</div>
+
+</div>
+<p class="dv-next">Escribe "quiero <a href="#2b">2b</a>" o "quiero <a href="#2a">2a</a>" para pasar esa versión a producción, o pide más ajustes (p. ej. "más contraste en los botones", "prueba otro acento de color").</p>
+</section>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">3 direcciones visuales para agenda, detalle de evento y calendario</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a><span class="dv-oname">Actual — Slate System (referencia)</span><span class="dv-odesc">Recreación fiel del código: negro puro, índigo, Inter, tono gamificado (Quest, XP, racha con llama).</span></div>
+<div class="dv-row">
+
+<div class="dv-phonewrap"><span class="dv-phonecap">Agenda</span>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ true }}" width="320" height="700" hint-size="320,700">
+<div style="width:100%;height:100%;background:#0F0F0F;font-family:Inter,system-ui,sans-serif;display:flex;flex-direction:column;position:relative;overflow:hidden">
+<div style="padding:16px 16px 10px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:flex-start">
+<div><div style="font-size:24px;font-weight:700;color:#fff;letter-spacing:-.5px">Hoy</div><div style="font-size:13px;color:#A1A1AA;margin-top:2px">14 de septiembre</div></div>
+<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:16px;background:linear-gradient(135deg,#FF6B35,#FF8C42);box-shadow:0 2px 8px rgba(255,107,53,.35)">
+<div style="width:11px;height:11px;background:#fff;border-radius:50% 50% 50% 0;transform:rotate(45deg)"></div><span style="font-size:14px;font-weight:700;color:#fff">12</span></div>
+</div>
+<div style="display:flex;align-items:center;gap:2px">
+<span style="font-size:18px;color:#A1A1AA">‹</span>
+<div style="display:flex;gap:5px;flex:1;justify-content:space-between">
+<div style="width:34px;border-radius:10px;background:#1A1A1A;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:#A1A1AA">V</span><span style="font-size:14px;font-weight:600;color:#fff;margin-top:2px">11</span></div>
+<div style="width:34px;border-radius:10px;background:#1A1A1A;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:#A1A1AA">S</span><span style="font-size:14px;font-weight:600;color:#fff;margin-top:2px">12</span></div>
+<div style="width:34px;border-radius:10px;background:#1A1A1A;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:#A1A1AA">D</span><span style="font-size:14px;font-weight:600;color:#fff;margin-top:2px">13</span></div>
+<div style="width:34px;border-radius:10px;background:#6366F1;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:rgba(255,255,255,.7)">L</span><span style="font-size:14px;font-weight:600;color:#fff;margin-top:2px">14</span></div>
+<div style="width:34px;border-radius:10px;background:#1A1A1A;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:#A1A1AA">M</span><span style="font-size:14px;font-weight:600;color:#fff;margin-top:2px">15</span></div>
+<div style="width:34px;border-radius:10px;background:#1A1A1A;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:#A1A1AA">X</span><span style="font-size:14px;font-weight:600;color:#fff;margin-top:2px">16</span></div>
+<div style="width:34px;border-radius:10px;background:#1A1A1A;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:#A1A1AA">J</span><span style="font-size:14px;font-weight:600;color:#fff;margin-top:2px">17</span></div>
+</div>
+<span style="font-size:18px;color:#A1A1AA">›</span>
+</div>
+</div>
+<div style="flex:1;overflow:auto;padding:0 16px 70px;display:flex;flex-direction:column;gap:18px">
+<div style="background:#1E1E1E;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px">
+<div style="font-size:13px;font-weight:600;color:#818CF8">▶ Daily Quest</div>
+<div style="font-size:12.5px;color:#A1A1AA">Completa 3 misiones hoy</div>
+<div style="display:flex;align-items:center;gap:12px;margin-top:2px">
+<div style="flex:1"><div style="font-size:11px;color:#A1A1AA;margin-bottom:5px">2/3 completadas</div><div style="height:6px;background:#262626;border-radius:4px;overflow:hidden"><div style="width:66%;height:100%;background:#22C55E"></div></div></div>
+<div style="background:#6366F1;padding:9px 12px;border-radius:8px;font-size:11px;font-weight:600;color:#fff;white-space:nowrap">▶ Reclamar +25 XP</div>
+</div></div>
+<div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:13px;font-weight:600;color:#A1A1AA">Con horario</span><span style="font-size:11px;color:#A1A1AA;background:#262626;padding:2px 8px;border-radius:10px">3</span></div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="background:#1E1E1E;border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px">
+<div style="width:22px;height:22px;border-radius:50%;background:#22C55E;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;flex-shrink:0">✓</div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500;color:#71717A;text-decoration:line-through">Enviar reporte semanal</div><div style="font-size:11px;color:#71717A;margin-top:2px">09:00</div></div>
+</div>
+<div style="background:#1E1E1E;border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px">
+<div style="width:22px;height:22px;border-radius:50%;border:2px solid #71717A;flex-shrink:0"></div>
+<div style="flex:1;min-width:0">
+<div style="display:flex;align-items:center;gap:5px"><div style="width:7px;height:7px;border-radius:50%;background:#EF4444;flex-shrink:0"></div><span style="font-size:14px;font-weight:500;color:#fff">Preparar presentación cliente</span></div>
+<div style="font-size:11px;color:#71717A;margin-top:2px">14:30</div>
+<div style="margin-top:6px;display:flex;flex-direction:column;gap:5px">
+<div style="display:flex;align-items:center;gap:7px"><div style="width:14px;height:14px;border-radius:50%;background:#22C55E;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px">✓</div><span style="font-size:12px;color:#71717A;text-decoration:line-through">Revisar diapositivas</span></div>
+<div style="display:flex;align-items:center;gap:7px"><div style="width:14px;height:14px;border-radius:50%;border:1.5px solid #71717A"></div><span style="font-size:12px;color:#A1A1AA">Enviar borrador al equipo</span></div>
+</div></div>
+<div style="width:4px;height:34px;border-radius:2px;background:#F59E0B;flex-shrink:0"></div>
+</div>
+<div style="background:#1E1E1E;border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px">
+<div style="width:22px;height:22px;border-radius:50%;border:2px solid #71717A;flex-shrink:0"></div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500;color:#fff">Llamar al proveedor</div><div style="font-size:11px;color:#71717A;margin-top:2px">16:00</div></div>
+<div style="width:4px;height:34px;border-radius:2px;background:#EF4444;flex-shrink:0"></div>
+</div>
+</div></div>
+<div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:13px;font-weight:600;color:#A1A1AA">Sin horario</span><span style="font-size:11px;color:#A1A1AA;background:#262626;padding:2px 8px;border-radius:10px">2</span></div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="background:#1E1E1E;border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px"><div style="width:22px;height:22px;border-radius:50%;border:2px solid #71717A;flex-shrink:0"></div><span style="font-size:14px;font-weight:500;color:#fff">Comprar materiales de oficina</span></div>
+<div style="background:#1E1E1E;border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px"><div style="width:22px;height:22px;border-radius:50%;border:2px solid #71717A;flex-shrink:0"></div><span style="font-size:14px;font-weight:500;color:#fff">Actualizar hoja de cálculo</span></div>
+</div></div>
+</div>
+<div style="position:absolute;bottom:20px;right:20px;width:52px;height:52px;border-radius:50%;background:#6366F1;box-shadow:0 4px 14px rgba(99,102,241,.4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px">+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-phonewrap"><span class="dv-phonecap">Detalle</span>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ true }}" width="320" height="700" hint-size="320,700">
+<div style="width:100%;height:100%;background:#0F0F0F;font-family:Inter,system-ui,sans-serif;position:relative;overflow:hidden">
+<div style="position:absolute;inset:0;background:rgba(0,0,0,.55)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;height:92%;background:#1A1A1A;border-radius:20px 20px 0 0;padding:16px;display:flex;flex-direction:column;gap:14px;overflow:auto">
+<div style="width:36px;height:4px;border-radius:2px;background:#71717A;align-self:center"></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:19px;font-weight:700;color:#fff">Editar tarea</span><div style="width:16px;height:14px;border:1.5px solid #EF4444;border-radius:2px;position:relative"><div style="position:absolute;top:-4px;left:2px;width:8px;height:1.5px;background:#EF4444"></div></div></div>
+<div style="background:#262626;border-radius:12px;padding:13px 14px;font-size:16px;color:#fff">Preparar presentación cliente</div>
+<div style="display:flex;gap:10px">
+<div style="flex:1;background:#262626;border-radius:12px;padding:12px 14px"><div style="width:4px;height:4px;border-radius:50%;background:#A1A1AA;margin-bottom:5px"></div><span style="font-size:13px;color:#fff">14 sept 2026</span></div>
+<div style="flex:1;background:#262626;border-radius:12px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between"><div><div style="width:4px;height:4px;border-radius:50%;background:#A1A1AA;margin-bottom:5px"></div><span style="font-size:13px;color:#fff">14:30</span></div><span style="font-size:14px;color:#71717A">✕</span></div>
+</div>
+<div style="background:#262626;border-radius:8px;padding:10px 12px;font-size:11px;color:#A1A1AA;line-height:1.4">Por defecto te avisaremos justo a la hora de la tarea. Puedes adelantar el aviso en Ajustes › Recordatorios.</div>
+<div><div style="font-size:11px;color:#A1A1AA;margin-bottom:7px">Prioridad</div>
+<div style="display:flex;gap:8px">
+<div style="flex:1;background:#262626;border-radius:8px;padding:10px 0;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:7px;height:7px;border-radius:50%;background:#6366F1"></div><span style="font-size:11px;color:#A1A1AA">Normal</span></div>
+<div style="flex:1;background:rgba(245,158,11,.2);border:1px solid #F59E0B;border-radius:8px;padding:10px 0;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:7px;height:7px;border-radius:50%;background:#F59E0B"></div><span style="font-size:11px;font-weight:600;color:#F59E0B">Media</span></div>
+<div style="flex:1;background:#262626;border-radius:8px;padding:10px 0;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:7px;height:7px;border-radius:50%;background:#EF4444"></div><span style="font-size:11px;color:#A1A1AA">Alta</span></div>
+</div></div>
+<div><div style="font-size:11px;color:#A1A1AA;margin-bottom:7px">Categoría</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<div style="padding:8px 14px;border-radius:20px;background:rgba(99,102,241,.2);border:1px solid #6366F1;display:flex;align-items:center;gap:6px"><div style="width:7px;height:7px;border-radius:50%;background:#EF4444"></div><span style="font-size:12px;font-weight:600;color:#EF4444">Trabajo</span></div>
+<div style="padding:8px 14px;border-radius:20px;background:#262626;display:flex;align-items:center;gap:6px"><div style="width:7px;height:7px;border-radius:50%;background:#3B82F6"></div><span style="font-size:12px;color:#A1A1AA">Personal</span></div>
+<div style="padding:8px 14px;border-radius:20px;background:#262626;display:flex;align-items:center;gap:6px"><div style="width:7px;height:7px;border-radius:50%;background:#22C55E"></div><span style="font-size:12px;color:#A1A1AA">Salud</span></div>
+</div></div>
+<div><div style="font-size:11px;color:#A1A1AA;margin-bottom:7px">Repetir</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px"><div style="padding:7px 13px;border-radius:20px;background:rgba(99,102,241,.2);border:1px solid #6366F1;font-size:12px;font-weight:600;color:#6366F1">No repetir</div><div style="padding:7px 13px;border-radius:20px;background:#262626;font-size:12px;color:#A1A1AA">Diario</div><div style="padding:7px 13px;border-radius:20px;background:#262626;font-size:12px;color:#A1A1AA">Semanal</div></div></div>
+<div style="background:#262626;border-radius:12px;padding:13px 14px;font-size:13px;color:#fff;min-height:44px">Incluir métricas del último trimestre</div>
+<div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:11px;color:#A1A1AA">Subtareas</span><span style="font-size:11px;font-weight:600;color:#6366F1">+ Añadir</span></div>
+<div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:#71717A">⠿</span><div style="flex:1;background:#262626;border-radius:8px;padding:9px 12px;font-size:13px;color:#fff">Revisar aprobación final</div><span style="font-size:13px;color:#71717A">✕</span></div></div>
+<div style="background:#6366F1;border-radius:12px;padding:13px 0;text-align:center;font-size:15px;font-weight:600;color:#fff;margin-top:4px">Guardar</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-phonewrap"><span class="dv-phonecap">Calendario</span>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ true }}" width="320" height="700" hint-size="320,700">
+<div style="width:100%;height:100%;background:#0F0F0F;font-family:Inter,system-ui,sans-serif;padding:16px;display:flex;flex-direction:column;gap:16px;overflow:auto">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:21px;font-weight:700;color:#fff">Mi Progreso</span><div style="display:flex;align-items:center;gap:5px"><div style="width:9px;height:9px;background:#FF6B35;border-radius:50% 50% 50% 0;transform:rotate(45deg)"></div><span style="font-size:12px;color:#A1A1AA">12 días</span></div></div>
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:16px;color:#A1A1AA">‹</span><span style="font-size:12.5px;color:#A1A1AA">8 sept - 14 sept</span><span style="font-size:16px;color:#A1A1AA">›</span></div>
+<div style="background:#1E1E1E;border-radius:12px;padding:14px"><div style="display:flex;justify-content:space-between;margin-bottom:10px"><span style="font-size:14px;font-weight:600;color:#fff">Progreso semanal</span><span style="font-size:14px;font-weight:700;color:#6366F1">65%</span></div><div style="height:8px;background:#262626;border-radius:4px;overflow:hidden"><div style="width:65%;height:100%;background:#6366F1"></div></div></div>
+<div>
+<div style="display:flex;align-items:center;margin-bottom:8px"><span style="font-size:16px;color:#A1A1AA">‹</span><span style="flex:1;text-align:center;font-size:15px;font-weight:600;color:#fff">Septiembre 2026</span><span style="font-size:16px;color:#A1A1AA">›</span><span style="font-size:12px;font-weight:600;color:#6366F1;margin-left:6px">Hoy</span></div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px">
+<span style="font-size:10px;font-weight:600;color:#A1A1AA;text-align:center">D</span><span style="font-size:10px;font-weight:600;color:#A1A1AA;text-align:center">L</span><span style="font-size:10px;font-weight:600;color:#A1A1AA;text-align:center">M</span><span style="font-size:10px;font-weight:600;color:#A1A1AA;text-align:center">X</span><span style="font-size:10px;font-weight:600;color:#A1A1AA;text-align:center">J</span><span style="font-size:10px;font-weight:600;color:#A1A1AA;text-align:center">V</span><span style="font-size:10px;font-weight:600;color:#A1A1AA;text-align:center">S</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+<div></div><div></div>
+<div style="aspect-ratio:1;border-radius:6px;background:#1A1A1A;position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;color:#fff">1</span></div>
+<div style="aspect-ratio:1;border-radius:6px;background:rgba(34,197,94,.1);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;color:#fff">2</span><div style="position:absolute;bottom:2px;width:5px;height:5px;border-radius:50%;background:#22C55E"></div></div>
+<div style="aspect-ratio:1;border-radius:6px;background:#1A1A1A;position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;color:#fff">3</span></div>
+<div style="aspect-ratio:1;border-radius:6px;background:rgba(245,158,11,.12);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;color:#fff">4</span><div style="position:absolute;bottom:2px;width:5px;height:5px;border-radius:50%;background:#F59E0B"></div></div>
+<div style="aspect-ratio:1;border-radius:6px;background:#1A1A1A;position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;color:#fff">5</span></div>
+<div style="aspect-ratio:1;border-radius:6px;background:rgba(34,197,94,.1);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;color:#fff">6</span><div style="position:absolute;bottom:2px;width:5px;height:5px;border-radius:50%;background:#22C55E"></div></div>
+<div style="aspect-ratio:1;border-radius:6px;background:#1A1A1A;position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;color:#fff">7</span></div>
+<div style="aspect-ratio:1;border-radius:6px;background:#1A1A1A;position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;color:#fff">8</span></div>
+<div style="aspect-ratio:1;border-radius:6px;background:rgba(34,197,94,.1);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;color:#fff">9</span><div style="position:absolute;bottom:2px;width:5px;height:5px;border-radius:50%;background:#22C55E"></div></div>
+<div style="aspect-ratio:1;border-radius:6px;background:#1A1A1A;position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;color:#fff">10</span></div>
+<div style="aspect-ratio:1;border-radius:6px;background:#1A1A1A;position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;color:#fff">11</span></div>
+<div style="aspect-ratio:1;border-radius:6px;background:rgba(245,158,11,.12);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;color:#fff">12</span><div style="position:absolute;bottom:2px;width:5px;height:5px;border-radius:50%;background:#F59E0B"></div></div>
+<div style="aspect-ratio:1;border-radius:6px;background:#1A1A1A;position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;color:#fff">13</span></div>
+<div style="aspect-ratio:1;border-radius:6px;background:rgba(99,102,241,.25);border:1px solid #6366F1;position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;font-weight:700;color:#6366F1">14</span></div>
+</div>
+</div>
+<div style="font-size:14px;font-weight:600;color:#fff">Resumen diario</div>
+<div style="display:flex;gap:4px">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><span style="font-size:10px;font-weight:600;color:#A1A1AA">L</span><span style="font-size:13px;font-weight:600;color:#fff">8</span><div style="width:26px;height:26px;border-radius:50%;background:conic-gradient(#22C55E 100%,#262626 0)"></div><span style="font-size:9px;color:#71717A">2</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><span style="font-size:10px;font-weight:600;color:#A1A1AA">M</span><span style="font-size:13px;font-weight:600;color:#fff">9</span><div style="width:26px;height:26px;border-radius:50%;background:conic-gradient(#6366F1 60%,#262626 0)"></div><span style="font-size:9px;color:#71717A">3</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><span style="font-size:10px;font-weight:600;color:#A1A1AA">X</span><span style="font-size:13px;font-weight:600;color:#fff">10</span><div style="width:26px;height:26px;border-radius:50%;background:conic-gradient(#6366F1 40%,#262626 0)"></div><span style="font-size:9px;color:#71717A">1</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><span style="font-size:10px;font-weight:600;color:#A1A1AA">J</span><span style="font-size:13px;font-weight:600;color:#fff">11</span><div style="width:26px;height:26px;border-radius:50%;background:#262626"></div><span style="font-size:9px;color:#71717A">0</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;border:1px solid #6366F1;border-radius:8px;padding:2px 0"><span style="font-size:10px;font-weight:700;color:#6366F1">V</span><span style="font-size:13px;font-weight:700;color:#6366F1">12</span><div style="width:26px;height:26px;border-radius:50%;background:conic-gradient(#6366F1 80%,#262626 0)"></div><span style="font-size:9px;color:#71717A">4</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><span style="font-size:10px;font-weight:600;color:#A1A1AA">S</span><span style="font-size:13px;font-weight:600;color:#fff">13</span><div style="width:26px;height:26px;border-radius:50%;background:conic-gradient(#22C55E 100%,#262626 0)"></div><span style="font-size:9px;color:#71717A">2</span></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><span style="font-size:10px;font-weight:700;color:#818CF8">D</span><span style="font-size:13px;font-weight:700;color:#fff">14</span><div style="width:26px;height:26px;border-radius:50%;background:conic-gradient(#6366F1 66%,#262626 0)"></div><span style="font-size:9px;color:#71717A">3</span></div>
+</div>
+</div>
+</x-import>
+</div>
+
+</div>
+</div>
+
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a><span class="dv-oname">Minimalista y neutral</span><span class="dv-odesc">Blanco cálido, tinta casi negra, un solo acento grafito discreto. Sin sombras, sin degradados, sin insignias de color — la jerarquía viene del espacio y del peso tipográfico. Helvetica/sistema.</span></div>
+<div class="dv-row">
+
+<div class="dv-phonewrap"><span class="dv-phonecap">Agenda</span>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ false }}" width="320" height="700" hint-size="320,700">
+<div style="width:100%;height:100%;background:#FAFAF8;font-family:-apple-system,Helvetica Neue,Arial,sans-serif;display:flex;flex-direction:column;position:relative;overflow:hidden">
+<div style="padding:20px 20px 12px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;justify-content:space-between;align-items:flex-start">
+<div><div style="font-size:22px;font-weight:600;color:#2B2B29;letter-spacing:-.3px">Hoy</div><div style="font-size:12.5px;color:#7A7A74;margin-top:2px">14 de septiembre</div></div>
+<div style="font-size:12px;color:#7A7A74;padding-top:4px">Racha: 12 días</div>
+</div>
+<div style="display:flex;align-items:center;gap:2px">
+<span style="font-size:16px;color:#A8A6A0">‹</span>
+<div style="display:flex;gap:5px;flex:1;justify-content:space-between">
+<div style="width:34px;border-radius:8px;background:transparent;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:#A8A6A0">V</span><span style="font-size:13px;font-weight:500;color:#2B2B29;margin-top:2px">11</span></div>
+<div style="width:34px;border-radius:8px;background:transparent;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:#A8A6A0">S</span><span style="font-size:13px;font-weight:500;color:#2B2B29;margin-top:2px">12</span></div>
+<div style="width:34px;border-radius:8px;background:transparent;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:#A8A6A0">D</span><span style="font-size:13px;font-weight:500;color:#2B2B29;margin-top:2px">13</span></div>
+<div style="width:34px;border-radius:8px;background:#2B2B29;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:rgba(255,255,255,.6)">L</span><span style="font-size:13px;font-weight:600;color:#fff;margin-top:2px">14</span></div>
+<div style="width:34px;border-radius:8px;background:transparent;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:#A8A6A0">M</span><span style="font-size:13px;font-weight:500;color:#2B2B29;margin-top:2px">15</span></div>
+<div style="width:34px;border-radius:8px;background:transparent;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:#A8A6A0">X</span><span style="font-size:13px;font-weight:500;color:#2B2B29;margin-top:2px">16</span></div>
+<div style="width:34px;border-radius:8px;background:transparent;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:#A8A6A0">J</span><span style="font-size:13px;font-weight:500;color:#2B2B29;margin-top:2px">17</span></div>
+</div>
+<span style="font-size:16px;color:#A8A6A0">›</span>
+</div>
+<div style="height:1px;background:#E6E4DF"></div>
+</div>
+<div style="flex:1;overflow:auto;padding:0 20px 70px;display:flex;flex-direction:column;gap:22px">
+<div style="border:1px solid #E6E4DF;border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:7px">
+<div style="font-size:13px;font-weight:600;color:#2B2B29">Meta diaria</div>
+<div style="font-size:12px;color:#7A7A74">Completa 3 tareas para hoy</div>
+<div style="margin-top:2px"><div style="font-size:11px;color:#7A7A74;margin-bottom:5px">2 de 3 tareas completadas</div><div style="height:3px;background:#E6E4DF;border-radius:2px;overflow:hidden"><div style="width:66%;height:100%;background:#4C5A75"></div></div></div>
+</div>
+<div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:12.5px;font-weight:600;color:#7A7A74;text-transform:uppercase;letter-spacing:.03em">Con horario</span><span style="font-size:11px;color:#A8A6A0">3</span></div>
+<div style="display:flex;flex-direction:column">
+<div style="padding:11px 0;border-bottom:1px solid #E6E4DF;display:flex;align-items:center;gap:10px">
+<div style="width:18px;height:18px;border-radius:50%;background:#2B2B29;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;flex-shrink:0">✓</div>
+<div style="flex:1;min-width:0"><div style="font-size:13.5px;color:#A8A6A0;text-decoration:line-through">Enviar reporte semanal</div><div style="font-size:11px;color:#A8A6A0;margin-top:1px">09:00</div></div>
+</div>
+<div style="padding:11px 0;border-bottom:1px solid #E6E4DF;display:flex;align-items:center;gap:10px">
+<div style="width:18px;height:18px;border-radius:50%;border:1.5px solid #A8A6A0;flex-shrink:0"></div>
+<div style="flex:1;min-width:0">
+<div style="display:flex;align-items:center;gap:5px"><div style="width:6px;height:6px;border-radius:50%;background:#B14B45;flex-shrink:0"></div><span style="font-size:13.5px;color:#2B2B29">Preparar presentación cliente</span></div>
+<div style="font-size:11px;color:#A8A6A0;margin-top:1px">14:30</div>
+<div style="margin-top:6px;display:flex;flex-direction:column;gap:5px">
+<div style="display:flex;align-items:center;gap:7px"><div style="width:13px;height:13px;border-radius:50%;background:#2B2B29;display:flex;align-items:center;justify-content:center;color:#fff;font-size:8px">✓</div><span style="font-size:11.5px;color:#A8A6A0;text-decoration:line-through">Revisar diapositivas</span></div>
+<div style="display:flex;align-items:center;gap:7px"><div style="width:13px;height:13px;border-radius:50%;border:1.5px solid #A8A6A0"></div><span style="font-size:11.5px;color:#7A7A74">Enviar borrador al equipo</span></div>
+</div></div>
+</div>
+<div style="padding:11px 0;border-bottom:1px solid #E6E4DF;display:flex;align-items:center;gap:10px">
+<div style="width:18px;height:18px;border-radius:50%;border:1.5px solid #A8A6A0;flex-shrink:0"></div>
+<div style="flex:1;min-width:0"><div style="font-size:13.5px;color:#2B2B29">Llamar al proveedor</div><div style="font-size:11px;color:#A8A6A0;margin-top:1px">16:00</div></div>
+</div>
+</div></div>
+<div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:12.5px;font-weight:600;color:#7A7A74;text-transform:uppercase;letter-spacing:.03em">Sin horario</span><span style="font-size:11px;color:#A8A6A0">2</span></div>
+<div style="display:flex;flex-direction:column">
+<div style="padding:11px 0;border-bottom:1px solid #E6E4DF;display:flex;align-items:center;gap:10px"><div style="width:18px;height:18px;border-radius:50%;border:1.5px solid #A8A6A0;flex-shrink:0"></div><span style="font-size:13.5px;color:#2B2B29">Comprar materiales de oficina</span></div>
+<div style="padding:11px 0;border-bottom:1px solid #E6E4DF;display:flex;align-items:center;gap:10px"><div style="width:18px;height:18px;border-radius:50%;border:1.5px solid #A8A6A0;flex-shrink:0"></div><span style="font-size:13.5px;color:#2B2B29">Actualizar hoja de cálculo</span></div>
+</div></div>
+</div>
+<div style="position:absolute;bottom:20px;right:20px;width:48px;height:48px;border-radius:50%;background:#2B2B29;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px">+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-phonewrap"><span class="dv-phonecap">Detalle</span>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ false }}" width="320" height="700" hint-size="320,700">
+<div style="width:100%;height:100%;background:#FAFAF8;font-family:-apple-system,Helvetica Neue,Arial,sans-serif;position:relative;overflow:hidden">
+<div style="position:absolute;inset:0;background:rgba(0,0,0,.35)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;height:92%;background:#FFFFFF;border-radius:14px 14px 0 0;padding:20px;display:flex;flex-direction:column;gap:16px;overflow:auto;border-top:1px solid #E6E4DF">
+<div style="width:32px;height:3px;border-radius:2px;background:#D8D6D0;align-self:center"></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:17px;font-weight:600;color:#2B2B29">Editar tarea</span><span style="font-size:12px;color:#B14B45">Eliminar</span></div>
+<div style="border-bottom:1px solid #E6E4DF;padding-bottom:10px;font-size:15px;color:#2B2B29">Preparar presentación cliente</div>
+<div style="display:flex;gap:16px">
+<div style="flex:1"><div style="font-size:10.5px;color:#A8A6A0;margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em">Fecha</div><span style="font-size:13px;color:#2B2B29">14 sept 2026</span></div>
+<div style="flex:1"><div style="font-size:10.5px;color:#A8A6A0;margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em">Hora</div><span style="font-size:13px;color:#2B2B29">14:30</span></div>
+</div>
+<div style="font-size:11px;color:#7A7A74;line-height:1.5">Te avisaremos a la hora indicada. Puedes ajustarlo en Ajustes › Recordatorios.</div>
+<div><div style="font-size:10.5px;color:#A8A6A0;margin-bottom:8px;text-transform:uppercase;letter-spacing:.03em">Prioridad</div>
+<div style="display:flex;gap:18px">
+<span style="font-size:12.5px;color:#A8A6A0">Normal</span>
+<span style="font-size:12.5px;font-weight:600;color:#2B2B29;border-bottom:2px solid #4C5A75">Media</span>
+<span style="font-size:12.5px;color:#A8A6A0">Alta</span>
+</div></div>
+<div><div style="font-size:10.5px;color:#A8A6A0;margin-bottom:8px;text-transform:uppercase;letter-spacing:.03em">Categoría</div>
+<div style="display:flex;flex-wrap:wrap;gap:10px">
+<span style="font-size:12.5px;font-weight:600;color:#2B2B29;border-bottom:2px solid #2B2B29;padding-bottom:2px">Trabajo</span>
+<span style="font-size:12.5px;color:#A8A6A0">Personal</span>
+<span style="font-size:12.5px;color:#A8A6A0">Salud</span>
+</div></div>
+<div><div style="font-size:10.5px;color:#A8A6A0;margin-bottom:8px;text-transform:uppercase;letter-spacing:.03em">Repetir</div>
+<span style="font-size:12.5px;font-weight:600;color:#2B2B29;border-bottom:2px solid #2B2B29;padding-bottom:2px">No repetir</span></div>
+<div style="border:1px solid #E6E4DF;border-radius:8px;padding:12px;font-size:13px;color:#2B2B29;min-height:40px">Incluir métricas del último trimestre</div>
+<div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:10.5px;color:#A8A6A0;text-transform:uppercase;letter-spacing:.03em">Subtareas</span><span style="font-size:12px;font-weight:600;color:#4C5A75">+ Añadir</span></div>
+<div style="border-bottom:1px solid #E6E4DF;padding-bottom:9px;font-size:13px;color:#2B2B29">Revisar aprobación final</div></div>
+<div style="background:#2B2B29;border-radius:8px;padding:13px 0;text-align:center;font-size:14px;font-weight:600;color:#fff;margin-top:4px">Guardar</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-phonewrap"><span class="dv-phonecap">Calendario</span>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ false }}" width="320" height="700" hint-size="320,700">
+<div style="width:100%;height:100%;background:#FAFAF8;font-family:-apple-system,Helvetica Neue,Arial,sans-serif;padding:20px;display:flex;flex-direction:column;gap:18px;overflow:auto">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:19px;font-weight:600;color:#2B2B29">Mi progreso</span><span style="font-size:12px;color:#7A7A74">12 días</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:14px;color:#A8A6A0">‹</span><span style="font-size:12px;color:#7A7A74">8 sept – 14 sept</span><span style="font-size:14px;color:#A8A6A0">›</span></div>
+<div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:13px;color:#2B2B29">Progreso semanal</span><span style="font-size:13px;font-weight:600;color:#4C5A75">65%</span></div><div style="height:3px;background:#E6E4DF;border-radius:2px;overflow:hidden"><div style="width:65%;height:100%;background:#4C5A75"></div></div></div>
+<div>
+<div style="display:flex;align-items:center;margin-bottom:10px"><span style="font-size:14px;color:#A8A6A0">‹</span><span style="flex:1;text-align:center;font-size:13.5px;font-weight:600;color:#2B2B29">Septiembre 2026</span><span style="font-size:14px;color:#A8A6A0">›</span><span style="font-size:11px;color:#4C5A75;margin-left:6px">Hoy</span></div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px">
+<span style="font-size:9.5px;color:#A8A6A0;text-align:center">D</span><span style="font-size:9.5px;color:#A8A6A0;text-align:center">L</span><span style="font-size:9.5px;color:#A8A6A0;text-align:center">M</span><span style="font-size:9.5px;color:#A8A6A0;text-align:center">X</span><span style="font-size:9.5px;color:#A8A6A0;text-align:center">J</span><span style="font-size:9.5px;color:#A8A6A0;text-align:center">V</span><span style="font-size:9.5px;color:#A8A6A0;text-align:center">S</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">
+<div></div><div></div>
+<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center"><span style="font-size:11.5px;color:#2B2B29">1</span></div>
+<div style="aspect-ratio:1;position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:11.5px;color:#2B2B29">2</span><div style="position:absolute;bottom:1px;width:3px;height:3px;border-radius:50%;background:#5B8A6B"></div></div>
+<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center"><span style="font-size:11.5px;color:#2B2B29">3</span></div>
+<div style="aspect-ratio:1;position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:11.5px;color:#2B2B29">4</span><div style="position:absolute;bottom:1px;width:3px;height:3px;border-radius:50%;background:#B4863B"></div></div>
+<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center"><span style="font-size:11.5px;color:#2B2B29">5</span></div>
+<div style="aspect-ratio:1;position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:11.5px;color:#2B2B29">6</span><div style="position:absolute;bottom:1px;width:3px;height:3px;border-radius:50%;background:#5B8A6B"></div></div>
+<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center"><span style="font-size:11.5px;color:#2B2B29">7</span></div>
+<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center"><span style="font-size:11.5px;color:#2B2B29">8</span></div>
+<div style="aspect-ratio:1;position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:11.5px;color:#2B2B29">9</span><div style="position:absolute;bottom:1px;width:3px;height:3px;border-radius:50%;background:#5B8A6B"></div></div>
+<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center"><span style="font-size:11.5px;color:#2B2B29">10</span></div>
+<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center"><span style="font-size:11.5px;color:#2B2B29">11</span></div>
+<div style="aspect-ratio:1;position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:11.5px;color:#2B2B29">12</span><div style="position:absolute;bottom:1px;width:3px;height:3px;border-radius:50%;background:#B4863B"></div></div>
+<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center"><span style="font-size:11.5px;color:#2B2B29">13</span></div>
+<div style="aspect-ratio:1;border-radius:6px;border:1px solid #4C5A75;display:flex;align-items:center;justify-content:center"><span style="font-size:11.5px;font-weight:700;color:#4C5A75">14</span></div>
+</div>
+</div>
+<div style="font-size:13px;font-weight:600;color:#2B2B29">Resumen diario</div>
+<div style="display:flex;gap:6px">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:9.5px;color:#A8A6A0">L</span><span style="font-size:12px;color:#2B2B29">8</span><div style="width:3px;height:20px;background:#E6E4DF;border-radius:2px;position:relative"><div style="position:absolute;bottom:0;width:100%;height:100%;background:#4C5A75;border-radius:2px"></div></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:9.5px;color:#A8A6A0">M</span><span style="font-size:12px;color:#2B2B29">9</span><div style="width:3px;height:20px;background:#E6E4DF;border-radius:2px;position:relative"><div style="position:absolute;bottom:0;width:100%;height:60%;background:#4C5A75;border-radius:2px"></div></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:9.5px;color:#A8A6A0">X</span><span style="font-size:12px;color:#2B2B29">10</span><div style="width:3px;height:20px;background:#E6E4DF;border-radius:2px;position:relative"><div style="position:absolute;bottom:0;width:100%;height:40%;background:#4C5A75;border-radius:2px"></div></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:9.5px;color:#A8A6A0">J</span><span style="font-size:12px;color:#2B2B29">11</span><div style="width:3px;height:20px;background:#E6E4DF;border-radius:2px"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;border-bottom:2px solid #4C5A75;padding-bottom:4px"><span style="font-size:9.5px;font-weight:600;color:#4C5A75">V</span><span style="font-size:12px;font-weight:600;color:#4C5A75">12</span><div style="width:3px;height:20px;background:#E6E4DF;border-radius:2px;position:relative"><div style="position:absolute;bottom:0;width:100%;height:80%;background:#4C5A75;border-radius:2px"></div></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:9.5px;color:#A8A6A0">S</span><span style="font-size:12px;color:#2B2B29">13</span><div style="width:3px;height:20px;background:#E6E4DF;border-radius:2px;position:relative"><div style="position:absolute;bottom:0;width:100%;height:100%;background:#4C5A75;border-radius:2px"></div></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-size:9.5px;font-weight:600;color:#2B2B29">D</span><span style="font-size:12px;font-weight:600;color:#2B2B29">14</span><div style="width:3px;height:20px;background:#E6E4DF;border-radius:2px;position:relative"><div style="position:absolute;bottom:0;width:100%;height:66%;background:#4C5A75;border-radius:2px"></div></div></div>
+</div>
+</div>
+</x-import>
+</div>
+
+</div>
+</div>
+
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a><span class="dv-oname">Cálida y amigable</span><span class="dv-odesc">Crema, tinta café oscuro, acento coral, tipografía redondeada (Nunito). Tarjetas grandes con esquinas suaves y sombra ligera — invita a volver sin sentirse un juego.</span></div>
+<div class="dv-row">
+
+<div class="dv-phonewrap"><span class="dv-phonecap">Agenda</span>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ false }}" width="320" height="700" hint-size="320,700">
+<div style="width:100%;height:100%;background:#FCF1E4;font-family:'Nunito',sans-serif;display:flex;flex-direction:column;position:relative;overflow:hidden">
+<div style="padding:18px 18px 8px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:flex-start">
+<div><div style="font-size:23px;font-weight:800;color:#4A3325">Hoy</div><div style="font-size:12.5px;color:#8C6F58;margin-top:2px">14 de septiembre</div></div>
+<div style="display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:20px;background:linear-gradient(135deg,#E8734F,#F0A868);box-shadow:0 3px 10px rgba(232,115,79,.3)">
+<div style="width:11px;height:11px;background:#fff;border-radius:50% 50% 50% 0;transform:rotate(45deg)"></div><span style="font-size:14px;font-weight:800;color:#fff">12</span></div>
+</div>
+<div style="display:flex;align-items:center;gap:2px">
+<span style="font-size:17px;color:#C0A98F">‹</span>
+<div style="display:flex;gap:5px;flex:1;justify-content:space-between">
+<div style="width:34px;border-radius:14px;background:#FFFBF3;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:#C0A98F">V</span><span style="font-size:13.5px;font-weight:700;color:#4A3325;margin-top:2px">11</span></div>
+<div style="width:34px;border-radius:14px;background:#FFFBF3;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:#C0A98F">S</span><span style="font-size:13.5px;font-weight:700;color:#4A3325;margin-top:2px">12</span></div>
+<div style="width:34px;border-radius:14px;background:#FFFBF3;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:#C0A98F">D</span><span style="font-size:13.5px;font-weight:700;color:#4A3325;margin-top:2px">13</span></div>
+<div style="width:34px;border-radius:14px;background:#E8734F;display:flex;flex-direction:column;align-items:center;padding:6px 0;box-shadow:0 3px 8px rgba(232,115,79,.35)"><span style="font-size:10px;color:rgba(255,255,255,.75)">L</span><span style="font-size:13.5px;font-weight:800;color:#fff;margin-top:2px">14</span></div>
+<div style="width:34px;border-radius:14px;background:#FFFBF3;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:#C0A98F">M</span><span style="font-size:13.5px;font-weight:700;color:#4A3325;margin-top:2px">15</span></div>
+<div style="width:34px;border-radius:14px;background:#FFFBF3;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:#C0A98F">X</span><span style="font-size:13.5px;font-weight:700;color:#4A3325;margin-top:2px">16</span></div>
+<div style="width:34px;border-radius:14px;background:#FFFBF3;display:flex;flex-direction:column;align-items:center;padding:6px 0"><span style="font-size:10px;color:#C0A98F">J</span><span style="font-size:13.5px;font-weight:700;color:#4A3325;margin-top:2px">17</span></div>
+</div>
+<span style="font-size:17px;color:#C0A98F">›</span>
+</div>
+</div>
+<div style="flex:1;overflow:auto;padding:0 18px 70px;display:flex;flex-direction:column;gap:18px">
+<div style="background:#FFFBF3;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:8px;box-shadow:0 4px 14px rgba(74,51,37,.06)">
+<div style="font-size:14px;font-weight:800;color:#4A3325">Meta del día</div>
+<div style="font-size:12.5px;color:#8C6F58">Completa 3 tareas y cierra el día</div>
+<div style="margin-top:2px"><div style="font-size:11px;color:#8C6F58;margin-bottom:5px">2 de 3 tareas completadas</div><div style="height:8px;background:#FCF1E4;border-radius:8px;overflow:hidden"><div style="width:66%;height:100%;background:#7FAE7A;border-radius:8px"></div></div></div>
+</div>
+<div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-size:13px;font-weight:700;color:#8C6F58">Con horario</span><span style="font-size:11px;color:#8C6F58;background:#F3DEC4;padding:2px 9px;border-radius:10px">3</span></div>
+<div style="display:flex;flex-direction:column;gap:9px">
+<div style="background:#FFFBF3;border-radius:18px;padding:13px;display:flex;align-items:center;gap:10px;box-shadow:0 3px 10px rgba(74,51,37,.05)">
+<div style="width:24px;height:24px;border-radius:50%;background:#7FAE7A;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;flex-shrink:0">✓</div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600;color:#C0A98F;text-decoration:line-through">Enviar reporte semanal</div><div style="font-size:11px;color:#C0A98F;margin-top:2px">09:00</div></div>
+</div>
+<div style="background:#FFFBF3;border-radius:18px;padding:13px;display:flex;align-items:center;gap:10px;box-shadow:0 3px 10px rgba(74,51,37,.05)">
+<div style="width:24px;height:24px;border-radius:50%;border:2px solid #E3D5C4;flex-shrink:0"></div>
+<div style="flex:1;min-width:0">
+<div style="display:flex;align-items:center;gap:5px"><div style="width:7px;height:7px;border-radius:50%;background:#C15A4E;flex-shrink:0"></div><span style="font-size:14px;font-weight:700;color:#4A3325">Preparar presentación cliente</span></div>
+<div style="font-size:11px;color:#C0A98F;margin-top:2px">14:30</div>
+<div style="margin-top:6px;display:flex;flex-direction:column;gap:5px">
+<div style="display:flex;align-items:center;gap:7px"><div style="width:14px;height:14px;border-radius:50%;background:#7FAE7A;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px">✓</div><span style="font-size:12px;color:#C0A98F;text-decoration:line-through">Revisar diapositivas</span></div>
+<div style="display:flex;align-items:center;gap:7px"><div style="width:14px;height:14px;border-radius:50%;border:1.5px solid #E3D5C4"></div><span style="font-size:12px;color:#8C6F58">Enviar borrador al equipo</span></div>
+</div></div>
+</div>
+<div style="background:#FFFBF3;border-radius:18px;padding:13px;display:flex;align-items:center;gap:10px;box-shadow:0 3px 10px rgba(74,51,37,.05)">
+<div style="width:24px;height:24px;border-radius:50%;border:2px solid #E3D5C4;flex-shrink:0"></div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;color:#4A3325">Llamar al proveedor</div><div style="font-size:11px;color:#C0A98F;margin-top:2px">16:00</div></div>
+</div>
+</div></div>
+<div>
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-size:13px;font-weight:700;color:#8C6F58">Sin horario</span><span style="font-size:11px;color:#8C6F58;background:#F3DEC4;padding:2px 9px;border-radius:10px">2</span></div>
+<div style="display:flex;flex-direction:column;gap:9px">
+<div style="background:#FFFBF3;border-radius:18px;padding:13px;display:flex;align-items:center;gap:10px;box-shadow:0 3px 10px rgba(74,51,37,.05)"><div style="width:24px;height:24px;border-radius:50%;border:2px solid #E3D5C4;flex-shrink:0"></div><span style="font-size:14px;font-weight:700;color:#4A3325">Comprar materiales de oficina</span></div>
+<div style="background:#FFFBF3;border-radius:18px;padding:13px;display:flex;align-items:center;gap:10px;box-shadow:0 3px 10px rgba(74,51,37,.05)"><div style="width:24px;height:24px;border-radius:50%;border:2px solid #E3D5C4;flex-shrink:0"></div><span style="font-size:14px;font-weight:700;color:#4A3325">Actualizar hoja de cálculo</span></div>
+</div></div>
+</div>
+<div style="position:absolute;bottom:20px;right:20px;width:54px;height:54px;border-radius:50%;background:#E8734F;box-shadow:0 6px 16px rgba(232,115,79,.4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px">+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-phonewrap"><span class="dv-phonecap">Detalle</span>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ false }}" width="320" height="700" hint-size="320,700">
+<div style="width:100%;height:100%;background:#FCF1E4;font-family:'Nunito',sans-serif;position:relative;overflow:hidden">
+<div style="position:absolute;inset:0;background:rgba(74,51,37,.4)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;height:92%;background:#FFFBF3;border-radius:26px 26px 0 0;padding:18px;display:flex;flex-direction:column;gap:14px;overflow:auto">
+<div style="width:38px;height:5px;border-radius:3px;background:#E3D5C4;align-self:center"></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:19px;font-weight:800;color:#4A3325">Editar tarea</span><span style="font-size:12px;font-weight:700;color:#C15A4E">Eliminar</span></div>
+<div style="background:#FCF1E4;border-radius:16px;padding:13px 15px;font-size:15px;font-weight:600;color:#4A3325">Preparar presentación cliente</div>
+<div style="display:flex;gap:10px">
+<div style="flex:1;background:#FCF1E4;border-radius:16px;padding:12px 15px"><span style="font-size:13px;font-weight:600;color:#4A3325">📆 14 sept 2026</span></div>
+<div style="flex:1;background:#FCF1E4;border-radius:16px;padding:12px 15px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;font-weight:600;color:#4A3325">14:30</span><span style="font-size:13px;color:#C0A98F">✕</span></div>
+</div>
+<div style="background:#F3DEC4;border-radius:14px;padding:11px 13px;font-size:11px;color:#8C6F58;line-height:1.4">Te avisaremos justo a la hora de la tarea. Puedes ajustarlo en Ajustes › Recordatorios.</div>
+<div><div style="font-size:11px;font-weight:700;color:#8C6F58;margin-bottom:8px">Prioridad</div>
+<div style="display:flex;gap:8px">
+<div style="flex:1;background:#FCF1E4;border-radius:16px;padding:10px 0;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:7px;height:7px;border-radius:50%;background:#E8734F"></div><span style="font-size:11px;color:#8C6F58">Normal</span></div>
+<div style="flex:1;background:#E3D5C4;border-radius:16px;padding:10px 0;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:7px;height:7px;border-radius:50%;background:#E3A94A"></div><span style="font-size:11px;font-weight:700;color:#4A3325">Media</span></div>
+<div style="flex:1;background:#FCF1E4;border-radius:16px;padding:10px 0;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:7px;height:7px;border-radius:50%;background:#C15A4E"></div><span style="font-size:11px;color:#8C6F58">Alta</span></div>
+</div></div>
+<div><div style="font-size:11px;font-weight:700;color:#8C6F58;margin-bottom:8px">Categoría</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<div style="padding:8px 14px;border-radius:20px;background:#E3D5C4;display:flex;align-items:center;gap:6px"><div style="width:7px;height:7px;border-radius:50%;background:#C15A4E"></div><span style="font-size:12px;font-weight:700;color:#4A3325">Trabajo</span></div>
+<div style="padding:8px 14px;border-radius:20px;background:#FCF1E4;display:flex;align-items:center;gap:6px"><div style="width:7px;height:7px;border-radius:50%;background:#5C87C4"></div><span style="font-size:12px;color:#8C6F58">Personal</span></div>
+<div style="padding:8px 14px;border-radius:20px;background:#FCF1E4;display:flex;align-items:center;gap:6px"><div style="width:7px;height:7px;border-radius:50%;background:#7FAE7A"></div><span style="font-size:12px;color:#8C6F58">Salud</span></div>
+</div></div>
+<div><div style="font-size:11px;font-weight:700;color:#8C6F58;margin-bottom:8px">Repetir</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px"><div style="padding:7px 14px;border-radius:20px;background:#E3D5C4;font-size:12px;font-weight:700;color:#4A3325">No repetir</div><div style="padding:7px 14px;border-radius:20px;background:#FCF1E4;font-size:12px;color:#8C6F58">Diario</div><div style="padding:7px 14px;border-radius:20px;background:#FCF1E4;font-size:12px;color:#8C6F58">Semanal</div></div></div>
+<div style="background:#FCF1E4;border-radius:16px;padding:13px 15px;font-size:13px;color:#4A3325;min-height:44px">Incluir métricas del último trimestre</div>
+<div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-size:11px;font-weight:700;color:#8C6F58">Subtareas</span><span style="font-size:11.5px;font-weight:700;color:#E8734F">+ Añadir</span></div>
+<div style="background:#FCF1E4;border-radius:14px;padding:10px 13px;font-size:13px;color:#4A3325">Revisar aprobación final</div></div>
+<div style="background:#E8734F;border-radius:20px;padding:14px 0;text-align:center;font-size:15px;font-weight:800;color:#fff;margin-top:4px;box-shadow:0 4px 12px rgba(232,115,79,.35)">Guardar</div>
+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-phonewrap"><span class="dv-phonecap">Calendario</span>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ false }}" width="320" height="700" hint-size="320,700">
+<div style="width:100%;height:100%;background:#FCF1E4;font-family:'Nunito',sans-serif;padding:18px;display:flex;flex-direction:column;gap:16px;overflow:auto">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:20px;font-weight:800;color:#4A3325">Mi progreso</span><div style="display:flex;align-items:center;gap:5px"><div style="width:9px;height:9px;background:#E8734F;border-radius:50% 50% 50% 0;transform:rotate(45deg)"></div><span style="font-size:12px;font-weight:700;color:#8C6F58">12 días</span></div></div>
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:15px;color:#C0A98F">‹</span><span style="font-size:12.5px;font-weight:600;color:#8C6F58">8 sept – 14 sept</span><span style="font-size:15px;color:#C0A98F">›</span></div>
+<div style="background:#FFFBF3;border-radius:20px;padding:15px;box-shadow:0 4px 12px rgba(74,51,37,.06)"><div style="display:flex;justify-content:space-between;margin-bottom:9px"><span style="font-size:14px;font-weight:700;color:#4A3325">Progreso semanal</span><span style="font-size:14px;font-weight:800;color:#E8734F">65%</span></div><div style="height:9px;background:#FCF1E4;border-radius:8px;overflow:hidden"><div style="width:65%;height:100%;background:#E8734F;border-radius:8px"></div></div></div>
+<div>
+<div style="display:flex;align-items:center;margin-bottom:9px"><span style="font-size:15px;color:#C0A98F">‹</span><span style="flex:1;text-align:center;font-size:14.5px;font-weight:700;color:#4A3325">Septiembre 2026</span><span style="font-size:15px;color:#C0A98F">›</span><span style="font-size:11.5px;font-weight:700;color:#E8734F;margin-left:6px">Hoy</span></div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px">
+<span style="font-size:10px;font-weight:700;color:#C0A98F;text-align:center">D</span><span style="font-size:10px;font-weight:700;color:#C0A98F;text-align:center">L</span><span style="font-size:10px;font-weight:700;color:#C0A98F;text-align:center">M</span><span style="font-size:10px;font-weight:700;color:#C0A98F;text-align:center">X</span><span style="font-size:10px;font-weight:700;color:#C0A98F;text-align:center">J</span><span style="font-size:10px;font-weight:700;color:#C0A98F;text-align:center">V</span><span style="font-size:10px;font-weight:700;color:#C0A98F;text-align:center">S</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+<div></div><div></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#FFFBF3;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;font-weight:600;color:#4A3325">1</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:rgba(127,174,122,.18);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;font-weight:600;color:#4A3325">2</span><div style="position:absolute;bottom:3px;width:5px;height:5px;border-radius:50%;background:#7FAE7A"></div></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#FFFBF3;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;font-weight:600;color:#4A3325">3</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:rgba(227,169,74,.2);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;font-weight:600;color:#4A3325">4</span><div style="position:absolute;bottom:3px;width:5px;height:5px;border-radius:50%;background:#E3A94A"></div></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#FFFBF3;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;font-weight:600;color:#4A3325">5</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:rgba(127,174,122,.18);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;font-weight:600;color:#4A3325">6</span><div style="position:absolute;bottom:3px;width:5px;height:5px;border-radius:50%;background:#7FAE7A"></div></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#FFFBF3;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;font-weight:600;color:#4A3325">7</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#FFFBF3;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;font-weight:600;color:#4A3325">8</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:rgba(127,174,122,.18);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;font-weight:600;color:#4A3325">9</span><div style="position:absolute;bottom:3px;width:5px;height:5px;border-radius:50%;background:#7FAE7A"></div></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#FFFBF3;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;font-weight:600;color:#4A3325">10</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#FFFBF3;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;font-weight:600;color:#4A3325">11</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:rgba(227,169,74,.2);position:relative;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;font-weight:600;color:#4A3325">12</span><div style="position:absolute;bottom:3px;width:5px;height:5px;border-radius:50%;background:#E3A94A"></div></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#FFFBF3;display:flex;align-items:center;justify-content:center"><span style="font-size:12px;font-weight:600;color:#4A3325">13</span></div>
+<div style="aspect-ratio:1;border-radius:10px;background:#E8734F;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(232,115,79,.35)"><span style="font-size:12px;font-weight:800;color:#fff">14</span></div>
+</div>
+</div>
+<div style="font-size:14px;font-weight:800;color:#4A3325">Resumen diario</div>
+<div style="display:flex;gap:5px">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><span style="font-size:10px;font-weight:700;color:#C0A98F">L</span><span style="font-size:13px;font-weight:700;color:#4A3325">8</span><div style="width:28px;height:28px;border-radius:50%;background:conic-gradient(#7FAE7A 100%,#F3DEC4 0)"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><span style="font-size:10px;font-weight:700;color:#C0A98F">M</span><span style="font-size:13px;font-weight:700;color:#4A3325">9</span><div style="width:28px;height:28px;border-radius:50%;background:conic-gradient(#E8734F 60%,#F3DEC4 0)"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><span style="font-size:10px;font-weight:700;color:#C0A98F">X</span><span style="font-size:13px;font-weight:700;color:#4A3325">10</span><div style="width:28px;height:28px;border-radius:50%;background:conic-gradient(#E8734F 40%,#F3DEC4 0)"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><span style="font-size:10px;font-weight:700;color:#C0A98F">J</span><span style="font-size:13px;font-weight:700;color:#4A3325">11</span><div style="width:28px;height:28px;border-radius:50%;background:#F3DEC4"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;background:#FFFBF3;border-radius:14px;padding:4px 0"><span style="font-size:10px;font-weight:800;color:#E8734F">V</span><span style="font-size:13px;font-weight:800;color:#E8734F">12</span><div style="width:28px;height:28px;border-radius:50%;background:conic-gradient(#E8734F 80%,#F3DEC4 0)"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><span style="font-size:10px;font-weight:700;color:#C0A98F">S</span><span style="font-size:13px;font-weight:700;color:#4A3325">13</span><div style="width:28px;height:28px;border-radius:50%;background:conic-gradient(#7FAE7A 100%,#F3DEC4 0)"></div></div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px"><span style="font-size:10px;font-weight:800;color:#4A3325">D</span><span style="font-size:13px;font-weight:800;color:#4A3325">14</span><div style="width:28px;height:28px;border-radius:50%;background:conic-gradient(#E8734F 66%,#F3DEC4 0)"></div></div>
+</div>
+</div>
+</x-import>
+</div>
+
+</div>
+</div>
+
+<div class="dv-opt" id="1d">
+<div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a><span class="dv-oname">Profesional y corporativa</span><span class="dv-odesc">Gris frío, azul marino, IBM Plex Sans, microetiquetas en mayúsculas, bordes finos de 1px. Checkbox cuadrado y filas tipo tabla — pensada para quien usa la app en un contexto de trabajo.</span></div>
+<div class="dv-row">
+
+<div class="dv-phonewrap"><span class="dv-phonecap">Agenda</span>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ false }}" width="320" height="700" hint-size="320,700">
+<div style="width:100%;height:100%;background:#F3F5F8;font-family:'IBM Plex Sans',sans-serif;display:flex;flex-direction:column;position:relative;overflow:hidden">
+<div style="padding:18px 18px 10px;display:flex;flex-direction:column;gap:14px;border-bottom:1px solid #DFE3EA">
+<div style="display:flex;justify-content:space-between;align-items:flex-start">
+<div><div style="font-size:20px;font-weight:600;color:#1F2537">Hoy</div><div style="font-size:11px;color:#59617A;margin-top:2px;letter-spacing:.03em">14 SEP 2026</div></div>
+<div style="text-align:right"><div style="font-size:9.5px;color:#97A0B3;text-transform:uppercase;letter-spacing:.05em">Racha</div><div style="font-size:15px;font-weight:700;color:#1F2537">12 días</div></div>
+</div>
+<div style="display:flex;align-items:center;gap:2px">
+<span style="font-size:15px;color:#97A0B3">‹</span>
+<div style="display:flex;gap:4px;flex:1;justify-content:space-between">
+<div style="width:34px;border-radius:4px;background:#fff;border:1px solid #DFE3EA;display:flex;flex-direction:column;align-items:center;padding:5px 0"><span style="font-size:9.5px;color:#97A0B3">V</span><span style="font-size:13px;font-weight:600;color:#1F2537;margin-top:2px">11</span></div>
+<div style="width:34px;border-radius:4px;background:#fff;border:1px solid #DFE3EA;display:flex;flex-direction:column;align-items:center;padding:5px 0"><span style="font-size:9.5px;color:#97A0B3">S</span><span style="font-size:13px;font-weight:600;color:#1F2537;margin-top:2px">12</span></div>
+<div style="width:34px;border-radius:4px;background:#fff;border:1px solid #DFE3EA;display:flex;flex-direction:column;align-items:center;padding:5px 0"><span style="font-size:9.5px;color:#97A0B3">D</span><span style="font-size:13px;font-weight:600;color:#1F2537;margin-top:2px">13</span></div>
+<div style="width:34px;border-radius:4px;background:#2F4B8F;display:flex;flex-direction:column;align-items:center;padding:5px 0"><span style="font-size:9.5px;color:rgba(255,255,255,.7)">L</span><span style="font-size:13px;font-weight:700;color:#fff;margin-top:2px">14</span></div>
+<div style="width:34px;border-radius:4px;background:#fff;border:1px solid #DFE3EA;display:flex;flex-direction:column;align-items:center;padding:5px 0"><span style="font-size:9.5px;color:#97A0B3">M</span><span style="font-size:13px;font-weight:600;color:#1F2537;margin-top:2px">15</span></div>
+<div style="width:34px;border-radius:4px;background:#fff;border:1px solid #DFE3EA;display:flex;flex-direction:column;align-items:center;padding:5px 0"><span style="font-size:9.5px;color:#97A0B3">X</span><span style="font-size:13px;font-weight:600;color:#1F2537;margin-top:2px">16</span></div>
+<div style="width:34px;border-radius:4px;background:#fff;border:1px solid #DFE3EA;display:flex;flex-direction:column;align-items:center;padding:5px 0"><span style="font-size:9.5px;color:#97A0B3">J</span><span style="font-size:13px;font-weight:600;color:#1F2537;margin-top:2px">17</span></div>
+</div>
+<span style="font-size:15px;color:#97A0B3">›</span>
+</div>
+</div>
+<div style="flex:1;overflow:auto;padding:16px 18px 70px;display:flex;flex-direction:column;gap:18px">
+<div style="background:#fff;border:1px solid #DFE3EA;border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;font-weight:600;color:#1F2537;text-transform:uppercase;letter-spacing:.04em">Meta diaria</span><span style="font-size:12px;font-weight:600;color:#59617A">2/3</span></div>
+<div style="height:4px;background:#F3F5F8;border-radius:2px;overflow:hidden"><div style="width:66%;height:100%;background:#2F4B8F"></div></div>
+<div style="margin-top:2px"><span style="font-size:11px;color:#59617A">2 de 3 tareas completadas hoy</span></div>
+</div>
+<div>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #DFE3EA"><span style="font-size:11px;font-weight:600;color:#59617A;text-transform:uppercase;letter-spacing:.05em">Con horario</span><span style="font-size:11px;color:#97A0B3">3</span></div>
+<div style="display:flex;flex-direction:column">
+<div style="padding:10px 0;border-bottom:1px solid #DFE3EA;display:flex;align-items:center;gap:10px">
+<div style="width:16px;height:16px;border-radius:3px;background:#3F8F63;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;flex-shrink:0">✓</div>
+<div style="flex:1;min-width:0"><div style="font-size:13px;color:#97A0B3;text-decoration:line-through">Enviar reporte semanal</div></div>
+<span style="font-size:11px;color:#97A0B3">09:00</span>
+</div>
+<div style="padding:10px 0;border-bottom:1px solid #DFE3EA;display:flex;align-items:center;gap:10px">
+<div style="width:16px;height:16px;border-radius:3px;border:1.5px solid #97A0B3;flex-shrink:0"></div>
+<div style="flex:1;min-width:0">
+<div style="font-size:13px;color:#1F2537">Preparar presentación cliente</div>
+<div style="margin-top:5px;display:flex;flex-direction:column;gap:4px">
+<div style="display:flex;align-items:center;gap:6px"><div style="width:11px;height:11px;border-radius:2px;background:#3F8F63;display:flex;align-items:center;justify-content:center;color:#fff;font-size:7px">✓</div><span style="font-size:11px;color:#97A0B3;text-decoration:line-through">Revisar diapositivas</span></div>
+<div style="display:flex;align-items:center;gap:6px"><div style="width:11px;height:11px;border-radius:2px;border:1.5px solid #97A0B3"></div><span style="font-size:11px;color:#59617A">Enviar borrador al equipo</span></div>
+</div></div>
+<div style="width:3px;height:14px;background:#B98A2E;flex-shrink:0"></div>
+<span style="font-size:11px;color:#97A0B3">14:30</span>
+</div>
+<div style="padding:10px 0;border-bottom:1px solid #DFE3EA;display:flex;align-items:center;gap:10px">
+<div style="width:16px;height:16px;border-radius:3px;border:1.5px solid #97A0B3;flex-shrink:0"></div>
+<div style="flex:1;min-width:0"><div style="font-size:13px;color:#1F2537">Llamar al proveedor</div></div>
+<div style="width:3px;height:14px;background:#A23B35;flex-shrink:0"></div>
+<span style="font-size:11px;color:#97A0B3">16:00</span>
+</div>
+</div></div>
+<div>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #DFE3EA"><span style="font-size:11px;font-weight:600;color:#59617A;text-transform:uppercase;letter-spacing:.05em">Sin horario</span><span style="font-size:11px;color:#97A0B3">2</span></div>
+<div style="display:flex;flex-direction:column">
+<div style="padding:10px 0;border-bottom:1px solid #DFE3EA;display:flex;align-items:center;gap:10px"><div style="width:16px;height:16px;border-radius:3px;border:1.5px solid #97A0B3;flex-shrink:0"></div><span style="font-size:13px;color:#1F2537">Comprar materiales de oficina</span></div>
+<div style="padding:10px 0;border-bottom:1px solid #DFE3EA;display:flex;align-items:center;gap:10px"><div style="width:16px;height:16px;border-radius:3px;border:1.5px solid #97A0B3;flex-shrink:0"></div><span style="font-size:13px;color:#1F2537">Actualizar hoja de cálculo</span></div>
+</div></div>
+</div>
+<div style="position:absolute;bottom:20px;right:20px;width:48px;height:48px;border-radius:6px;background:#2F4B8F;box-shadow:0 3px 10px rgba(47,75,143,.3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px">+</div>
+</div>
+</x-import>
+</div>
+
+<div class="dv-phonewrap"><span class="dv-phonecap">Detalle</span>
+<x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ false }}" width="320" height="700" hint-size="320,700">
+<div style="width:100%;height:100%;background:#F3F5F8;font-family:'IBM Plex Sans',sans-serif;position:relative;overflow:hidden">
+<div style="position:absolute;inset:0;background:rgba(20,25,40,.4)"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;height:92%;background:#FFFFFF;border-radius:6px 6px 0 0;padding:18px;display:flex;flex-direction:column;gap:14px;overflow:auto;border-top:2px solid #2F4B8F">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:16px;font-weight:600;color:#1F2537">Editar tarea</span><span style="font-size:11px;font-weight:600;color:#A23B35;border:1px solid #A23B35;padding:4px 9px;border-radius:4px">Eliminar</span></div>
+<div style="border:1px solid #DFE3EA;border-radius:4px;padding:11px 13px;font-size:14px;color:#1F2537">Preparar presentación cliente</div>
+<div style="display:flex;gap:10px">
+<div style="flex:1;border:1px solid #DFE3EA;border-radius:4px;padding:10px 13px"><div style="font-size:9.5px;color:#97A0B3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Fecha</div><span style="font-size:12.5px;color:#1F2537">14 sept 2026</span></div>
+<div style="flex:1;border:1px solid #DFE3EA;border-radius:4px;padding:10px 13px;display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:9.5px;color:#97A0B3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Hora</div><span style="font-size:12.5px;color:#1F2537">14:30</span></div><span style="font-size:12px;color:#97A0B3">✕</span></div>
+</div>
+<div style="background:#F3F5F8;border-radius:4px;padding:10px 12px;font-size:10.5px;color:#59617A;line-height:1.4">Se enviará un aviso a la hora indicada. Ajustable en Ajustes › Recordatorios.</div>
+<div><div style="font-size:9.5px;font-weight:600;color:#59617A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">Prioridad</div>
+<div style="display:flex;gap:8px">
+<div style="flex:1;border:1px solid #DFE3EA;border-radius:4px;padding:8px 0;text-align:center"><span style="font-size:11px;color:#59617A">Normal</span></div>
+<div style="flex:1;border:1px solid #2F4B8F;background:rgba(47,75,143,.06);border-radius:4px;padding:8px 0;text-align:center"><span style="font-size:11px;font-weight:600;color:#2F4B8F">Media</span></div>
+<div style="flex:1;border:1px solid #DFE3EA;border-radius:4px;padding:8px 0;text-align:center"><span style="font-size:11px;color:#59617A">Alta</span></div>
+</div></div>
+<div><div style="font-size:9.5px;font-weight:600;color:#59617A;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">Categoría</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
