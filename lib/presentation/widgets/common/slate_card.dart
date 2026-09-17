@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
+import '../../../core/theme/slate_theme_context.dart';
 
 class SlateCard extends StatelessWidget {
   final Widget child;
@@ -16,8 +16,9 @@ class SlateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final slate = context.slate;
     return Material(
-      color: AppColors.card,
+      color: slate.surface,
       borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       child: InkWell(
         onTap: onTap,

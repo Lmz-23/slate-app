@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
 import '../../../core/extensions/datetime_extensions.dart';
+import '../../../core/theme/slate_shapes.dart';
+import '../../../core/theme/slate_theme_context.dart';
 import '../../../domain/entities/task.dart';
 import '../../../domain/enums/task_priority.dart';
 import '../../../domain/enums/recurrence_type.dart';
@@ -10,6 +11,7 @@ import '../../../application/providers/task_provider.dart';
 import '../../../application/providers/category_provider.dart';
 import '../../../application/providers/task_overlap_provider.dart';
 import '../../../application/services/task_overlap_detector.dart';
+import '../../widgets/common/slate_snackbar.dart';
 import 'widgets/priority_selector.dart';
 import 'widgets/category_selector.dart';
 import 'widgets/recurrence_selector.dart';
@@ -103,26 +105,30 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
         tasks.any((t) => t.parentTaskId == _existingTask!.id);
 
     if (hasRecurrence) {
+      final slate = context.slate;
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: AppColors.surface,
-          title: const Text(
+          backgroundColor: slate.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(SlateShapes.radiusLarge),
+          ),
+          title: Text(
             'Eliminar tarea',
-            style: TextStyle(color: AppColors.textPrimary),
+            style: TextStyle(color: slate.textPrimary),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.today, color: AppColors.primary),
-                title: const Text(
+                leading: Icon(Icons.today, color: slate.accent),
+                title: Text(
                   'Solo este día',
-                  style: TextStyle(color: AppColors.textPrimary),
+                  style: TextStyle(color: slate.textPrimary),
                 ),
-                subtitle: const Text(
+                subtitle: Text(
                   'Eliminar solo esta ocurrencia',
-                  style: TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: slate.textSecondary),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -130,14 +136,14 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.event_repeat, color: AppColors.error),
-                title: const Text(
+                leading: Icon(Icons.event_repeat, color: slate.danger),
+                title: Text(
                   'Todas las ocurrencias',
-                  style: TextStyle(color: AppColors.error),
+                  style: TextStyle(color: slate.danger),
                 ),
-                subtitle: const Text(
+                subtitle: Text(
                   'Eliminar tarea y todas sus repeticiones',
-                  style: TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: slate.textSecondary),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -149,7 +155,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
+              child: Text('Cancelar', style: TextStyle(color: slate.textSecondary)),
             ),
           ],
         ),
@@ -178,14 +184,17 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
   Widget build(BuildContext context) {
     final categories = ref.watch(categoriesProvider);
     final isEditing = widget.taskId != null;
+    final slate = context.slate;
 
     return Container(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: slate.surface,
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(SlateShapes.radiusLarge),
+        ),
       ),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -198,7 +207,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.textTertiary,
+                  color: slate.textTertiary,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -209,10 +218,10 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
               children: [
                 Text(
                   isEditing ? 'Editar tarea' : 'Nueva tarea',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                    color: slate.textPrimary,
                   ),
                 ),
                 Row(
@@ -220,7 +229,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
                     if (isEditing)
                       IconButton(
                         onPressed: _showDeleteDialog,
-                        icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                        icon: Icon(Icons.delete_outline, color: slate.danger),
                       ),
                   ],
                 ),
@@ -230,9 +239,9 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
             TextField(
               controller: _titleController,
               autofocus: true,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
-                color: AppColors.textPrimary,
+                color: slate.textPrimary,
               ),
               decoration: const InputDecoration(
                 hintText: '¿Qué necesitas hacer?',
@@ -275,7 +284,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
             TextField(
               controller: _notesController,
               maxLines: 3,
-              style: const TextStyle(color: AppColors.textPrimary),
+              style: TextStyle(color: slate.textPrimary),
               decoration: const InputDecoration(
                 hintText: 'Notas (opcional)',
               ),
@@ -290,18 +299,18 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
               child: ElevatedButton(
                 onPressed: _saveTask,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: slate.accent,
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    borderRadius: BorderRadius.circular(SlateShapes.radiusMedium),
                   ),
                 ),
                 child: Text(
                   isEditing ? 'Guardar' : 'Crear tarea',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: slate.onAccent,
                   ),
                 ),
               ),
@@ -318,17 +327,18 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
   /// ligadas a la tarea principal. En modo edición solo AÑADE nuevas; las
   /// subtareas existentes se gestionan desde la tarjeta.
   Widget _buildSubtaskEditor() {
+    final slate = context.slate;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Subtareas',
               style: TextStyle(
                 fontSize: 12,
-                color: AppColors.textSecondary,
+                color: slate.textSecondary,
               ),
             ),
             TextButton.icon(
@@ -340,7 +350,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
               icon: const Icon(Icons.add, size: 16),
               label: const Text('Añadir'),
               style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary,
+                foregroundColor: slate.accent,
                 padding: EdgeInsets.zero,
                 visualDensity: VisualDensity.compact,
               ),
@@ -351,15 +361,15 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
         for (final controller in _subtaskControllers) ...[
           Row(
             children: [
-              const Icon(Icons.drag_indicator,
-                  size: 16, color: AppColors.textTertiary),
+              Icon(Icons.drag_indicator,
+                  size: 16, color: slate.textTertiary),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: TextField(
                   controller: controller,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
-                    color: AppColors.textPrimary,
+                    color: slate.textPrimary,
                   ),
                   decoration: const InputDecoration(
                     hintText: 'Detalle de la subtarea',
@@ -377,8 +387,8 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
                     }
                   });
                 },
-                icon: const Icon(Icons.close,
-                    size: 16, color: AppColors.textTertiary),
+                icon: Icon(Icons.close,
+                    size: 16, color: slate.textTertiary),
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
               ),
@@ -395,6 +405,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
   /// `TasksNotifier.updateTask` (la subtarea se reasigna a la fecha de la
   /// principal en el guardado).
   Widget _buildSubtaskDateLockRow() {
+    final slate = context.slate;
     final tasks = ref.watch(tasksProvider);
     final parentId = _existingTask?.parentTaskId;
     final parent = parentId != null
@@ -409,23 +420,23 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
         vertical: AppSpacing.md,
       ),
       decoration: BoxDecoration(
-        color: AppColors.surfaceLight,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        color: slate.surfaceAlt,
+        borderRadius: BorderRadius.circular(SlateShapes.radiusMedium),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.lock_outline,
             size: 20,
-            color: AppColors.textSecondary,
+            color: slate.textSecondary,
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               '${lockedDate.formattedDate} · la fecha sigue a la tarea principal',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: AppColors.textSecondary,
+                color: slate.textSecondary,
               ),
             ),
           ),
@@ -435,31 +446,32 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
   }
 
   Widget _buildReminderHint() {
+    final slate = context.slate;
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: AppColors.surfaceLight,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
+        color: slate.surfaceAlt,
+        borderRadius: BorderRadius.circular(SlateShapes.radiusSmall),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
             Icons.notifications_active_outlined,
             size: 16,
-            color: AppColors.primary,
+            color: slate.accent,
           ),
-          SizedBox(width: AppSpacing.sm),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               'Por defecto te avisaremos justo a la hora de la tarea. '
               'Puedes adelantar el aviso en Ajustes › Recordatorios.',
               style: TextStyle(
                 fontSize: 12,
-                color: AppColors.textSecondary,
+                color: slate.textSecondary,
                 height: 1.4,
               ),
             ),
@@ -470,6 +482,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
   }
 
   Widget _buildDateTimeRow() {
+    final slate = context.slate;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -484,18 +497,18 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
                     vertical: AppSpacing.md,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceLight,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    color: slate.surfaceAlt,
+                    borderRadius: BorderRadius.circular(SlateShapes.radiusMedium),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_today, size: 20, color: AppColors.textSecondary),
+                      Icon(Icons.calendar_today, size: 20, color: slate.textSecondary),
                       const SizedBox(width: AppSpacing.sm),
                       Text(
                         _selectedDate.formattedDate,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: AppColors.textPrimary,
+                          color: slate.textPrimary,
                         ),
                       ),
                     ],
@@ -513,18 +526,18 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
                     vertical: AppSpacing.md,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceLight,
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                    color: slate.surfaceAlt,
+                    borderRadius: BorderRadius.circular(SlateShapes.radiusMedium),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.access_time, size: 20, color: AppColors.textSecondary),
+                      Icon(Icons.access_time, size: 20, color: slate.textSecondary),
                       const SizedBox(width: AppSpacing.sm),
                       Text(
                         _selectedTime?.format(context) ?? 'Sin hora',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: AppColors.textPrimary,
+                          color: slate.textPrimary,
                         ),
                       ),
                     ],
@@ -541,7 +554,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
                   _selectedTime = null;
                   _durationMinutes = null;
                 }),
-                icon: const Icon(Icons.close, size: 20, color: AppColors.textTertiary),
+                icon: Icon(Icons.close, size: 20, color: slate.textTertiary),
               ),
             ],
           ],
@@ -558,20 +571,20 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
                 vertical: AppSpacing.md,
               ),
               decoration: BoxDecoration(
-                color: AppColors.surfaceLight,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                color: slate.surfaceAlt,
+                borderRadius: BorderRadius.circular(SlateShapes.radiusMedium),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.update, size: 20, color: AppColors.textSecondary),
+                  Icon(Icons.update, size: 20, color: slate.textSecondary),
                   const SizedBox(width: AppSpacing.sm),
                   Text(
                     _durationMinutes != null && _durationMinutes! > 0
                         ? 'Hasta ${_endTimeLabel()}'
                         : 'Hora de fin (obligatoria)',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: AppColors.textPrimary,
+                      color: slate.textPrimary,
                     ),
                   ),
                 ],
@@ -604,11 +617,12 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) {
+        final slate = context.slate;
         return Theme(
           data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppColors.primary,
-              surface: AppColors.surface,
+            colorScheme: ColorScheme.dark(
+              primary: slate.accent,
+              surface: slate.surface,
             ),
           ),
           child: child!,
@@ -625,11 +639,12 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
       context: context,
       initialTime: _selectedTime ?? TimeOfDay.now(),
       builder: (context, child) {
+        final slate = context.slate;
         return Theme(
           data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppColors.primary,
-              surface: AppColors.surface,
+            colorScheme: ColorScheme.dark(
+              primary: slate.accent,
+              surface: slate.surface,
             ),
           ),
           child: child!,
@@ -675,11 +690,12 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
             )
           : initialEnd,
       builder: (context, child) {
+        final slate = context.slate;
         return Theme(
           data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppColors.primary,
-              surface: AppColors.surface,
+            colorScheme: ColorScheme.dark(
+              primary: slate.accent,
+              surface: slate.surface,
             ),
           ),
           child: child!,
@@ -694,9 +710,7 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
 
     if (duration <= 0) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('La hora de fin debe ser distinta a la de inicio')),
-        );
+        showSlateSnackBar(context, 'La hora de fin debe ser distinta a la de inicio');
       }
       return;
     }
@@ -707,17 +721,13 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
   Future<void> _saveTask() async {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('El título es obligatorio')),
-      );
+      showSlateSnackBar(context, 'El título es obligatorio');
       return;
     }
 
     // Invariante I1 (Addendum 2, A11): hora de fin obligatoria si hay inicio.
     if (_selectedTime != null && (_durationMinutes == null || _durationMinutes! <= 0)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('La hora de fin es obligatoria')),
-      );
+      showSlateSnackBar(context, 'La hora de fin es obligatoria');
       return;
     }
 
@@ -820,19 +830,23 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
   /// Diálogo de conflicto de horario (Addendum 2/3, A12/A14). Tres acciones:
   /// Acortar (solo si `canTruncate`), Guardar de todos modos, Cancelar.
   Future<_ConflictAction?> _showConflictDialog(TaskConflict conflict) {
+    final slate = context.slate;
     final rangeLabel =
         '${conflict.start.formattedTime}–${conflict.end.formattedTime}';
     return showDialog<_ConflictAction>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text(
+        backgroundColor: slate.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(SlateShapes.radiusLarge),
+        ),
+        title: Text(
           'Conflicto de horario',
-          style: TextStyle(color: AppColors.textPrimary),
+          style: TextStyle(color: slate.textPrimary),
         ),
         content: Text(
           '"${conflict.title}" se solapa con esta tarea ($rangeLabel).',
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: slate.textSecondary),
         ),
         actionsAlignment: MainAxisAlignment.center,
         actions: [
@@ -840,16 +854,29 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
             FilledButton(
               onPressed: () =>
                   Navigator.pop(dialogContext, _ConflictAction.truncate),
-              style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+              style: FilledButton.styleFrom(
+                backgroundColor: slate.accent,
+                foregroundColor: slate.onAccent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(SlateShapes.radiusSmall),
+                ),
+              ),
               child: Text('Acortar "${conflict.title}"'),
             ),
           OutlinedButton(
             onPressed: () => Navigator.pop(dialogContext, _ConflictAction.saveAnyway),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: slate.textPrimary,
+              side: BorderSide(color: slate.outline),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(SlateShapes.radiusSmall),
+              ),
+            ),
             child: const Text('Guardar de todos modos'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancelar'),
+            child: Text('Cancelar', style: TextStyle(color: slate.textSecondary)),
           ),
         ],
       ),
@@ -872,18 +899,15 @@ class _TaskFormSheetState extends ConsumerState<TaskFormSheet> {
     );
 
     if (mounted && previousDuration != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('"${current.title}" acortada'),
-          action: SnackBarAction(
-            label: 'DESHACER',
-            onPressed: () {
-              ref.read(tasksProvider.notifier).updateTask(
-                    current.copyWith(durationMinutes: previousDuration),
-                  );
-            },
-          ),
-        ),
+      showSlateSnackBar(
+        context,
+        '"${current.title}" acortada',
+        actionLabel: 'Deshacer',
+        onAction: () {
+          ref.read(tasksProvider.notifier).updateTask(
+                current.copyWith(durationMinutes: previousDuration),
+              );
+        },
       );
     }
   }

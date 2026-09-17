@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../domain/entities/task.dart';
 import '../../../domain/enums/task_priority.dart';
 import '../../../domain/enums/recurrence_type.dart';
@@ -61,31 +60,55 @@ class _TaskTileState extends ConsumerState<TaskTile> {
     return allTasks.any((t) => t.parentTaskId == task.id);
   }
 
+  /// Diálogo de confirmación de borrado (sistema-visual-fase3.md §6):
+  /// contenedor `surface` radio 20, scrim `background` al 60%; dos botones en
+  /// fila (`Cancelar` texto plano, `Eliminar` fondo `danger` radio 14) — es el
+  /// único botón lleno de la app que usa `danger` en vez de `accent`.
   Future<bool> _confirmDelete(BuildContext context) async {
+    final slate = context.slate;
     if (!_isPartOfSeries()) {
       final confirmed = await showDialog<bool>(
         context: context,
+        barrierColor: slate.background.withValues(alpha: 0.6),
         builder: (dialogContext) => AlertDialog(
-          backgroundColor: AppColors.surface,
-          title: const Text(
-            'Eliminar tarea',
-            style: TextStyle(color: AppColors.textPrimary),
+          backgroundColor: slate.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(SlateShapes.radiusLarge),
           ),
-          content: const Text(
+          title: Text(
+            '¿Eliminar tarea?',
+            style: TextStyle(
+              fontFamily: 'Nunito',
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: slate.textPrimary,
+            ),
+          ),
+          content: Text(
             '¿Eliminar esta tarea?',
-            style: TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(
+              fontFamily: 'Nunito',
+              fontSize: 13,
+              color: slate.textSecondary,
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text(
-                'Eliminar',
-                style: TextStyle(color: AppColors.error),
+              child: Text(
+                'Cancelar',
+                style: TextStyle(color: slate.textSecondary),
               ),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              style: FilledButton.styleFrom(
+                backgroundColor: slate.danger,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(SlateShapes.radiusSmall),
+                ),
+              ),
+              child: const Text('Eliminar'),
             ),
           ],
         ),
@@ -95,36 +118,45 @@ class _TaskTileState extends ConsumerState<TaskTile> {
 
     final deleteSeries = await showDialog<bool>(
       context: context,
+      barrierColor: slate.background.withValues(alpha: 0.6),
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text(
+        backgroundColor: slate.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(SlateShapes.radiusLarge),
+        ),
+        title: Text(
           'Eliminar tarea',
-          style: TextStyle(color: AppColors.textPrimary),
+          style: TextStyle(
+            fontFamily: 'Nunito',
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: slate.textPrimary,
+          ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.today, color: AppColors.primary),
-              title: const Text(
+              leading: Icon(Icons.today, color: slate.textSecondary),
+              title: Text(
                 'Solo este día',
-                style: TextStyle(color: AppColors.textPrimary),
+                style: TextStyle(color: slate.textPrimary),
               ),
-              subtitle: const Text(
+              subtitle: Text(
                 'Eliminar solo esta ocurrencia',
-                style: TextStyle(color: AppColors.textSecondary),
+                style: TextStyle(color: slate.textSecondary),
               ),
               onTap: () => Navigator.pop(dialogContext, false),
             ),
             ListTile(
-              leading: const Icon(Icons.event_repeat, color: AppColors.error),
-              title: const Text(
+              leading: Icon(Icons.event_repeat, color: slate.danger),
+              title: Text(
                 'Eliminar toda la serie',
-                style: TextStyle(color: AppColors.error),
+                style: TextStyle(color: slate.danger),
               ),
-              subtitle: const Text(
+              subtitle: Text(
                 'Eliminar tarea y todas sus repeticiones',
-                style: TextStyle(color: AppColors.textSecondary),
+                style: TextStyle(color: slate.textSecondary),
               ),
               onTap: () => Navigator.pop(dialogContext, true),
             ),
@@ -133,7 +165,7 @@ class _TaskTileState extends ConsumerState<TaskTile> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancelar'),
+            child: Text('Cancelar', style: TextStyle(color: slate.textSecondary)),
           ),
         ],
       ),

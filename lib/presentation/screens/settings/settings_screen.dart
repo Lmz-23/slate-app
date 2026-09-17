@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
+import '../../../core/theme/slate_shapes.dart';
+import '../../../core/theme/slate_theme_context.dart';
 import '../../../domain/enums/app_theme_mode.dart';
 import '../../../application/providers/settings_provider.dart';
 import '../../../application/services/timezone_service.dart';
@@ -15,6 +16,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
+    final slate = context.slate;
 
     return Scaffold(
       body: SafeArea(
@@ -23,19 +25,22 @@ class SettingsScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Ajustes',
                 style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  fontFamily: 'Nunito',
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: slate.textPrimary,
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
               _buildSection(
+                context,
                 title: 'Usuario',
                 children: [
                   _buildTextField(
+                    context,
                     label: 'Nombre',
                     value: settings.userName,
                     onChanged: (value) {
@@ -46,9 +51,11 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               _buildSection(
+                context,
                 title: 'Ubicación y Zona Horaria',
                 children: [
                   _buildSwitchTile(
+                    context,
                     icon: Icons.location_on_outlined,
                     title: 'Detectar zona automáticamente',
                     subtitle: settings.locationPermissionGranted
@@ -69,8 +76,9 @@ class SettingsScreen extends ConsumerWidget {
                       }
                     },
                   ),
-                  const Divider(height: 1, color: AppColors.surfaceLight),
+                  Divider(height: 1, color: slate.outline),
                   _buildListTile(
+                    context,
                     icon: Icons.public,
                     title: 'Zona horaria',
                     subtitle: TimezoneService.getDisplayName(settings.timezone),
@@ -80,9 +88,11 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               _buildSection(
+                context,
                 title: 'Preferencias',
                 children: [
                   _buildListTile(
+                    context,
                     icon: Icons.access_time,
                     title: 'Hora de reset del día',
                     subtitle: '${settings.dayResetHour}:00 AM',
@@ -95,8 +105,9 @@ class SettingsScreen extends ConsumerWidget {
                           ref.read(settingsProvider.notifier).updateDayResetHour(hour),
                     ),
                   ),
-                  const Divider(height: 1, color: AppColors.surfaceLight),
+                  Divider(height: 1, color: slate.outline),
                   _buildSwitchTile(
+                    context,
                     icon: Icons.notifications_outlined,
                     title: 'Notificaciones',
                     subtitle: 'Recordatorios de tareas',
@@ -116,21 +127,25 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               _buildSection(
+                context,
                 title: 'Recordatorios',
                 children: [
                   _buildInfoBox(
+                    context,
                     text: 'Por defecto te avisamos justo a la hora de la tarea '
                         '(margen 0). Puedes adelantar el aviso eligiendo un margen.',
                   ),
-                  const Divider(height: 1, color: AppColors.surfaceLight),
+                  Divider(height: 1, color: slate.outline),
                   _buildListTile(
+                    context,
                     icon: Icons.timer_outlined,
                     title: 'Margen de aviso',
                     subtitle: _formatLeadTime(settings.notificationLeadTimeMinutes),
                     onTap: () => _showLeadTimePicker(context, ref, settings.notificationLeadTimeMinutes),
                   ),
-                  const Divider(height: 1, color: AppColors.surfaceLight),
+                  Divider(height: 1, color: slate.outline),
                   _buildSwitchTile(
+                    context,
                     icon: Icons.summarize_outlined,
                     title: 'Resumen diario',
                     subtitle: 'Recibe 2 resúmenes al día con tus pendientes',
@@ -139,8 +154,9 @@ class SettingsScreen extends ConsumerWidget {
                       ref.read(settingsProvider.notifier).updateDailyReminderEnabled(value);
                     },
                   ),
-                  const Divider(height: 1, color: AppColors.surfaceLight),
+                  Divider(height: 1, color: slate.outline),
                   _buildListTile(
+                    context,
                     icon: Icons.wb_sunny_outlined,
                     title: 'Resumen de la mañana',
                     subtitle: '${settings.dailyReminderHour1}:00 · si tienes tareas pendientes',
@@ -153,8 +169,9 @@ class SettingsScreen extends ConsumerWidget {
                           ref.read(settingsProvider.notifier).updateDailyReminderHour1(hour),
                     ),
                   ),
-                  const Divider(height: 1, color: AppColors.surfaceLight),
+                  Divider(height: 1, color: slate.outline),
                   _buildListTile(
+                    context,
                     icon: Icons.nightlight_outlined,
                     title: 'Resumen de la tarde',
                     subtitle: '${settings.dailyReminderHour2}:00 · solo si no completaste nada hoy',
@@ -167,8 +184,9 @@ class SettingsScreen extends ConsumerWidget {
                           ref.read(settingsProvider.notifier).updateDailyReminderHour2(hour),
                     ),
                   ),
-                  const Divider(height: 1, color: AppColors.surfaceLight),
+                  Divider(height: 1, color: slate.outline),
                   _buildSwitchTile(
+                    context,
                     icon: Icons.nightlight_round,
                     title: 'Cierre de jornada',
                     subtitle: 'Resumen de tu día al día siguiente (${settings.dayResetHour}:00)',
@@ -181,16 +199,19 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               _buildSection(
+                context,
                 title: 'Apariencia',
                 children: [
                   _buildListTile(
+                    context,
                     icon: Icons.palette_outlined,
                     title: 'Tema',
                     subtitle: settings.themeMode.displayName,
                     onTap: () => _showThemePicker(context, ref, settings.themeMode),
                   ),
-                  const Divider(height: 1, color: AppColors.surfaceLight),
+                  Divider(height: 1, color: slate.outline),
                   _buildSwitchTile(
+                    context,
                     icon: Icons.smart_toy_outlined,
                     title: 'Textos con IA',
                     subtitle: 'Los títulos de tus tareas se envían a Google '
@@ -213,9 +234,11 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               _buildSection(
+                context,
                 title: 'Gestión',
                 children: [
                   _buildListTile(
+                    context,
                     icon: Icons.category_outlined,
                     title: 'Categorías',
                     subtitle: 'Administrar categorías',
@@ -228,8 +251,9 @@ class SettingsScreen extends ConsumerWidget {
                 child: Text(
                   'Slate v1.2.0',
                   style: TextStyle(
+                    fontFamily: 'Nunito',
                     fontSize: 12,
-                    color: AppColors.textTertiary,
+                    color: slate.textTertiary,
                   ),
                 ),
               ),
@@ -241,24 +265,34 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSection({required String title, required List<Widget> children}) {
+  Widget _buildSection(
+    BuildContext context, {
+    required String title,
+    required List<Widget> children,
+  }) {
+    final slate = context.slate;
+    final shapes = context.slateShapes;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          title,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
+          title.toUpperCase(),
+          style: TextStyle(
+            fontFamily: 'Nunito',
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.4,
+            color: slate.textTertiary,
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.card,
-            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            color: slate.surface,
+            borderRadius: BorderRadius.circular(SlateShapes.radiusMedium),
+            boxShadow: shapes.tileShadow,
           ),
+          clipBehavior: Clip.antiAlias,
           child: Column(
             children: children,
           ),
@@ -267,11 +301,13 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTextField({
+  Widget _buildTextField(
+    BuildContext context, {
     required String label,
     required String value,
     required Function(String) onChanged,
   }) {
+    final slate = context.slate;
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -279,18 +315,20 @@ class SettingsScreen extends ConsumerWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
+              fontFamily: 'Nunito',
               fontSize: 12,
-              color: AppColors.textSecondary,
+              color: slate.textSecondary,
             ),
           ),
           const SizedBox(height: 8),
           TextFormField(
             initialValue: value,
             onChanged: onChanged,
-            style: const TextStyle(
+            style: TextStyle(
+              fontFamily: 'Nunito',
               fontSize: 16,
-              color: AppColors.textPrimary,
+              color: slate.textPrimary,
             ),
             decoration: const InputDecoration(
               isDense: true,
@@ -303,60 +341,71 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildListTile({
+  Widget _buildListTile(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
   }) {
+    final slate = context.slate;
     return ListTile(
-      leading: Icon(icon, color: AppColors.textSecondary),
+      leading: Icon(icon, size: 20, color: slate.textSecondary),
       title: Text(
         title,
-        style: const TextStyle(
-          fontSize: 16,
-          color: AppColors.textPrimary,
+        style: TextStyle(
+          fontFamily: 'Nunito',
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: slate.textPrimary,
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: const TextStyle(
-          fontSize: 14,
-          color: AppColors.textSecondary,
+        style: TextStyle(
+          fontFamily: 'Nunito',
+          fontSize: 12.5,
+          color: slate.textSecondary,
         ),
       ),
-      trailing: const Icon(Icons.chevron_right, color: AppColors.textTertiary),
+      trailing: Icon(Icons.chevron_right, color: slate.textTertiary),
       onTap: onTap,
     );
   }
 
-  Widget _buildSwitchTile({
+  Widget _buildSwitchTile(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String subtitle,
     required bool value,
     required Function(bool) onChanged,
   }) {
+    final slate = context.slate;
     return ListTile(
-      leading: Icon(icon, color: AppColors.textSecondary),
+      leading: Icon(icon, size: 20, color: slate.textSecondary),
       title: Text(
         title,
-        style: const TextStyle(
-          fontSize: 16,
-          color: AppColors.textPrimary,
+        style: TextStyle(
+          fontFamily: 'Nunito',
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: slate.textPrimary,
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: const TextStyle(
-          fontSize: 14,
-          color: AppColors.textSecondary,
+        style: TextStyle(
+          fontFamily: 'Nunito',
+          fontSize: 12.5,
+          color: slate.textSecondary,
         ),
       ),
       trailing: Switch(
         value: value,
         onChanged: onChanged,
-        activeColor: AppColors.primary,
+        activeColor: slate.accent,
+        inactiveTrackColor: slate.surfaceAlt,
       ),
     );
   }
@@ -368,13 +417,15 @@ class SettingsScreen extends ConsumerWidget {
     required String title,
     required void Function(int hour) onSelect,
   }) {
+    final slate = context.slate;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: slate.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
+        final slate = context.slate;
         return SizedBox(
           height: 300,
           child: Column(
@@ -383,10 +434,11 @@ class SettingsScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                  style: TextStyle(
+                    fontFamily: 'Nunito',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: slate.textPrimary,
                   ),
                 ),
               ),
@@ -399,12 +451,12 @@ class SettingsScreen extends ConsumerWidget {
                       title: Text(
                         '$index:00',
                         style: TextStyle(
-                          color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                          color: isSelected ? slate.accent : slate.textPrimary,
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                       trailing: isSelected
-                          ? const Icon(Icons.check, color: AppColors.primary)
+                          ? Icon(Icons.check, color: slate.accent)
                           : null,
                       onTap: () {
                         onSelect(index);
@@ -427,20 +479,22 @@ class SettingsScreen extends ConsumerWidget {
     return '$minutes min antes';
   }
 
-  Widget _buildInfoBox({required String text}) {
+  Widget _buildInfoBox(BuildContext context, {required String text}) {
+    final slate = context.slate;
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline, size: 16, color: AppColors.primary),
+          Icon(Icons.info_outline, size: 16, color: slate.accent),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
+              style: TextStyle(
+                fontFamily: 'Nunito',
                 fontSize: 13,
-                color: AppColors.textSecondary,
+                color: slate.textSecondary,
                 height: 1.4,
               ),
             ),
@@ -474,20 +528,27 @@ class SettingsScreen extends ConsumerWidget {
     await metaBox.put('ai_thematic_notice_shown', true);
     if (!context.mounted) return;
 
+    if (!context.mounted) return;
+    final slate = context.slate;
     await showDialog<void>(
       context: context,
       barrierDismissible: true,
+      barrierColor: slate.background.withValues(alpha: 0.6),
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text(
+        backgroundColor: slate.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(SlateShapes.radiusLarge),
+        ),
+        title: Text(
           'Textos con IA',
           style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
+            fontFamily: 'Nunito',
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: slate.textPrimary,
           ),
         ),
-        content: const Text(
+        content: Text(
           'Al activar esta opción, los títulos de tus tareas se envían a un '
           'servicio externo de IA (Google Gemini) para generar los textos de '
           'las notificaciones.\n\n'
@@ -495,17 +556,18 @@ class SettingsScreen extends ConsumerWidget {
           'Si estás sin conexión o desactivas esta opción, se usan textos '
           'locales y no se envía nada.',
           style: TextStyle(
-            fontSize: 14,
-            color: AppColors.textSecondary,
+            fontFamily: 'Nunito',
+            fontSize: 13,
+            color: slate.textSecondary,
             height: 1.4,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               'Entendido',
-              style: TextStyle(color: AppColors.primary),
+              style: TextStyle(color: slate.accent),
             ),
           ),
         ],
@@ -515,9 +577,10 @@ class SettingsScreen extends ConsumerWidget {
 
   void _showLeadTimePicker(BuildContext context, WidgetRef ref, int current) {
     const options = [0, 5, 10, 15, 30, 60];
+    final slate = context.slate;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: slate.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -526,14 +589,15 @@ class SettingsScreen extends ConsumerWidget {
           height: 320,
           child: Column(
             children: [
-              const Padding(
-                padding: EdgeInsets.all(AppSpacing.md),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Text(
                   'Margen de aviso',
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    fontFamily: 'Nunito',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: context.slate.textPrimary,
                   ),
                 ),
               ),
@@ -541,13 +605,14 @@ class SettingsScreen extends ConsumerWidget {
                 child: ListView.builder(
                   itemCount: options.length,
                   itemBuilder: (context, index) {
+                    final slate = context.slate;
                     final minutes = options[index];
                     final isSelected = minutes == current;
                     return ListTile(
                       title: Text(
                         _formatLeadTime(minutes),
                         style: TextStyle(
-                          color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                          color: isSelected ? slate.accent : slate.textPrimary,
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
@@ -555,13 +620,13 @@ class SettingsScreen extends ConsumerWidget {
                         minutes == 0
                             ? 'Avísame justo a la hora de la tarea'
                             : 'Avísame $minutes min antes de la tarea',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
-                          color: AppColors.textSecondary,
+                          color: slate.textSecondary,
                         ),
                       ),
                       trailing: isSelected
-                          ? const Icon(Icons.check, color: AppColors.primary)
+                          ? Icon(Icons.check, color: slate.accent)
                           : null,
                       onTap: () {
                         ref.read(settingsProvider.notifier).updateNotificationLeadTime(minutes);
@@ -579,9 +644,10 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   void _showThemePicker(BuildContext context, WidgetRef ref, AppThemeMode currentMode) {
+    final slate = context.slate;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: slate.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -590,35 +656,37 @@ class SettingsScreen extends ConsumerWidget {
           height: 200,
           child: Column(
             children: [
-              const Padding(
-                padding: EdgeInsets.all(AppSpacing.md),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Text(
                   'Tema',
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    fontFamily: 'Nunito',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: context.slate.textPrimary,
                   ),
                 ),
               ),
               ...AppThemeMode.values.map((mode) {
+                final slate = context.slate;
                 final isSelected = mode == currentMode;
                 return ListTile(
                   leading: Icon(
                     mode == AppThemeMode.dark
                         ? Icons.dark_mode
                         : Icons.light_mode,
-                    color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                    color: isSelected ? slate.accent : slate.textSecondary,
                   ),
                   title: Text(
                     mode.displayName,
                     style: TextStyle(
-                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                      color: isSelected ? slate.accent : slate.textPrimary,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                   trailing: isSelected
-                      ? const Icon(Icons.check, color: AppColors.primary)
+                      ? Icon(Icons.check, color: slate.accent)
                       : null,
                   onTap: () {
                     ref.read(settingsProvider.notifier).updateThemeMode(mode);
@@ -635,34 +703,37 @@ class SettingsScreen extends ConsumerWidget {
 
   void _showTimezonePicker(BuildContext context, WidgetRef ref, String currentTimezone) {
     final timezones = TimezoneService.sortedTimezones;
+    final slate = context.slate;
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: slate.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return Container(
+        return SizedBox(
           height: MediaQuery.of(context).size.height * 0.7,
           child: Column(
             children: [
-              const Padding(
-                padding: EdgeInsets.all(AppSpacing.md),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Text(
                   'Zona horaria',
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    fontFamily: 'Nunito',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: context.slate.textPrimary,
                   ),
                 ),
               ),
-              const Divider(color: AppColors.surfaceLight),
+              Divider(color: context.slate.outline),
               Expanded(
                 child: ListView.builder(
                   itemCount: timezones.length,
                   itemBuilder: (context, index) {
+                    final slate = context.slate;
                     final tz = timezones[index];
                     final isSelected = tz == currentTimezone;
                     final isAmerica = tz.startsWith('America');
@@ -677,10 +748,10 @@ class SettingsScreen extends ConsumerWidget {
                             ),
                             child: Text(
                               isAmerica ? 'América' : 'Europa',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
+                                color: slate.accent,
                               ),
                             ),
                           ),
@@ -688,19 +759,19 @@ class SettingsScreen extends ConsumerWidget {
                           title: Text(
                             TimezoneService.getDisplayName(tz),
                             style: TextStyle(
-                              color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                              color: isSelected ? slate.accent : slate.textPrimary,
                               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                             ),
                           ),
                           subtitle: Text(
                             tz,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: AppColors.textTertiary,
+                              color: slate.textTertiary,
                             ),
                           ),
                           trailing: isSelected
-                              ? const Icon(Icons.check, color: AppColors.primary)
+                              ? Icon(Icons.check, color: slate.accent)
                               : null,
                           onTap: () {
                             ref.read(settingsProvider.notifier).updateTimezone(tz);

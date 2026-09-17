@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/theme/slate_theme_context.dart';
 import '../../../../domain/enums/recurrence_type.dart';
 
+/// Selector de recurrencia (sistema-visual-fase3.md §4): mismo tratamiento
+/// visual que el selector de prioridad (fondo `surfaceAlt` inactivo, `accent`
+/// al 12% + borde `accent` activo), sin punto de color.
 class RecurrenceSelector extends StatelessWidget {
   final RecurrenceType selected;
   final List<int> selectedDays;
@@ -17,14 +20,16 @@ class RecurrenceSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final slate = context.slate;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Repetir',
           style: TextStyle(
+            fontFamily: 'Nunito',
             fontSize: 12,
-            color: AppColors.textSecondary,
+            color: slate.textSecondary,
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -41,16 +46,17 @@ class RecurrenceSelector extends StatelessWidget {
                   vertical: AppSpacing.sm,
                 ),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppColors.primary.withValues(alpha: 0.2) : AppColors.surfaceLight,
+                  color: isSelected ? slate.accent.withValues(alpha: 0.12) : slate.surfaceAlt,
                   borderRadius: BorderRadius.circular(20),
-                  border: isSelected ? Border.all(color: AppColors.primary, width: 1) : null,
+                  border: isSelected ? Border.all(color: slate.accent, width: 1.5) : null,
                 ),
                 child: Text(
                   type.displayName,
                   style: TextStyle(
+                    fontFamily: 'Nunito',
                     fontSize: 13,
-                    color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    color: isSelected ? slate.accent : slate.textSecondary,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                   ),
                 ),
               ),
@@ -59,13 +65,14 @@ class RecurrenceSelector extends StatelessWidget {
         ),
         if (selected == RecurrenceType.specificDays) ...[
           const SizedBox(height: AppSpacing.md),
-          _buildDaysSelector(),
+          _buildDaysSelector(context),
         ],
       ],
     );
   }
 
-  Widget _buildDaysSelector() {
+  Widget _buildDaysSelector(BuildContext context) {
+    final slate = context.slate;
     const days = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -85,16 +92,17 @@ class RecurrenceSelector extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary : AppColors.surfaceLight,
+              color: isSelected ? slate.accent : slate.surfaceAlt,
               shape: BoxShape.circle,
             ),
             child: Center(
               child: Text(
                 days[index],
                 style: TextStyle(
+                  fontFamily: 'Nunito',
                   fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: isSelected ? Colors.white : AppColors.textSecondary,
+                  fontWeight: FontWeight.w700,
+                  color: isSelected ? slate.onAccent : slate.textSecondary,
                 ),
               ),
             ),

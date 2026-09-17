@@ -83,4 +83,24 @@ class SlatePalette {
 
   /// `rgba(232,115,79,.4)` — sombra del FAB.
   static const Color shadowFabLight = Color(0x66E8734F);
+
+  // ---------------------------------------------------------------------
+  // Paleta curada de categorías (sistema-visual-fase3.md §5, semilla
+  // #5C87C4). Reemplaza a `AppColors.categoryColors` (17 tonos saturados)
+  // SOLO para el selector de categorías NUEVAS: las categorías existentes
+  // conservan su `colorHex` propio (Decisión A5, sin migración de datos).
+  // Un único set para ambos modos: los 9 tonos ya están pensados para
+  // convivir con la paleta cálida en claro y oscuro.
+  // ---------------------------------------------------------------------
+  static const List<Color> categoryPalette = [
+    Color(0xFF5C87C4), // Azul semilla
+    Color(0xFF7A9FD1), // Azul claro
+    Color(0xFF6FAE9E), // Verde azulado
+    Color(0xFF7FAE7A), // Verde (= success)
+    Color(0xFFE3A94A), // Ámbar (= priorityMedium)
+    Color(0xFFC97B5A), // Terracota
+    Color(0xFFB5769E), // Ciruela suave
+    Color(0xFF8C7FBF), // Lavanda grisáceo
+    Color(0xFFA98F6F), // Marrón arena
+  ];
 }

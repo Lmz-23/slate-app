@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/theme/slate_theme_context.dart';
 import '../../../../domain/entities/task.dart';
 import '../../../../application/providers/task_provider.dart';
 import '../../../../application/providers/streak_provider.dart';
@@ -23,6 +23,7 @@ class TaskSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final slate = context.slate;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -30,24 +31,26 @@ class TaskSection extends ConsumerWidget {
           children: [
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
+                fontFamily: 'Nunito',
                 fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w700,
+                color: slate.textSecondary,
               ),
             ),
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: AppColors.surfaceLight,
+                color: slate.surfaceAlt,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 '${tasks.length}',
-                style: const TextStyle(
+                style: TextStyle(
+                  fontFamily: 'Nunito',
                   fontSize: 12,
-                  color: AppColors.textSecondary,
+                  color: slate.textSecondary,
                 ),
               ),
             ),

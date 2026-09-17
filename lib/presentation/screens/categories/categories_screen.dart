@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_spacing.dart';
+import '../../../core/theme/slate_shapes.dart';
+import '../../../core/theme/slate_theme_context.dart';
+import '../../../core/theme/tokens/slate_palette.dart';
+import '../../../core/utils/color_utils.dart';
 import '../../../domain/entities/category.dart';
 import '../../../application/providers/category_provider.dart';
 import '../../widgets/common/slate_card.dart';
@@ -24,7 +27,7 @@ class CategoriesScreen extends ConsumerWidget {
         ],
       ),
       body: categories.isEmpty
-          ? _buildEmptyState()
+          ? _buildEmptyState(context)
           : ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.md),
               itemCount: categories.length,
@@ -37,30 +40,34 @@ class CategoriesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
+    final slate = context.slate;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.category_outlined,
-            size: 64,
-            color: AppColors.textTertiary.withValues(alpha: 0.5),
+            size: 40,
+            color: slate.textTertiary,
           ),
           const SizedBox(height: AppSpacing.md),
-          const Text(
+          Text(
             'Sin categorías',
             style: TextStyle(
-              fontSize: 18,
-              color: AppColors.textSecondary,
+              fontFamily: 'Nunito',
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: slate.textSecondary,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          const Text(
+          Text(
             'Toca + para crear una categoría',
             style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textTertiary,
+              fontFamily: 'Nunito',
+              fontSize: 12.5,
+              color: slate.textTertiary,
             ),
           ),
         ],
@@ -69,6 +76,7 @@ class CategoriesScreen extends ConsumerWidget {
   }
 
   Widget _buildCategoryTile(BuildContext context, WidgetRef ref, Category category) {
+    final slate = context.slate;
     return SlateCard(
       onTap: () => _showCategoryForm(context, ref, category: category),
       child: Row(
@@ -77,7 +85,7 @@ class CategoriesScreen extends ConsumerWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.fromHex(category.colorHex),
+              color: ColorUtils.fromHex(category.colorHex),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
@@ -90,15 +98,16 @@ class CategoriesScreen extends ConsumerWidget {
           Expanded(
             child: Text(
               category.name,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textPrimary,
+              style: TextStyle(
+                fontFamily: 'Nunito',
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: slate.textPrimary,
               ),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: AppColors.textTertiary),
+            icon: Icon(Icons.delete_outline, color: slate.textTertiary),
             onPressed: () => _deleteCategory(context, ref, category.id),
           ),
         ],
@@ -108,7 +117,10 @@ class CategoriesScreen extends ConsumerWidget {
 
   void _showCategoryForm(BuildContext context, WidgetRef ref, {Category? category}) {
     final nameController = TextEditingController(text: category?.name ?? '');
-    String selectedColor = category?.colorHex ?? AppColors.categoryColors.first.value.toRadixString(16).substring(2);
+    // Paleta curada de categorías NUEVAS (Decisión A5, sistema-visual-fase3.md
+    // §5): las categorías existentes conservan su colorHex propio sin cambio.
+    String selectedColor = category?.colorHex ??
+        SlatePalette.categoryPalette.first.value.toRadixString(16).substring(2);
 
     showModalBottomSheet(
       context: context,
@@ -117,13 +129,14 @@ class CategoriesScreen extends ConsumerWidget {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
+            final slate = context.slate;
             return Container(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
               ),
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              decoration: BoxDecoration(
+                color: slate.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.lg),
@@ -133,34 +146,36 @@ class CategoriesScreen extends ConsumerWidget {
                   children: [
                     Text(
                       category == null ? 'Nueva categoría' : 'Editar categoría',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                      style: TextStyle(
+                        fontFamily: 'Nunito',
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: slate.textPrimary,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     TextField(
                       controller: nameController,
                       autofocus: true,
-                      style: const TextStyle(color: AppColors.textPrimary),
+                      style: TextStyle(fontFamily: 'Nunito', color: slate.textPrimary),
                       decoration: const InputDecoration(
                         hintText: 'Nombre de categoría',
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    const Text(
+                    Text(
                       'Color',
                       style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.textSecondary,
+                        fontFamily: 'Nunito',
+                        fontSize: 12,
+                        color: slate.textSecondary,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Wrap(
                       spacing: AppSpacing.sm,
                       runSpacing: AppSpacing.sm,
-                      children: AppColors.categoryColors.map((color) {
+                      children: SlatePalette.categoryPalette.map((color) {
                         final colorHex = color.value.toRadixString(16).substring(2);
                         final isSelected = selectedColor == colorHex;
                         return GestureDetector(
@@ -176,11 +191,11 @@ class CategoriesScreen extends ConsumerWidget {
                               color: color,
                               borderRadius: BorderRadius.circular(10),
                               border: isSelected
-                                  ? Border.all(color: Colors.white, width: 3)
+                                  ? Border.all(color: slate.onAccent, width: 3)
                                   : null,
                             ),
                             child: isSelected
-                                ? const Icon(Icons.check, color: Colors.white, size: 20)
+                                ? Icon(Icons.check, color: slate.onAccent, size: 20)
                                 : null,
                           ),
                         );
@@ -209,18 +224,19 @@ class CategoriesScreen extends ConsumerWidget {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: slate.accent,
                           padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                            borderRadius: BorderRadius.circular(SlateShapes.radiusSmall),
                           ),
                         ),
                         child: Text(
                           category == null ? 'Crear' : 'Guardar',
-                          style: const TextStyle(
+                          style: TextStyle(
+                            fontFamily: 'Nunito',
                             fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            color: slate.onAccent,
                           ),
                         ),
                       ),
@@ -236,32 +252,49 @@ class CategoriesScreen extends ConsumerWidget {
   }
 
   void _deleteCategory(BuildContext context, WidgetRef ref, String id) {
+    final slate = context.slate;
     showDialog(
       context: context,
+      barrierColor: slate.background.withValues(alpha: 0.6),
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text(
-          'Eliminar categoría',
-          style: TextStyle(color: AppColors.textPrimary),
+        backgroundColor: slate.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(SlateShapes.radiusLarge),
         ),
-        content: const Text(
+        title: Text(
+          '¿Eliminar categoría?',
+          style: TextStyle(
+            fontFamily: 'Nunito',
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: slate.textPrimary,
+          ),
+        ),
+        content: Text(
           '¿Estás seguro de que quieres eliminar esta categoría?',
-          style: TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(
+            fontFamily: 'Nunito',
+            fontSize: 13,
+            color: slate.textSecondary,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            child: Text('Cancelar', style: TextStyle(color: slate.textSecondary)),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () {
               ref.read(categoriesProvider.notifier).deleteCategory(id);
               Navigator.pop(context);
             },
-            child: const Text(
-              'Eliminar',
-              style: TextStyle(color: AppColors.error),
+            style: FilledButton.styleFrom(
+              backgroundColor: slate.danger,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(SlateShapes.radiusSmall),
+              ),
             ),
+            child: const Text('Eliminar'),
           ),
         ],
       ),
