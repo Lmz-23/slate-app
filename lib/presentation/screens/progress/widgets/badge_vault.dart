@@ -53,7 +53,15 @@ class BadgeVault extends StatelessWidget {
               crossAxisCount: 4,
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
-              childAspectRatio: 0.75,
+              // Altura fija (no `childAspectRatio`): el contenido de cada
+              // celda (círculo 56px + hasta 2 líneas de nombre + subtítulo)
+              // tiene una altura constante en px independiente del ancho de
+              // pantalla. Con `childAspectRatio` la altura escalaba con el
+              // ancho de la celda, por lo que en teléfonos angostos la celda
+              // quedaba más baja que el contenido y producía overflow
+              // vertical (detectado en verificación visual: "BOTTOM
+              // OVERFLOWED BY 9.0 PIXELS").
+              mainAxisExtent: 118,
             ),
             itemCount: allBadgeTypes.length,
             itemBuilder: (context, index) {

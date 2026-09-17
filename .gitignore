@@ -49,3 +49,6 @@ app.*.map.json
 /.env
 .env.local
 .env.*.local
+
+# Transient manual verification screenshots (not project docs)
+/.verification-screenshots/

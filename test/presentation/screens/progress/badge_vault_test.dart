@@ -65,6 +65,32 @@ Future<void> _pumpInScrollView(WidgetTester tester, Widget child) async {
 }
 
 void main() {
+  group('BadgeVault - layout en viewport angosto (regresión overflow)', () {
+    testWidgets(
+        'el grid de insignias no produce overflow de RenderFlex en un '
+        'ancho de teléfono típico', (tester) async {
+      // El tamaño por defecto de flutter_test (800x600) es más ancho que
+      // cualquier teléfono real y esconde overflows verticales de celda:
+      // con más ancho, `childAspectRatio` produce celdas más altas. Se fija
+      // un viewport angosto (equivalente a un teléfono compacto) para
+      // reproducir el layout real donde se detectó "BOTTOM OVERFLOWED BY
+      // 9.0 PIXELS" en la vitrina de insignias.
+      await tester.binding.setSurfaceSize(const Size(360, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await _pumpInScrollView(
+        tester,
+        BadgeVault(badges: [
+          _badge(BadgeType.streak3),
+          _badge(BadgeType.streak365), // nombre/subtítulo más largos
+        ]),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   group('BadgeVault - render directo', () {
     testWidgets('muestra la insignia desbloqueada y las demás como ???', (tester) async {
       await _pumpInScrollView(tester, const BadgeVault(badges: []));
