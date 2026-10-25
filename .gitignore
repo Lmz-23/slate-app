@@ -52,3 +52,15 @@ app.*.map.json
 
 # Transient manual verification screenshots (not project docs)
 /.verification-screenshots/
+
+.claude/pipeline-state.json
+
+# Contexto y configuración de IA (Claude, OpenCode, etc.): solo local, no se publica.
+.claude/
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+.opencode/
+opencode.json
+opencode.jsonc
+docs/ESTADO.md
